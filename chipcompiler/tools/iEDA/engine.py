@@ -79,7 +79,7 @@ class IEDAEngine:
         """init def"""
         self.ieda.def_init(def_path=path)
 
-    def init_verilog(self, 
+    def read_verilog(self, 
                      verilog : str, 
                      top_module: str):
         """init verilog"""

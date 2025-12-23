@@ -17,7 +17,7 @@ def PDK_SKY130() -> PDK:
     current_dir = os.path.split(os.path.abspath(__file__))[0]
     root = current_dir.rsplit('/', 1)[0]
 
-    foundry_dir = "{}/chipcompiler/third_party/iEDA/scripts/foundry/sky130".format(root)
+    foundry_dir = "{}/chipcompiler/thirdparty/iEDA/scripts/foundry/sky130".format(root)
     
     pdk = PDK(
         name="sky130",

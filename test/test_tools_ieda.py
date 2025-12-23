@@ -11,7 +11,8 @@ sys.path.append(root)
 from chipcompiler.tools import (
     create_workspace, 
     create_step, 
-    run_step
+    run_step,
+    create_db_engine
 )
 
 from pdk import get_pdk
@@ -48,6 +49,7 @@ def test_sky130_gcd():
                           input_def=workspace.design.origin_def,
                           input_verilog=workspace.design.origin_verilog)
     
+    db_engine = create_db_engine(workspace, eda_step)
     run_step(workspace, eda_step)
     
     
