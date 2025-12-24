@@ -97,12 +97,3 @@ def run_step(workspace: Workspace,
         return False
     
     return eda_module.run_step(workspace, step)
-
-def create_db_engine(workspace: Workspace,
-                     step: WorkspaceStep):
-    # check eda tool exist
-    eda_module = load_eda_module(step.tool)
-    if eda_module is None:
-        return False
-    
-    return eda_module.create_db_engine(workspace, step)
