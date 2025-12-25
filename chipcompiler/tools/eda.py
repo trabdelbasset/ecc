@@ -7,51 +7,31 @@ def load_eda_module(eda_tool: str):
     """
     Load and return the EDA tool module based on the given eda tool name.
     """
-    import importlib    
-    eda_module = importlib.import_module(f"chipcompiler.tools.{eda_tool}")
+    def check_module(eda_module):
+        functions = [
+            'is_eda_exist',
+            'build_step_space',
+            'build_step_config',
+            'run_step'
+        ]
+        
+        for func in functions:
+            if not hasattr(eda_module, func):
+                return False
+        return True
     
-    # check eda tool exist
-    if not eda_module.is_eda_exist():
-        logging.error(f"EDA tool : {eda_tool} not found!")
-        return None
-    
-    return eda_module
-
-def create_workspace(directory : str,
-                     origin_def : str,
-                     origin_verilog : str,
-                     pdk : PDK,
-                     parameters : Parameters) -> Workspace:
-    # create workspace directory
-    import os
-    os.makedirs(directory, exist_ok=True)
-    
-    # create workspace instance
-    workspace = Workspace()
-    workspace.directory = directory
-    workspace.design.name = parameters.data["Design"]
-    workspace.design.top_module = parameters.data["Top module"]         
-    workspace.pdk = pdk
-    workspace.parameters = parameters
-    
-    # update orign files to workspace origin folder
-    os.makedirs(f"{directory}/origin", exist_ok=True)
-
-    import shutil
-    if os.path.exists(origin_def):
-        shutil.copy(origin_def, f"{directory}/origin/{os.path.basename(origin_def)}")
-        workspace.design.origin_def = f"{directory}/origin/{os.path.basename(origin_def)}"
-    if os.path.exists(origin_verilog):
-        shutil.copy(origin_verilog, f"{directory}/origin/{os.path.basename(origin_verilog)}")
-        workspace.design.origin_verilog = f"{directory}/origin/{os.path.basename(origin_verilog)}"
-    if os.path.exists(pdk.sdc):
-        shutil.copy(pdk.sdc, f"{directory}/origin/{os.path.basename(pdk.sdc)}")
-        workspace.pdk.sdc = f"{directory}/origin/{os.path.basename(pdk.sdc)}"
-    if os.path.exists(pdk.spef):
-        shutil.copy(pdk.spef, f"{directory}/origin/{os.path.basename(pdk.spef)}")
-        workspace.pdk.spef = f"{directory}/origin/{os.path.basename(pdk.spef)}"
-    
-    return workspace
+    eda_module = None
+    try:
+        import importlib    
+        eda_module = importlib.import_module(f"chipcompiler.tools.{eda_tool}")
+        # check eda tool exist
+        if not check_module(eda_module) or not eda_module.is_eda_exist():
+            logging.error(f"EDA tool : {eda_tool} not found!")
+            return None
+    except Exception as e:    
+        logging.error(f"Error load module {eda_tool}: {e}")
+    finally:    
+        return eda_module
 
 def create_step(workspace : Workspace, 
                step : str, 
@@ -66,7 +46,8 @@ def create_step(workspace : Workspace,
     """
     # check eda tool exist
     eda_module = load_eda_module(eda)
-    if eda_module is None:
+    if eda_module is None \
+        or not hasattr(eda_module, 'build_step'):
         return None
     
     # build step

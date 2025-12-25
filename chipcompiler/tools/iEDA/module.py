@@ -2,7 +2,7 @@
 # -*- encoding: utf-8 -*-
 from numpy import double
 
-class IEDAEngine:
+class IEDAModule:
     """
     python api package of iEDA.
     """

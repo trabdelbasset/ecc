@@ -20,7 +20,7 @@ def build_step(workspace: Workspace,
     step.version = "0.1"
 
     # build step directory
-    step.directory = f"{workspace.directory}/{step.name}_{step.tool.lower()}"
+    step.directory = f"{workspace.directory}/{step.name}_{step.tool}"
     
     # build config paths    
     step.config = {

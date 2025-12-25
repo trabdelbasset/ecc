@@ -3,8 +3,8 @@
 import sys
 import os
        
-from chipcompiler.data import WorkspaceStep, Workspace, Parameters
-from chipcompiler.tools.iEDA.engine import IEDAEngine
+from chipcompiler.data import WorkspaceStep, Workspace, StateEnum
+from chipcompiler.tools.iEDA.module import IEDAModule
 from chipcompiler.tools.iEDA.utility import is_eda_exist
 
 def create_db_engine(workspace: Workspace,
@@ -13,8 +13,8 @@ def create_db_engine(workspace: Workspace,
     if not is_eda_exist():
         return False
     
-    from chipcompiler.tools.iEDA.engine import IEDAEngine
-    eda_inst = IEDAEngine()
+    from chipcompiler.tools.iEDA.module import IEDAModule
+    eda_inst = IEDAModule()
     
     eda_inst.init_config(flow_config=step.config["flow"],
                          db_config=step.config["db"],
@@ -40,8 +40,9 @@ def create_db_engine(workspace: Workspace,
 def run_step(workspace: Workspace,
              step: WorkspaceStep) -> bool:
     if not is_eda_exist():
-        return False
-    eda_inst = IEDAEngine()
+        return StateEnum.Invalid
+    
+    eda_inst = IEDAModule()
     
     
-    return True
+    return StateEnum.Success

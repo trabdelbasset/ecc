@@ -11,7 +11,7 @@ def json_read(file_path: str) -> dict:
     """
     data = {}
     if os.path.isfile(file_path) is False:
-        logging.error(f"JSON file not found: {file_path}")
+        logging.warning(f"JSON file not found: {file_path}")
         return data
     
     try:

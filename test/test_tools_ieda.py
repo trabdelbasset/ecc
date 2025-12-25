@@ -7,15 +7,14 @@ import os
 current_dir = os.path.split(os.path.abspath(__file__))[0]
 root = current_dir.rsplit('/', 1)[0]
 sys.path.append(root)
-    
-from chipcompiler.tools import (
-    create_workspace, 
-    create_step, 
-    run_step
+
+from chipcompiler.data import (
+    create_workspace
 )
 
 from chipcompiler.engine import (
-    EngineDB
+    EngineDB,
+    EngineFlow
 )
 
 from pdk import get_pdk
@@ -46,34 +45,13 @@ def test_sky130_gcd():
     # after create workspace, copy origin files to workspace origin folder
     # use the origin def and verilog in workspace for the first step.   
     # create eda tool instance
-    eda_step = create_step(workspace=workspace,
-                          step="floorplan",
-                          eda="iEDA",
-                          input_def=workspace.design.origin_def,
-                          input_verilog=workspace.design.origin_verilog)
+    engine_flow = EngineFlow(workspace=workspace)
+    engine_flow.build_default_steps()
+    engine_flow.create_step_workspaces()
     
-    db_engine = EngineDB()
-    db_engine.create_db_engine(workspace, eda_step)
-    run_step(workspace, eda_step)
+    # engine = EngineDB()
+    # engine.create_db_engine(workspace, eda_step)
     
-    
-    eda_step = create_step(workspace=workspace,
-                          step="place",
-                          eda="iEDA",
-                          input_def=eda_step.output["def"],
-                          input_verilog=eda_step.output["verilog"])
-    
-    eda_step = create_step(workspace=workspace,
-                          step="cts",
-                          eda="iEDA",
-                          input_def=eda_step.output["def"],
-                          input_verilog=eda_step.output["verilog"])
-    
-    eda_step = create_step(workspace=workspace,
-                          step="timingopt",
-                          eda="iEDA",
-                          input_def=eda_step.output["def"],
-                          input_verilog=eda_step.output["verilog"])
 
 if __name__ == "__main__":
     test_sky130_gcd()
