@@ -36,7 +36,9 @@ def build_step(workspace: Workspace,
         f"{StepEnum.ROUTING.value}": f"{step.directory}/config/rt_default_config.json",
         f"{StepEnum.TIMING_OPT_DRV.value}": f"{step.directory}/config/to_default_config_drv.json",
         f"{StepEnum.TIMING_OPT_HOLD.value}": f"{step.directory}/config/to_default_config_hold.json",
-        f"{StepEnum.TIMING_OPT_SETUP.value}": f"{step.directory}/config/to_default_config_setup.json"
+        f"{StepEnum.TIMING_OPT_SETUP.value}": f"{step.directory}/config/to_default_config_setup.json",
+        f"{StepEnum.LEGALIZATION.value}": f"{step.directory}/config/pl_default_config.json",
+        f"{StepEnum.FILLER.value}": f"{step.directory}/config/pl_default_config.json"
     }
     
     # build input paths
@@ -61,14 +63,27 @@ def build_step(workspace: Workspace,
     
     # build data paths
     step.data = {
-        "dir": f"{step.directory}/data"
+        "dir": f"{step.directory}/data",
+        f"{StepEnum.FLOORPLAN.value}": f"{step.directory}/data/fp",
+        f"{StepEnum.PNP.value}": f"{step.directory}/data/pnp",
+        f"{StepEnum.PLACEMENT.value}": f"{step.directory}/data/pl",
+        f"{StepEnum.LEGALIZATION.value}": f"{step.directory}/data/pl",
+        f"{StepEnum.FILLER.value}": f"{step.directory}/data/pl",
+        f"{StepEnum.CTS.value}": f"{step.directory}/data/cts",
+        f"{StepEnum.NETLIST_OPT.value}": f"{step.directory}/data/no",
+        f"{StepEnum.TIMING_OPT_DRV.value}": f"{step.directory}/data/to",
+        f"{StepEnum.TIMING_OPT_HOLD.value}": f"{step.directory}/data/to",
+        f"{StepEnum.TIMING_OPT_SETUP.value}": f"{step.directory}/data/to",
+        f"{StepEnum.ROUTING.value}": f"{step.directory}/data/rt",
+        f"{StepEnum.STA.value}": f"{step.directory}/data/sta"
     }
     
     # build feature paths
     step.feature = {
         "dir": f"{step.directory}/feature",
-        "db": f"{step.directory}/report/{step.name}.db.json",
-        "step": f"{step.directory}/report/{step.name}.step.json"
+        "db": f"{step.directory}/feature/{step.name}.db.json",
+        "step": f"{step.directory}/feature/{step.name}.step.json",
+        "map": f"{step.directory}/feature/{step.name}.map.json",
     }
     
     # build report paths
@@ -112,6 +127,18 @@ def build_step_space(step: WorkspaceStep) -> None:
     os.makedirs(step.log.get("dir", f"{step.directory}/log"), exist_ok=True)
     os.makedirs(step.script.get("dir", f"{step.directory}/script"), exist_ok=True)
     os.makedirs(step.analysis.get("dir", f"{step.directory}/analysis"), exist_ok=True)
+    
+    # build data directory
+    for key, dir in step.data.items():
+        os.makedirs(dir, exist_ok=True)
+        
+    # create pl sub dir
+    os.makedirs(f"{step.directory}/data/pl/density", exist_ok=True)
+    os.makedirs(f"{step.directory}/data/pl/gui", exist_ok=True)
+    os.makedirs(f"{step.directory}/data/pl/log", exist_ok=True)
+    os.makedirs(f"{step.directory}/data/pl/plot", exist_ok=True)
+    os.makedirs(f"{step.directory}/data/pl/report", exist_ok=True)
+        
 
 def build_step_config(workspace: Workspace,
                       step: WorkspaceStep, 
@@ -236,6 +263,7 @@ def build_step_config(workspace: Workspace,
         config = json_read(step.config[f"{StepEnum.ROUTING.value}"])
         
         # parameters
+        config["RT"]["-temp_directory_path"] = step.data.get(f"{StepEnum.ROUTING.value}", "")
         config["RT"]["-bottom_routing_layer"] = parameters.data.get("Bottom layer", "")
         config["RT"]["-top_routing_layer"] = parameters.data.get("Top layer", "")
         

@@ -123,7 +123,17 @@ class IEDAModule:
         generate step feature
         """
         self.ieda.feature_tool(json_path, step)
-    
+        
+    ########################################################################
+    # reports api
+    ########################################################################
+    def report_summary(self, 
+                       path: str):
+        """
+        generate step report
+        """
+        self.ieda.report_db(path)
+        
     ########################################################################
     # CTS api
     ########################################################################
@@ -131,6 +141,9 @@ class IEDAModule:
                 config: str, 
                 output : str) -> bool:
         return self.ieda.run_cts(config, output)
+    
+    def report_cts(self, output : str):
+        self.ieda.cts_report(output)
     
     def feature_cts_map(self, 
                         json_path: str, 
@@ -323,7 +336,7 @@ class IEDAModule:
         self.ieda.run_placer(config)
         
     def run_legalize(self, config: str):
-        self.ieda.run_incremental_flow(config)
+        self.ieda.run_incremental_lg()
         
     def run_filler(self, config: str):
         self.ieda.run_filler(config)
@@ -387,7 +400,7 @@ class IEDAModule:
             with open(config, "r", encoding="utf-8") as f_reader:  
                 json_data = json.load(f_reader)
                 # check if time enable
-                if json_data["RT"]["-enable_timing"] == "1":
+                if json_data is not None and json_data.get("RT", {}).get("-enable_timing", "0") == "1":
                     return True
         return False
     

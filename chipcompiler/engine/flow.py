@@ -18,13 +18,16 @@ class EngineFlow:
 
         # steps.append(self.init_step(StepEnum.SYNTHESIS, "yosys", StateEnum.Unstart))
         # steps.append(self.init_step(StepEnum.FLOORPLAN, "iEDA", StateEnum.Unstart))
+        steps.append(self.init_step(StepEnum.NETLIST_OPT, "iEDA", StateEnum.Unstart))
         steps.append(self.init_step(StepEnum.PLACEMENT, "iEDA", StateEnum.Unstart))
         steps.append(self.init_step(StepEnum.CTS, "iEDA", StateEnum.Unstart))
+        steps.append(self.init_step(StepEnum.TIMING_OPT_DRV, "iEDA", StateEnum.Unstart))
+        steps.append(self.init_step(StepEnum.TIMING_OPT_HOLD, "iEDA", StateEnum.Unstart))
         steps.append(self.init_step(StepEnum.LEGALIZATION, "iEDA", StateEnum.Unstart))
         steps.append(self.init_step(StepEnum.ROUTING, "iEDA", StateEnum.Unstart))
         steps.append(self.init_step(StepEnum.FILLER, "iEDA", StateEnum.Unstart))
-        steps.append(self.init_step(StepEnum.GDS, "klayout", StateEnum.Ignored))
-        steps.append(self.init_step(StepEnum.SIGNOFF, "innovus", StateEnum.Ignored))
+        # steps.append(self.init_step(StepEnum.GDS, "klayout", StateEnum.Ignored))
+        # steps.append(self.init_step(StepEnum.SIGNOFF, "innovus", StateEnum.Ignored))
         
         self.workspace.flow.data = {"steps" : steps}
         
@@ -102,12 +105,13 @@ class EngineFlow:
                  name : str,
                  tool : str,
                  state : str | StateEnum,
-                 runtime : str) -> bool:
+                 runtime : str=None) -> bool:
         state_value = state.value if isinstance(state, StateEnum) else state
         for step in self.workspace.flow.data.get("steps", []):
             if step.get("name") == name and step.get("tool") == tool:
                 step["state"] = state_value
-                step["runtime"] = runtime
+                if runtime is not None:
+                    step["runtime"] = runtime
                 
                 self.save()
                 return True
@@ -158,6 +162,10 @@ class EngineFlow:
             # save workspace step
             if eda_step is not None:
                 self.workspace_steps.append(eda_step)
+                pre_step = eda_step
+            else:
+                # error create step, TBD
+                pass
             
     def init_db_engine(self) -> bool:
         if len(self.workspace_steps) <= 0:
@@ -188,6 +196,11 @@ class EngineFlow:
         run all flow steps
         """
         for workspace_step in self.workspace_steps: 
+            if self.check_state(name=workspace_step.name,
+                                tool=workspace_step.tool,
+                                state=StateEnum.Success):
+                continue
+                
             state = self.run_step(workspace_step)
             
             match(state):
@@ -219,11 +232,21 @@ class EngineFlow:
         #set timer
         start_time = time.time()
         
-        # run steps
-        state = run_step(workspace=self.workspace, 
-                         step=workspace_step,
-                         module = self.db.engine)
+        # set state ongoing
+        self.set_state(name=workspace_step.name,
+                       tool=workspace_step.tool,
+                       state=StateEnum.Ongoing)
         
+        # run steps
+        # state = run_step(workspace=self.workspace, 
+        #                  step=workspace_step,
+        #                  module = self.db.engine)
+        from multiprocessing import Process
+        p = Process(target=run_step, args=(self.workspace, workspace_step, ))
+        p.start()
+        p.join()
+        
+        state =True
         # end time
         end_time = time.time()
         elapsed_time = end_time - start_time
