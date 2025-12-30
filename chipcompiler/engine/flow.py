@@ -16,24 +16,24 @@ class EngineFlow:
         # Flow step sequences
         steps = []
 
-        # steps.append(self.init_step(StepEnum.SYNTHESIS, "yosys", StateEnum.Unstart))
-        # steps.append(self.init_step(StepEnum.FLOORPLAN, "iEDA", StateEnum.Unstart))
-        steps.append(self.init_step(StepEnum.NETLIST_OPT, "iEDA", StateEnum.Unstart))
-        steps.append(self.init_step(StepEnum.PLACEMENT, "iEDA", StateEnum.Unstart))
-        steps.append(self.init_step(StepEnum.CTS, "iEDA", StateEnum.Unstart))
-        steps.append(self.init_step(StepEnum.TIMING_OPT_DRV, "iEDA", StateEnum.Unstart))
-        steps.append(self.init_step(StepEnum.TIMING_OPT_HOLD, "iEDA", StateEnum.Unstart))
-        steps.append(self.init_step(StepEnum.LEGALIZATION, "iEDA", StateEnum.Unstart))
-        steps.append(self.init_step(StepEnum.ROUTING, "iEDA", StateEnum.Unstart))
-        steps.append(self.init_step(StepEnum.FILLER, "iEDA", StateEnum.Unstart))
-        # steps.append(self.init_step(StepEnum.GDS, "klayout", StateEnum.Ignored))
-        # steps.append(self.init_step(StepEnum.SIGNOFF, "innovus", StateEnum.Ignored))
+        # steps.append(self.init_flow_step(StepEnum.SYNTHESIS, "yosys", StateEnum.Unstart))
+        # steps.append(self.init_flow_step(StepEnum.FLOORPLAN, "iEDA", StateEnum.Unstart))
+        steps.append(self.init_flow_step(StepEnum.NETLIST_OPT, "iEDA", StateEnum.Unstart))
+        steps.append(self.init_flow_step(StepEnum.PLACEMENT, "iEDA", StateEnum.Unstart))
+        steps.append(self.init_flow_step(StepEnum.CTS, "iEDA", StateEnum.Unstart))
+        steps.append(self.init_flow_step(StepEnum.TIMING_OPT_DRV, "iEDA", StateEnum.Unstart))
+        steps.append(self.init_flow_step(StepEnum.TIMING_OPT_HOLD, "iEDA", StateEnum.Unstart))
+        steps.append(self.init_flow_step(StepEnum.LEGALIZATION, "iEDA", StateEnum.Unstart))
+        steps.append(self.init_flow_step(StepEnum.ROUTING, "iEDA", StateEnum.Unstart))
+        steps.append(self.init_flow_step(StepEnum.FILLER, "iEDA", StateEnum.Unstart))
+        # steps.append(self.init_flow_step(StepEnum.GDS, "klayout", StateEnum.Ignored))
+        # steps.append(self.init_flow_step(StepEnum.SIGNOFF, "innovus", StateEnum.Ignored))
         
         self.workspace.flow.data = {"steps" : steps}
         
         self.save()
     
-    def init_step(self,
+    def init_flow_step(self,
                   step : StepEnum | str,
                   tool : str,
                   state : str | StateEnum):
@@ -52,7 +52,7 @@ class EngineFlow:
                  tool : str,
                  state : str | StateEnum):
         steps = self.workspace.flow.data.get("steps", [])
-        steps.append(self.init_step(step, tool, state))
+        steps.append(self.init_flow_step(step, tool, state))
         
         self.workspace.flow.data = {"steps" : steps}
         

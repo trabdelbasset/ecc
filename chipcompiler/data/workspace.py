@@ -3,6 +3,7 @@
 
 from dataclasses import dataclass, field
 from .parameter import Parameters, save_parameter
+from chipcompiler.utility import Logger, create_logger
     
 @dataclass
 class PDK:
@@ -46,6 +47,9 @@ class Workspace:
     parameters : Parameters = field(default_factory=Parameters) # design parameters
     flow : Flow = field(default_factory=Flow) # design flow for this workspace
     
+    # logger
+    logger : Logger = field(default_factory=Logger) # logger for this workspace
+    
 @dataclass
 class WorkspaceStep:
     """
@@ -72,7 +76,6 @@ class WorkspaceStep:
     
     # step result info
     result : dict = field(default_factory=dict) # result info about this step
-
 
 def create_workspace(directory : str,
                      origin_def : str,
@@ -112,6 +115,11 @@ def create_workspace(directory : str,
     if os.path.exists(pdk.spef):
         shutil.copy(pdk.spef, f"{directory}/origin/{os.path.basename(pdk.spef)}")
         workspace.pdk.spef = f"{directory}/origin/{os.path.basename(pdk.spef)}"
+        
+    # create logger
+    os.makedirs(f"{directory}/log", exist_ok=True)
+    workspace.logger = create_logger(name=workspace.design.name,
+                                     log_dir=f"{directory}/log")
     
     # save parameter
     save_parameter(workspace.parameters)
