@@ -52,6 +52,7 @@
           _module.args.pkgs = import inputs.nixpkgs {
             inherit system;
           };
+          # Use `nix develop -c python3 test/test_tools_yosys.py` to run tests in dev shell
           devShells = {
             default = pkgs.mkShell {
               nativeBuildInputs =
