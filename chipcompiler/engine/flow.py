@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
-from chipcompiler.data import Workspace, WorkspaceStep
+from chipcompiler.data import Workspace, WorkspaceStep, log_workspace
 from chipcompiler.data import StateEnum, StepEnum
 from chipcompiler.engine import EngineDB
 

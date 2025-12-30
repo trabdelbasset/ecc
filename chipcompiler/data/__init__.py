@@ -3,7 +3,8 @@ from .workspace import (
     Workspace, 
     WorkspaceStep, 
     PDK,
-    OriginDesign
+    OriginDesign,
+    log_workspace
 )
 
 from .parameter import (
@@ -23,6 +24,7 @@ __all__ = [
     'WorkspaceStep', 
     'PDK',
     'OriginDesign',
+    'log_workspace',
     'Parameters',
     'load_paramter',
     'save_parameter',

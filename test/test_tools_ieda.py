@@ -9,7 +9,8 @@ root = current_dir.rsplit('/', 1)[0]
 sys.path.append(root)
 
 from chipcompiler.data import (
-    create_workspace
+    create_workspace,
+    log_workspace
 )
 
 from chipcompiler.engine import (
@@ -49,6 +50,8 @@ def test_sky130_gcd():
     engine_flow = EngineFlow(workspace=workspace)
     engine_flow.build_default_steps()
     engine_flow.create_step_workspaces()
+    
+    log_workspace(workspace=workspace)
 
     # engine_flow.init_db_engine()
     engine_flow.run_steps()

@@ -40,3 +40,13 @@ def json_write(file_path: str, data: dict={}, indent=4) -> bool:
         return True
     except Exception as e:
         return False
+    
+def dict_to_str(d, indent=0):
+    result = []
+    for key, value in d.items():
+        result.append('  ' * indent + f"{key}:")
+        if isinstance(value, dict):
+            result.append(dict_to_str(value, indent + 1))
+        else:
+            result.append('  ' * (indent + 1) + str(value))
+    return '\n'.join(result)

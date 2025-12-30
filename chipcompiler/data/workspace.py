@@ -3,7 +3,7 @@
 
 from dataclasses import dataclass, field
 from .parameter import Parameters, save_parameter
-from chipcompiler.utility import Logger, create_logger
+from chipcompiler.utility import Logger, create_logger, dict_to_str
     
 @dataclass
 class PDK:
@@ -125,3 +125,38 @@ def create_workspace(directory : str,
     save_parameter(workspace.parameters)
      
     return workspace
+
+def log_workspace(workspace : Workspace):
+    def format_string(text : str, len=20) -> str:
+        return text.ljust(len, " ")
+        
+    workspace.logger.info("######################################################################")
+    workspace.logger.info("workspace      : %s", workspace.directory)
+    workspace.logger.info("PDK            : %s", workspace.pdk.name)
+    workspace.logger.info("design         : %s", workspace.design.name)
+    workspace.logger.info("top module     : %s", workspace.design.top_module)
+    workspace.logger.info("origin def     : %s", workspace.design.origin_def)
+    workspace.logger.info("origin verilog : %s", workspace.design.origin_verilog)
+    workspace.logger.info("sdc            : %s", workspace.pdk.sdc)
+    workspace.logger.info("spef           : %s", workspace.pdk.spef)
+    workspace.logger.info("######################################################################")
+    workspace.logger.info("")
+    workspace.logger.info("######################################################################")
+    workspace.logger.info("parameters     : %s", workspace.parameters.path)
+    workspace.logger.info("\n%s", dict_to_str(workspace.parameters.data))
+    workspace.logger.info("######################################################################")
+    workspace.logger.info("")
+    workspace.logger.info("######################################################################")
+    workspace.logger.info("flow           : %s", workspace.flow.path)
+    workspace.logger.info("%s | %s | %s | %s", 
+                              format_string("name"),
+                              format_string("tool"),
+                              format_string("state"),
+                              format_string("runtime"))
+    for step in workspace.flow.data.get("steps", []):
+        workspace.logger.info("%s | %s | %s | %s", 
+                              format_string(step.get("name", "")),
+                              format_string(step.get("tool", "")),
+                              format_string(step.get("state", "")),
+                              format_string(step.get("runtime", "")))
+    workspace.logger.info("######################################################################")
