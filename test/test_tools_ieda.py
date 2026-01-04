@@ -55,12 +55,41 @@ def test_sky130_gcd():
 
     # engine_flow.init_db_engine()
     engine_flow.run_steps()
-    
-    # engine = EngineDB()
-    # engine.create_db_engine(workspace, eda_step)
-    
+  
 
+def test_ics55_gcd():
+    gcd_dir="{}/test/examples/ics55_test".format(root)
+
+    input_def = ""
+    input_verilog = "/nfs/home/huangzengrong/ecos/testcase/gcd/gcd.v"
+    sdc="/nfs/home/huangzengrong/ecos/testcase/gcd/default.sdc"
+    spef="{}/chipcompiler/thirdparty/iEDA/scripts/foundry/sky130/spef/gcd.spef".format(root)
+
+    parameters=get_parameters("ics55", "gcd")
+    # use special different pdk setting for yosys
+    pdk = get_pdk("ics55")
+    pdk.sdc = sdc
+    pdk.spef = spef
+
+    workspace = create_workspace(
+        directory=gcd_dir,
+        origin_def=input_def,
+        origin_verilog=input_verilog,
+        pdk=pdk,
+        parameters=parameters
+    )
+
+    engine_flow = EngineFlow(workspace=workspace)
+    engine_flow.build_default_steps()
+    engine_flow.create_step_workspaces()
+    
+    log_workspace(workspace=workspace)
+    
+    engine_flow.run_steps()
+    
 if __name__ == "__main__":
-    test_sky130_gcd()
+    # test_sky130_gcd()
+    
+    test_ics55_gcd()
 
     exit(0)

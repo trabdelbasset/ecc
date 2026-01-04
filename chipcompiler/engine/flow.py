@@ -17,7 +17,7 @@ class EngineFlow:
         steps = []
 
         steps.append(self.init_flow_step(StepEnum.SYNTHESIS, "yosys", StateEnum.Unstart))
-        # steps.append(self.init_flow_step(StepEnum.FLOORPLAN, "iEDA", StateEnum.Unstart))
+        steps.append(self.init_flow_step(StepEnum.FLOORPLAN, "iEDA", StateEnum.Unstart))
         steps.append(self.init_flow_step(StepEnum.NETLIST_OPT, "iEDA", StateEnum.Unstart))
         steps.append(self.init_flow_step(StepEnum.PLACEMENT, "iEDA", StateEnum.Unstart))
         steps.append(self.init_flow_step(StepEnum.CTS, "iEDA", StateEnum.Unstart))
@@ -238,9 +238,6 @@ class EngineFlow:
                        state=StateEnum.Ongoing)
         
         # run steps
-        # state = run_step(workspace=self.workspace, 
-        #                  step=workspace_step,
-        #                  module = self.db.engine)
         from multiprocessing import Process
         p = Process(target=run_step, args=(self.workspace, workspace_step, ))
         p.start()

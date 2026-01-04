@@ -141,8 +141,7 @@ def build_step_space(step: WorkspaceStep) -> None:
         
 
 def build_step_config(workspace: Workspace,
-                      step: WorkspaceStep, 
-                      parameters: Parameters):
+                      step: WorkspaceStep):
     """
     Build the configuration files for the given step based on the parameters.
     """
@@ -179,7 +178,7 @@ def build_step_config(workspace: Workspace,
         config["INPUT"]["def_path"] = step.input["def"]
         config["INPUT"]["verilog_path"] = step.input["verilog"]
         config["OUTPUT"]["output_dir_path"] = step.output["dir"]
-        config["LayerSettings"]["routing_layer_1st"] = parameters.data.get("Bottom layer", "")
+        config["LayerSettings"]["routing_layer_1st"] = workspace.parameters.data.get("Bottom layer", "")
         
         # write back
         json_write(step.config["db"], config)
@@ -189,13 +188,12 @@ def build_step_config(workspace: Workspace,
         config = json_read(step.config[f"{StepEnum.NETLIST_OPT.value}"])
         
         # parameters
-        buffers = parameters.data.get("Buffers", [])
-        if len(buffers) > 0:
-            config["insert_buffer"] = buffers[0]
+        if len(workspace.pdk.buffers) > 0:
+            config["insert_buffer"] = workspace.pdk.buffers[0]
         else:
             config["insert_buffer"] = ""
         
-        config["max_fanout"] = parameters.data.get("Max fanout", 32)
+        config["max_fanout"] = workspace.parameters.data.get("Max fanout", 32)
         
         # write back
         json_write(step.config[f"{StepEnum.NETLIST_OPT.value}"], config)
@@ -205,9 +203,9 @@ def build_step_config(workspace: Workspace,
         config = json_read(step.config[f"{StepEnum.PLACEMENT.value}"])
         
         # parameters
-        config["PL"]["BUFFER"]["buffer_type"] = parameters.data.get("Buffers", [])
-        config["PL"]["Filler"]["first_iter"] = parameters.data.get("Fillers", [])
-        config["PL"]["Filler"]["second_iter"] = parameters.data.get("Fillers", [])
+        config["PL"]["BUFFER"]["buffer_type"] = workspace.pdk.buffers
+        config["PL"]["Filler"]["first_iter"] = workspace.pdk.fillers
+        config["PL"]["Filler"]["second_iter"] = workspace.pdk.fillers
         
         # write back
         json_write(step.config[f"{StepEnum.PLACEMENT.value}"], config)
@@ -217,13 +215,12 @@ def build_step_config(workspace: Workspace,
         config = json_read(step.config[f"{StepEnum.CTS.value}"])
         
         # parameters
-        buffers = parameters.data.get("Buffers", [])
-        if len(buffers) > 0:
-            config["root_buffer_type"] = buffers[0]
+        if len(workspace.pdk.buffers) > 0:
+            config["root_buffer_type"] = workspace.pdk.buffers[0]
         else:
             config["root_buffer_type"] = ""
         
-        config["buffer_type"] = parameters.data.get("Buffers", [])
+        config["buffer_type"] = workspace.pdk.buffers
         
         # write back
         json_write(step.config[f"{StepEnum.CTS.value}"], config)
@@ -233,7 +230,7 @@ def build_step_config(workspace: Workspace,
         config = json_read(step.config[f"{StepEnum.TIMING_OPT_DRV.value}"])
         
         # parameters
-        config["DRV_insert_buffers"] = parameters.data.get("Buffers", [])
+        config["DRV_insert_buffers"] = workspace.pdk.buffers
         
         # write back
         json_write(step.config[f"{StepEnum.TIMING_OPT_DRV.value}"], config)
@@ -243,7 +240,7 @@ def build_step_config(workspace: Workspace,
         config = json_read(step.config[f"{StepEnum.TIMING_OPT_HOLD.value}"])
         
         # parameters
-        config["hold_insert_buffers"] = parameters.data.get("Buffers", [])
+        config["hold_insert_buffers"] = workspace.pdk.buffers
         
         # write back
         json_write(step.config[f"{StepEnum.TIMING_OPT_HOLD.value}"], config)
@@ -253,7 +250,7 @@ def build_step_config(workspace: Workspace,
         config = json_read(step.config[f"{StepEnum.TIMING_OPT_SETUP.value}"])
         
         # parameters
-        config["setup_insert_buffers"] = parameters.data.get("Buffers", [])
+        config["setup_insert_buffers"] = workspace.pdk.buffers
         
         # write back
         json_write(step.config[f"{StepEnum.TIMING_OPT_SETUP.value}"], config)
@@ -264,8 +261,8 @@ def build_step_config(workspace: Workspace,
         
         # parameters
         config["RT"]["-temp_directory_path"] = step.data.get(f"{StepEnum.ROUTING.value}", "")
-        config["RT"]["-bottom_routing_layer"] = parameters.data.get("Bottom layer", "")
-        config["RT"]["-top_routing_layer"] = parameters.data.get("Top layer", "")
+        config["RT"]["-bottom_routing_layer"] = workspace.parameters.data.get("Bottom layer", "")
+        config["RT"]["-top_routing_layer"] = workspace.parameters.data.get("Top layer", "")
         
         # write back
         json_write(step.config[f"{StepEnum.ROUTING.value}"], config)

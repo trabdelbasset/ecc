@@ -266,3 +266,122 @@ def run_filler(workspace: Workspace,
         return save_data(step=step, module=eda_inst)
     
     return False
+
+def run_floorplan(workspace: Workspace,
+                  step: WorkspaceStep,
+                  module : IEDAModule = None) -> bool:
+    """
+    run floorplan
+    """
+    eda_inst = get_eda_instance(workspace=workspace,
+                                step=step,
+                                instance=module)
+    
+    if eda_inst is not None:
+        # init floorplan
+        util = workspace.parameters.data.get("Core", {}).get("Utilitization", 0.3)
+        margin = workspace.parameters.data.get("Core", {}).get("Margin", [0, 0])
+        aspect_ratio = workspace.parameters.data.get("Core", {}).get("Aspect ratio", 1)
+        eda_inst.init_floorplan_by_core_utilization(
+                core_site=workspace.pdk.site_core,
+                io_site=workspace.pdk.site_io,
+                corner_site=workspace.pdk.site_corner,
+                core_util=util,
+                x_margin=margin[0],
+                y_margin=margin[1],
+                xy_ratio=aspect_ratio,
+            )
+        
+        json_floorplan = workspace.parameters.data.get("Floorplan", {})
+        
+        # create tracks
+        json_track = json_floorplan.get("Tracks", [])
+        for item in json_track.items():
+            eda_inst.gern_track(layer=item.get("layer", ""),
+                                x_start=item.get("x start", 0),
+                                x_step=item.get("x step", 0),
+                                y_start=item.get("y start", 0),
+                                y_step=item.get("y step", 0))
+            
+        
+        # auto place io pins
+        json_iopin_place = json_floorplan.get("Auto place pin", {})
+        eda_inst.auto_place_pins(layer=json_iopin_place.get("layer", ""),
+                                 width=json_iopin_place.get("width", ""),
+                                 height=json_iopin_place.get("height", ""))
+        
+        # tap cell
+        eda_inst.tapcell(tapcell=workspace.pdk.tap_cell,
+                         distance=json_floorplan.get("Tap distance", 0),
+                         endcap=workspace.pdk.end_cap)
+        
+        # PDN
+        json_PDN = workspace.parameters.data.get("PDN", {})
+        
+        # IO placement
+        json_io_pins = json_PDN.get("IO", {})
+        for item in json_io_pins.items():
+            net_name = item.get("net name", "")
+            direction = item.get("direction", "")
+            is_power = item.get("is power", 1)
+            eda_inst.add_pdn_io(net_name=net_name,
+                                direction=direction,
+                                is_power=is_power)
+        
+        # PDN global connect
+        json_global_connect = json_PDN.get("Global connect", {})
+        for item in json_global_connect.items():
+            net_name = item.get("net name", "")
+            instance_pin_name = item.get("instance pin name", "")
+            is_power = item.get("is power", 1)
+            eda_inst.global_net_connect(net_name=net_name,
+                                        instance_pin_name=instance_pin_name,
+                                        is_power=is_power)
+        
+        # PDN grid
+        json_pdn_grid = json_PDN.get("Grid", {})
+        if len(json_pdn_grid) > 0:
+            layer = json_pdn_grid.get("layer", "")
+            power_net = json_pdn_grid.get("power net", "")
+            ground_net = json_pdn_grid.get("ground net", "")
+            width = json_pdn_grid.get("width", 0)
+            offset = json_pdn_grid.get("offset", 0)
+            eda_inst.create_pdn_grid(layer=layer,
+                                     net_power=power_net,
+                                     net_ground=ground_net,
+                                     width=width,
+                                     offset=offset)
+        
+        # PDN stripe
+        json_pdn_stripe = json_PDN.get("Stripe", {})
+        for item in json_pdn_stripe.items():
+            layer = item.get("layer", "")
+            power_net = item.get("power net", "")
+            ground_net = item.get("ground net", "")
+            width = item.get("width", 0)
+            pitch = item.get("pitch", 0)
+            offset = item.get("offset", 0)
+            eda_inst.create_pdn_stripe(layer=layer,
+                                       power_net=power_net,
+                                       ground_net=ground_net,
+                                       width=width,
+                                       pitch=pitch,
+                                       offset=offset)
+            
+        # PDN connect layers
+        json_pdn_connect_layers= json_PDN.get("Connect layers", [])
+        for item in json_pdn_connect_layers:
+            layers = item.get("layers", [])
+            if len(layers) >= 2:
+                eda_inst.connect_pdn_layers(layers)
+        
+        # set clock net
+        json_clocks = workspace.parameters.data.get("Clock", [])
+        for item in json_clocks:
+            eda_inst.set_net(net_name=item,
+                             net_type="CLOCK")
+                
+            
+        return save_data(step=step, module=eda_inst)
+    
+    return False

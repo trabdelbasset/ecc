@@ -191,11 +191,11 @@ class IEDAModule:
                        core_site: str,
                        io_site: str,
                        corner_site: str,
-                       core_util: double,
-                       x_margin: double,
-                       y_margin: double,
-                       xy_ratio: double,
-                       cell_area: double):
+                       core_util: double=0.4,
+                       x_margin: double=0,
+                       y_margin: double=0,
+                       aspect_ratio: double=1,
+                       cell_area: double=0):
         """
         init floorplan
         Example:
@@ -211,7 +211,7 @@ class IEDAModule:
             core_util=core_util,
             x_margin=x_margin,
             y_margin=y_margin,
-            xy_ratio=xy_ratio,
+            xy_ratio=aspect_ratio,
             cell_area=cell_area)
 
     def init_floorplan_by_area(
@@ -244,7 +244,7 @@ class IEDAModule:
         core_util: double,
         x_margin: double,
         y_margin: double,
-        xy_ratio: double,
+        aspect_ratio: double,
         cell_area: double = 0):
         """
         init floorplan by core utilization
@@ -258,7 +258,7 @@ class IEDAModule:
             core_util=core_util,
             x_margin=x_margin,
             y_margin=y_margin,
-            xy_ratio=xy_ratio,
+            xy_ratio=aspect_ratio,
             cell_area=cell_area)
 
     def gern_track(self, 
@@ -296,6 +296,36 @@ class IEDAModule:
         return self.ieda.global_net_connect(net_name=net_name, 
                                             instance_pin_name=instance_pin_name, 
                                             is_power=is_power)
+        
+    def create_pdn_grid(self,
+                        layer : str,
+                        net_power : str,
+                        net_ground : str,
+                        width : double,
+                        offset : double):
+        return self.ieda.create_grid(layer_name=layer,
+                                     net_name_power=net_power,
+                                     net_name_ground=net_ground,
+                                     width=width,
+                                     offset=offset)
+        
+    def create_pdn_stripe(self,
+                          layer : str,
+                          net_power : str,
+                          net_ground : str,
+                          width : double,
+                          pitch : double,
+                          offset : double):
+        return self.ieda.create_stripe(layer_name=layer,
+                                       net_name_power=net_power,
+                                       net_name_ground=net_ground,
+                                       width=width,
+                                       pitch=pitch,
+                                       offset=offset)
+        
+    def connect_pdn_layers(self,
+                           layers : list[str]):
+        return self.ieda.connect_two_layer(layers=layers)
 
     def auto_place_pins(self, 
                         layer: str, 

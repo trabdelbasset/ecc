@@ -22,14 +22,15 @@ def parameter_ics55(design : str, path : str) -> Parameters:
             "Design":"gcd",
             "Top module":"gcd",
             "Die" : {
-                "Size": [1000, 1000],
-                "Bounding box": [0, 0, 1000, 1000],
-                "Utilitization": 0.3
+                "Size": [],
+                "Bounding box": []
             },
             "Core" : {
-                "Size": [800, 800],
-                "Bounding box": [100, 100, 900, 900],
-                "Utilitization": 0.4
+                "Size": [],
+                "Bounding box": [],
+                "Utilitization": 0.4,
+                "Margin" : [0, 0],
+                "Aspect ratio" : 1
             },
             "Max fanout" : 20,
             "Target density" : 0.3,
@@ -38,25 +39,170 @@ def parameter_ics55(design : str, path : str) -> Parameters:
             "Frequency max [MHz]" : 100,
             "Bottom layer" : "MET2",
             "Top layer" : "MET5",
-            "Buffers" : [
-                "BUFX1H7R",
-                "BUFX2H7R",
-                "BUFX4H7R",
-                "BUFX8H7R"
-            ],
-            "Fillers" : [
-                "FILLER1H7R",
-                "FILLER2H7R",
-                "FILLER4H7R",
-                "FILLER8H7R",
-                "FILLER16H7R",
-                "FILLER32H7R",
-                "FILLER64H7R"
-            ],
-            "Tie high cell" : "TIEHIH7R",
-            "Tie high port" : "Z",
-            "Tie low cell" : "TIELOH7R",
-            "Tie low port" : "Z"
+            "Floorplan" : {
+                "Tap distance" : 58,
+                "Auto place pin" : {
+                  "layer" : "MET3",
+                  "width" : 300,
+                  "height" : 600  
+                },
+                "Tracks" :[
+                    {
+                        "layer" : "MET1",
+                        "x start" : 0,
+                        "x step" : 200,
+                        "y start" : 0,
+                        "y step" : 200
+                    },
+                    {
+                        "layer" : "MET2",
+                        "x start" : 0,
+                        "x step" : 200,
+                        "y start" : 0,
+                        "y step" : 200
+                    },
+                    {
+                        "layer" : "MET3",
+                        "x start" : 0,
+                        "x step" : 200,
+                        "y start" : 0,
+                        "y step" : 200
+                    },
+                    {
+                        "layer" : "MET4",
+                        "x start" : 0,
+                        "x step" : 200,
+                        "y start" : 0,
+                        "y step" : 200
+                    },
+                    {
+                        "layer" : "MET5",
+                        "x start" : 0,
+                        "x step" : 200,
+                        "y start" : 0,
+                        "y step" : 200
+                    },
+                    {
+                        "layer" : "T4M2",
+                        "x start" : 0,
+                        "x step" : 800,
+                        "y start" : 0,
+                        "y step" : 800
+                    },
+                    {
+                        "layer" : "RDL",
+                        "x start" : 0,
+                        "x step" : 5000,
+                        "y start" : 0,
+                        "y step" : 5000
+                    }
+                ]
+            },
+            "PDN" : {
+                "IO" : [
+                    {
+                        "net name" : "VDD",
+                        "direction" : "INOUT",
+                        "is power" : 1
+                    },
+                    {
+                        "net name" : "VDDIO",
+                        "direction" : "INOUT",
+                        "is power" : 1
+                    },
+                    {
+                        "net name" : "VSS",
+                        "direction" : "INOUT",
+                        "is power" : 0
+                    },
+                    {
+                        "net name" : "VSSIO",
+                        "direction" : "INOUT",
+                        "is power" : 0
+                    }
+                ],
+                "Global connect" : [
+                    {
+                        "net name" : "VDD",
+                        "instance pin name" : "VDD",
+                        "is power" : 1
+                    },
+                    {
+                        "net name" : "VDD",
+                        "instance pin name" : "VDD1",
+                        "is power" : 1
+                    },
+                    {
+                        "net name" : "VDD",
+                        "instance pin name" : "VNW",
+                        "is power" : 1
+                    },
+                    {
+                        "net name" : "VDDIO",
+                        "instance pin name" : "VDDIO",
+                        "is power" : 1
+                    },
+                    {
+                        "net name" : "VSS",
+                        "instance pin name" : "VSS",
+                        "is power" : 0
+                    },
+                    {
+                        "net name" : "VSS",
+                        "instance pin name" : "VSS1",
+                        "is power" : 0
+                    },
+                    {
+                        "net name" : "VSS",
+                        "instance pin name" : "VPW",
+                        "is power" : 0
+                    },
+                    {
+                        "net name" : "VSSIO",
+                        "instance pin name" : "VSSIO",
+                        "is power" : 0
+                    }
+                ],
+                "grid" : {
+                    "layer" : "MET1",
+                    "power net" : "VDD",
+                    "power ground" : "VSS",
+                    "width" : 0.16,
+                    "offset" : 0
+                },
+                "Stripe" : [
+                    {
+                        "layer" : "MET4",
+                        "power net" : "VDD",
+                        "ground net" : "VSS",
+                        "width" : 1,
+                        "pitch" : 16,
+                        "offset" : 0.5                        
+                    },
+                    {
+                        "layer" : "MET5",
+                        "power net" : "VDD",
+                        "ground net" : "VSS",
+                        "width" : 1,
+                        "pitch" : 16,
+                        "offset" : 0.5                        
+                    }
+                ],
+                "Connect layers" : [
+                    {
+                        "layers" : [
+                            "MET1",
+                            "MET5"
+                        ]
+                    },
+                    {
+                        "layers" : [
+                            "MET4",
+                            "MET5"
+                        ]
+                    }
+                ]
+            } 
         }
 
     return parameters
@@ -70,15 +216,15 @@ def parameter_sky130(design : str, path : str) -> Parameters:
             "Design":"gcd",
             "Top module":"gcd",
             "Die" : {
-                "Size": [1000, 1000],
-                "Bounding box": [0, 0, 1000, 1000],
-                "Utilitization": 0.3
-                
+                "Size": [],
+                "Bounding box": []
             },
             "Core" : {
-                "Size": [800, 800],
-                "Bounding box": [100, 100, 900, 900],
-                "Utilitization": 0.4
+                "Size": [],
+                "Bounding box": [],
+                "Utilitization": 0.4,
+                "Margin" : [0, 0],
+                "Aspect ratio" : 1
             },
             "Max fanout" : 20,
             "Target density" : 0.3,
@@ -87,16 +233,143 @@ def parameter_sky130(design : str, path : str) -> Parameters:
             "Frequency max [MHz]" : 100,
             "Bottom layer" : "met1",
             "Top layer" : "met4",
-            "Buffers" : [
-                "sky130_fd_sc_hs__buf_1",
-                "sky130_fd_sc_hs__buf_8"
-            ],
-            "Fillers" : [
-                "sky130_fd_sc_hs__fill_8",
-                "sky130_fd_sc_hs__fill_4",
-                "sky130_fd_sc_hs__fill_2",
-                "sky130_fd_sc_hs__fill_1"
-            ]
+            "floorplan" : {
+                "Tap distance" : 14,
+                "Auto place pin" : {
+                  "layer" : "met5",
+                  "width" : 2000,
+                  "height" : 2000  
+                },
+                "Tracks" :[
+                    {
+                        "layer" : "li1",
+                        "x start" : 240,
+                        "x step" : 480,
+                        "y start" : 185,
+                        "y step" : 370
+                    },
+                    {
+                        "layer" : "met1",
+                        "x start" : 185,
+                        "x step" : 370,
+                        "y start" : 185,
+                        "y step" : 370
+                    },
+                    {
+                        "layer" : "met2",
+                        "x start" : 240,
+                        "x step" : 480,
+                        "y start" : 240,
+                        "y step" : 480
+                    },
+                    {
+                        "layer" : "met3",
+                        "x start" : 370,
+                        "x step" : 740,
+                        "y start" : 370,
+                        "y step" : 740
+                    },
+                    {
+                        "layer" : "met4",
+                        "x start" : 480,
+                        "x step" : 960,
+                        "y start" : 480,
+                        "y step" : 960
+                    },
+                    {
+                        "layer" : "met5",
+                        "x start" : 185,
+                        "x step" : 3330,
+                        "y start" : 185,
+                        "y step" : 3330
+                    }
+                ]
+            },
+            "PDN" : {
+                "IO" : [
+                    {
+                        "net name" : "VDD",
+                        "direction" : "INOUT",
+                        "type" : "POWER"
+                    },
+                    {
+                        "net name" : "VSS",
+                        "direction" : "INOUT",
+                        "type" : "GROUND"
+                    }
+                ],
+                "Global connect" : [
+                    {
+                        "net name" : "VDD",
+                        "instance pin name" : "vdd",
+                        "is power" : 1
+                    },
+                    {
+                        "net name" : "VDD",
+                        "instance pin name" : "VPB",
+                        "is power" : 1
+                    },
+                    {
+                        "net name" : "VDD",
+                        "instance pin name" : "VPWR",
+                        "is power" : 1
+                    },
+                    {
+                        "net name" : "VSS",
+                        "instance pin name" : "gnd",
+                        "is power" : 0
+                    },
+                    {
+                        "net name" : "VSS",
+                        "instance pin name" : "VGND",
+                        "is power" : 0
+                    },
+                    {
+                        "net name" : "VSS",
+                        "instance pin name" : "VNB",
+                        "is power" : 0
+                    }
+                ],
+                "Grid" : {
+                    "layer" : "met1",
+                    "power net" : "VDD",
+                    "ground net" : "VSS",
+                    "width" : 0.48,
+                    "offset" : 0
+                },
+                "Stripe" : [
+                    {
+                        "layer" : "met4",
+                        "power net" : "VDD",
+                        "ground net" : "VSS",
+                        "width" : 1.60,
+                        "pitch" : 27.14,
+                        "offset" : 13.57                        
+                    },
+                    {
+                        "layer" : "met5",
+                        "power net" : "VDD",
+                        "ground net" : "VSS",
+                        "width" : 1.60,
+                        "pitch" : 27.20,
+                        "offset" : 13.60                      
+                    }
+                ],
+                "Connect layers" : [
+                    {
+                        "layers" : [
+                            "met1",
+                            "met4"
+                        ]
+                    },
+                    {
+                        "layers" : [
+                            "met4",
+                            "met5"
+                        ]
+                    }
+                ]
+            } 
         }
     
     return parameters

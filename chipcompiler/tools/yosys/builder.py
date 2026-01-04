@@ -83,8 +83,7 @@ def build_step_space(step: WorkspaceStep) -> None:
 
 
 def build_step_config(workspace: Workspace,
-                      step: WorkspaceStep,
-                      parameters: Parameters):
+                      step: WorkspaceStep):
     """
     Build the configuration files for the synthesis step.
 

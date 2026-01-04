@@ -17,6 +17,19 @@ class PDK:
     libs : list = field(default_factory=list) # pdk liberty files
     sdc : str = "" # pdk sdc file
     spef : str = "" # pdk spef file
+    site_core : str = "" # core site
+    site_io : str = "" # io site
+    site_corner : str = "" # corner site
+    tap_cell : str = "" # tap cell
+    end_cap : str = "" # end cap
+    buffers : list = field(default_factory=list) # buffers
+    fillers : list = field(default_factory=list) # fillers
+    tie_high_cell : str = ""
+    tie_high_port : str = ""
+    tie_low_cell : str = ""
+    tie_low_port : str = ""
+    dont_use : list = field(default_factory=list) # don't use cell list
+    
 
 @dataclass
 class OriginDesign:

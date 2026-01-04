@@ -21,18 +21,54 @@ def PDK_ICS55() -> PDK:
     pdk_root = "{}/chipcompiler/thirdparty/icsprout55-pdk".format(root)
     stdcell_dir = "{}/IP/STD_cell/ics55_LLSC_H7C_V1p10C100".format(pdk_root)
 
-    stdcell_corner = "{}/ics55_LLSC_H7CR".format(stdcell_dir)
-
     pdk = PDK(
         name="ics55",
         version="V1p10C100",
         tech="{}/prtech/techLEF/N551P6M.lef".format(pdk_root),
         lefs = [
-            "{}/prtech/techLEF/N551P6M.lef".format(pdk_root),
-            "{}/lef/ics55_LLSC_H7CR_ecos.lef".format(stdcell_corner),
+            "{}/ics55_LLSC_H7CR/lef/ics55_LLSC_H7CR_ecos.lef".format(stdcell_dir),
+            "{}/ics55_LLSC_H7CL/lef/ics55_LLSC_H7CL_ecos.lef".format(stdcell_dir)
         ],
         libs = [
-            "{}/liberty/ics55_LLSC_H7CR_typ_tt_1p2_25_nldm.lib".format(stdcell_corner),
+            "{}/ics55_LLSC_H7CR/liberty/ics55_LLSC_H7CR_ss_rcworst_1p08_125_nldm.lib".format(stdcell_dir),
+            "{}/ics55_LLSC_H7CL/liberty/ics55_LLSC_H7CL_ss_rcworst_1p08_125_nldm.lib".format(stdcell_dir)
+        ],
+        site_core = "core7",
+        site_io = "core7",
+        site_corner = "core7",
+        tap_cell = "FILLTAPH7R",
+        end_cap = "FILLTAPH7R",
+        buffers = [
+            "BUFX8H7L",
+            "BUFX12H7L",
+            "BUFX16H7L",
+            "BUFX20H7L"
+        ],
+        fillers = [
+            "FILLER64H7R",
+            "FILLER32H7R",
+            "FILLER16H7R",
+            "FILLER8H7R",
+            "FILLER4H7R",
+            "FILLER2H7R",
+            "FILLER1H7R" 
+        ],
+        tie_high_cell = "TIEHIH7R",
+        tie_high_port = "Z",
+        tie_low_cell = "TIELOH7R",
+        tie_low_port = "Z",
+        dont_use=[
+            "DFFSRQX*",
+            "DFFSRX*",
+            "*AO222*",
+            "*2BB2*",
+            "*AOI222*",
+            "*AOI33*",
+            "*OA222*",
+            "*OAI222*",
+            "*OAI33*",
+            "*NOR4*",
+            "ICG*"
         ]
     )
 
@@ -88,7 +124,27 @@ def PDK_SKY130() -> PDK:
             "{}/lib/sky130_sram_1rw1r_44x64_8_TT_1p8V_25C.lib".format(foundry_dir),
             "{}/lib/sky130_sram_1rw1r_64x256_8_TT_1p8V_25C.lib".format(foundry_dir),
             "{}/lib/sky130_sram_1rw1r_80x64_8_TT_1p8V_25C.lib".format(foundry_dir),
-        ]   
+        ],
+        site_core = "unit",
+        site_io = "unit",
+        site_corner= "unit",
+        tap_cell = "sky130_fd_sc_hs__tap_1",
+        end_cap = "sky130_fd_sc_hs__fill_1",
+        buffers = [
+            "sky130_fd_sc_hs__buf_1",
+            "sky130_fd_sc_hs__buf_8"
+        ],
+        fillers = [
+            "sky130_fd_sc_hs__fill_8",
+            "sky130_fd_sc_hs__fill_4",
+            "sky130_fd_sc_hs__fill_2",
+            "sky130_fd_sc_hs__fill_1"   
+        ],
+        tie_high_cell = "",
+        tie_high_port = "",
+        tie_low_cell = "",
+        tie_low_port = "",
+        dont_use=[]
     )
     
     return pdk
