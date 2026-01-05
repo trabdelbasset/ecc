@@ -39,7 +39,7 @@ class StateEnum(Enum):
     Ongoing = "Ongoing" # step is running
     Pending = "Pending" # step is pending
     Imcomplete = "Incomplete" # step is failed
-    Ignored = "Ignored" # step result do not affect flow step
+    # Ignored = "Ignored" # step result do not affect flow step
     
 
 ###########################################################################

@@ -104,64 +104,64 @@ def parameter_ics55(design : str, path : str) -> Parameters:
                     {
                         "net name" : "VDD",
                         "direction" : "INOUT",
-                        "is power" : 1
+                        "is power" : True
                     },
                     {
                         "net name" : "VDDIO",
                         "direction" : "INOUT",
-                        "is power" : 1
+                        "is power" : True
                     },
                     {
                         "net name" : "VSS",
                         "direction" : "INOUT",
-                        "is power" : 0
+                        "is power" : False
                     },
                     {
                         "net name" : "VSSIO",
                         "direction" : "INOUT",
-                        "is power" : 0
+                        "is power" : False
                     }
                 ],
                 "Global connect" : [
                     {
                         "net name" : "VDD",
                         "instance pin name" : "VDD",
-                        "is power" : 1
+                        "is power" : True
                     },
                     {
                         "net name" : "VDD",
                         "instance pin name" : "VDD1",
-                        "is power" : 1
+                        "is power" : True
                     },
                     {
                         "net name" : "VDD",
                         "instance pin name" : "VNW",
-                        "is power" : 1
+                        "is power" : True
                     },
                     {
                         "net name" : "VDDIO",
                         "instance pin name" : "VDDIO",
-                        "is power" : 1
+                        "is power" : True
                     },
                     {
                         "net name" : "VSS",
                         "instance pin name" : "VSS",
-                        "is power" : 0
+                        "is power" : False
                     },
                     {
                         "net name" : "VSS",
                         "instance pin name" : "VSS1",
-                        "is power" : 0
+                        "is power" : False
                     },
                     {
                         "net name" : "VSS",
                         "instance pin name" : "VPW",
-                        "is power" : 0
+                        "is power" : False
                     },
                     {
                         "net name" : "VSSIO",
                         "instance pin name" : "VSSIO",
-                        "is power" : 0
+                        "is power" : False
                     }
                 ],
                 "grid" : {
@@ -218,12 +218,12 @@ def parameter_sky130(design : str, path : str) -> Parameters:
             "Top module":"gcd",
             "Die" : {
                 "Size": [],
-                "Bounding box": []
+                "Bounding box": ""
             },
             "Core" : {
                 "Size": [],
-                "Bounding box": [],
-                "Utilitization": 0.4,
+                "Bounding box": "",
+                "Utilitization": 0.2,
                 "Margin" : [0, 0],
                 "Aspect ratio" : 1
             },
@@ -292,44 +292,44 @@ def parameter_sky130(design : str, path : str) -> Parameters:
                     {
                         "net name" : "VDD",
                         "direction" : "INOUT",
-                        "type" : "POWER"
+                        "is power" : True
                     },
                     {
                         "net name" : "VSS",
                         "direction" : "INOUT",
-                        "type" : "GROUND"
+                        "is power" : False
                     }
                 ],
                 "Global connect" : [
                     {
                         "net name" : "VDD",
                         "instance pin name" : "vdd",
-                        "is power" : 1
+                        "is power" : True
                     },
                     {
                         "net name" : "VDD",
                         "instance pin name" : "VPB",
-                        "is power" : 1
+                        "is power" : True
                     },
                     {
                         "net name" : "VDD",
                         "instance pin name" : "VPWR",
-                        "is power" : 1
+                        "is power" : True
                     },
                     {
                         "net name" : "VSS",
                         "instance pin name" : "gnd",
-                        "is power" : 0
+                        "is power" : False
                     },
                     {
                         "net name" : "VSS",
                         "instance pin name" : "VGND",
-                        "is power" : 0
+                        "is power" : False
                     },
                     {
                         "net name" : "VSS",
                         "instance pin name" : "VNB",
-                        "is power" : 0
+                        "is power" : False
                     }
                 ],
                 "Grid" : {

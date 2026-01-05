@@ -75,7 +75,8 @@ def build_step(workspace: Workspace,
         f"{StepEnum.TIMING_OPT_HOLD.value}": f"{step.directory}/data/to",
         f"{StepEnum.TIMING_OPT_SETUP.value}": f"{step.directory}/data/to",
         f"{StepEnum.ROUTING.value}": f"{step.directory}/data/rt",
-        f"{StepEnum.STA.value}": f"{step.directory}/data/sta"
+        f"{StepEnum.STA.value}": f"{step.directory}/data/sta",
+        f"{StepEnum.DRC.value}": f"{step.directory}/data/drc"
     }
     
     # build feature paths
@@ -83,14 +84,15 @@ def build_step(workspace: Workspace,
         "dir": f"{step.directory}/feature",
         "db": f"{step.directory}/feature/{step.name}.db.json",
         "step": f"{step.directory}/feature/{step.name}.step.json",
+        f"{StepEnum.DRC.value}": f"{step.directory}/feature/drc.json",
         "map": f"{step.directory}/feature/{step.name}.map.json",
     }
     
     # build report paths
     step.report = {
         "dir": f"{step.directory}/report",
-        "summary": f"{step.directory}/report/{step.name}.summary.rpt",
-        "drc": f"{step.directory}/report/{step.name}_drc.rpt"
+        "db": f"{step.directory}/report/{step.name}.db.rpt",
+        f"{StepEnum.DRC.value}": f"{step.directory}/report/drc.rpt"
     }
     
     # build log paths

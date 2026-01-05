@@ -16,8 +16,8 @@ class EngineFlow:
         # Flow step sequences
         steps = []
 
-        # steps.append(self.init_flow_step(StepEnum.SYNTHESIS, "yosys", StateEnum.Unstart))
-        # steps.append(self.init_flow_step(StepEnum.FLOORPLAN, "iEDA", StateEnum.Unstart))
+        steps.append(self.init_flow_step(StepEnum.SYNTHESIS, "yosys", StateEnum.Unstart))
+        steps.append(self.init_flow_step(StepEnum.FLOORPLAN, "iEDA", StateEnum.Unstart))
         steps.append(self.init_flow_step(StepEnum.NETLIST_OPT, "iEDA", StateEnum.Unstart))
         steps.append(self.init_flow_step(StepEnum.PLACEMENT, "iEDA", StateEnum.Unstart))
         steps.append(self.init_flow_step(StepEnum.CTS, "iEDA", StateEnum.Unstart))
@@ -26,8 +26,8 @@ class EngineFlow:
         steps.append(self.init_flow_step(StepEnum.LEGALIZATION, "iEDA", StateEnum.Unstart))
         steps.append(self.init_flow_step(StepEnum.ROUTING, "iEDA", StateEnum.Unstart))
         steps.append(self.init_flow_step(StepEnum.FILLER, "iEDA", StateEnum.Unstart))
-        # steps.append(self.init_flow_step(StepEnum.GDS, "klayout", StateEnum.Ignored))
-        # steps.append(self.init_flow_step(StepEnum.SIGNOFF, "innovus", StateEnum.Ignored))
+        # steps.append(self.init_flow_step(StepEnum.GDS, "klayout", StateEnum.Unstart))
+        # steps.append(self.init_flow_step(StepEnum.SIGNOFF, "innovus", StateEnum.Unstart))
         
         self.workspace.flow.data = {"steps" : steps}
         
@@ -220,8 +220,6 @@ class EngineFlow:
             match(state):
                 case StateEnum.Success:
                     continue
-                case StateEnum.Ignored:
-                    continue
                 case StateEnum.Invalid:
                     return False
                 case StateEnum.Unstart:
@@ -240,6 +238,11 @@ class EngineFlow:
         """
         run single step
         """
+        if self.check_state(name=workspace_step.name,
+                            tool=workspace_step.tool,
+                            state=StateEnum.Success):
+            return StateEnum.Success
+                        
         from chipcompiler.tools import create_step, run_step
         import time
         
@@ -257,7 +260,6 @@ class EngineFlow:
         p.start()
         p.join()
         
-        state = self.check_step_result(workspace_step=workspace_step)
         # end time
         end_time = time.time()
         elapsed_time = end_time - start_time
@@ -268,6 +270,7 @@ class EngineFlow:
         
         
         # save state
+        state = self.check_step_result(workspace_step=workspace_step)
         self.set_state(name=workspace_step.name,
                        tool=workspace_step.tool,
                        state=StateEnum.Success if state else StateEnum.Imcomplete,

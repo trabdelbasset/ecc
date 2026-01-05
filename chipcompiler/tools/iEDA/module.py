@@ -159,15 +159,13 @@ class IEDAModule:
     ########################################################################
     def init_drc(self, 
                  output_dir : str,
-                 therad_number : int = 128,
-                 golden_dir : str = ""):
+                 therad_number : int = 128):
         """
         init drc config
         """
         self.ieda.init_drc(
             temp_directory_path=output_dir,
-            thread_number=therad_number,
-            golden_directory_path=golden_dir)
+            thread_number=therad_number)
         
     def run_drc(self, 
                 config: str, 
@@ -181,7 +179,7 @@ class IEDAModule:
         """
         generate drc result
         """
-        self.ieda.save_drc(feature_path)
+        self.ieda.save_drc(path=feature_path)
     
     ########################################################################    
     # floorplan api
@@ -365,6 +363,12 @@ class IEDAModule:
     ########################################################################
     def run_placement(self, config: str):
         self.ieda.run_placer(config)
+        
+    def feature_placement_map(self, json_path: str, map_grid_size=1):
+        """
+        generate placement map feature
+        """
+        self.ieda.feature_pl_eval(json_path, map_grid_size)
         
     def run_legalize(self, config: str):
         self.ieda.run_incremental_lg()

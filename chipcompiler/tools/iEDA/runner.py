@@ -71,7 +71,7 @@ def save_data(step: WorkspaceStep,
     module.feature_step(step=step.name,
                         json_path=step.feature["step"])
     
-    module.report_summary(path=step.report["summary"])
+    module.report_summary(path=step.report["db"])
     
     return True
     
@@ -115,6 +115,10 @@ def run_step(workspace: Workspace,
             state = run_routing(workspace=workspace, 
                                 step=step, 
                                 module=module)
+        case StepEnum.DRC.value:
+            state = run_drc(workspace=workspace, 
+                            step=step, 
+                            module=module)
         case StepEnum.FILLER.value:
             state = run_filler(workspace=workspace, 
                                step=step, 
@@ -150,6 +154,7 @@ def run_placement(workspace: Workspace,
     
     if eda_inst is not None:
         eda_inst.run_placement(config=step.config[f"{StepEnum.PLACEMENT.value}"])
+        eda_inst.feature_placement_map(json_path=step.feature["map"])
         
         return save_data(step=step, module=eda_inst)
     
@@ -237,6 +242,28 @@ def run_routing(workspace: Workspace,
     
     return False
 
+
+def run_drc(workspace: Workspace,
+            step: WorkspaceStep,
+            module : IEDAModule = None) -> bool:
+    """
+    run chip drc
+    """
+    eda_inst = get_eda_instance(workspace=workspace,
+                                step=step,
+                                instance=module)
+    
+    
+    if eda_inst is not None:
+        eda_inst.init_drc(output_dir=step.data[f"{StepEnum.DRC.value}"])
+        eda_inst.run_drc(config=step.config[f"{StepEnum.DRC.value}"],
+                         report_path=step.report[f"{StepEnum.DRC.value}"])
+        eda_inst.save_drc(feature_path=step.feature[f"{StepEnum.DRC.value}"])
+        
+        return save_data(step=step, module=eda_inst)
+    
+    return False
+
 def run_legalization(workspace: Workspace,
                      step: WorkspaceStep,
                      module : IEDAModule = None) -> bool:
@@ -283,6 +310,7 @@ def run_floorplan(workspace: Workspace,
     
     if eda_inst is not None:
         # init floorplan
+        # init by core utilization
         util = workspace.parameters.data.get("Core", {}).get("Utilitization", 0.3)
         margin = workspace.parameters.data.get("Core", {}).get("Margin", [0, 0])
         aspect_ratio = workspace.parameters.data.get("Core", {}).get("Aspect ratio", 1)
@@ -296,6 +324,14 @@ def run_floorplan(workspace: Workspace,
                 aspect_ratio=aspect_ratio,
             )
         
+        # init by die and core area
+        # die_area=workspace.parameters.data.get("Die", {}).get("Bounding box", "")
+        # core_area=workspace.parameters.data.get("Core", {}).get("Bounding box", "")
+        # eda_inst.init_floorplan_by_area(die_area=die_area,
+        #                                 core_area=core_area,
+        #                                 core_site=workspace.pdk.site_core,
+        #                                 io_site=workspace.pdk.site_io,
+        #                                 corner_site=workspace.pdk.site_corner)
         
         json_floorplan = workspace.parameters.data.get("Floorplan", {})
         
@@ -307,19 +343,6 @@ def run_floorplan(workspace: Workspace,
                                 x_step=item.get("x step", 0),
                                 y_start=item.get("y start", 0),
                                 y_step=item.get("y step", 0))
-            
-        
-        # auto place io pins
-        json_iopin_place = json_floorplan.get("Auto place pin", {})
-        eda_inst.auto_place_pins(layer=json_iopin_place.get("layer", ""),
-                                 width=json_iopin_place.get("width", 0),
-                                 height=json_iopin_place.get("height", 0),
-                                 sides=json_iopin_place.get("sides", []))
-        
-        # tap cell
-        eda_inst.tapcell(tapcell=workspace.pdk.tap_cell,
-                         distance=json_floorplan.get("Tap distance", 0),
-                         endcap=workspace.pdk.end_cap)
         
         # PDN
         json_PDN = workspace.parameters.data.get("PDN", {})
@@ -329,7 +352,7 @@ def run_floorplan(workspace: Workspace,
         for item in json_io_pins:
             net_name = item.get("net name", "")
             direction = item.get("direction", "")
-            is_power = item.get("is power", 1)
+            is_power = item.get("is power")
             eda_inst.add_pdn_io(net_name=net_name,
                                 direction=direction,
                                 is_power=is_power)
@@ -344,42 +367,54 @@ def run_floorplan(workspace: Workspace,
                                         instance_pin_name=instance_pin_name,
                                         is_power=is_power)
         
-        # PDN grid
-        json_pdn_grid = json_PDN.get("Grid", {})
-        if len(json_pdn_grid) > 0:
-            layer = json_pdn_grid.get("layer", "")
-            power_net = json_pdn_grid.get("power net", "")
-            ground_net = json_pdn_grid.get("ground net", "")
-            width = json_pdn_grid.get("width", 0)
-            offset = json_pdn_grid.get("offset", 0)
-            eda_inst.create_pdn_grid(layer=layer,
-                                     net_power=power_net,
-                                     net_ground=ground_net,
-                                     width=width,
-                                     offset=offset)
+        # auto place io pins
+        json_iopin_place = json_floorplan.get("Auto place pin", {})
+        eda_inst.auto_place_pins(layer=json_iopin_place.get("layer", ""),
+                                 width=json_iopin_place.get("width", 0),
+                                 height=json_iopin_place.get("height", 0),
+                                 sides=json_iopin_place.get("sides", []))
         
-        # PDN stripe
-        json_pdn_stripe = json_PDN.get("Stripe", {})
-        for item in json_pdn_stripe:
-            layer = item.get("layer", "")
-            power_net = item.get("power net", "")
-            ground_net = item.get("ground net", "")
-            width = item.get("width", 0)
-            pitch = item.get("pitch", 0)
-            offset = item.get("offset", 0)
-            eda_inst.create_pdn_stripe(layer=layer,
-                                       net_power=power_net,
-                                       net_ground=ground_net,
-                                       width=width,
-                                       pitch=pitch,
-                                       offset=offset)
+        # tap cell
+        eda_inst.tapcell(tapcell=workspace.pdk.tap_cell,
+                         distance=json_floorplan.get("Tap distance", 0),
+                         endcap=workspace.pdk.end_cap)
+        
+        # PDN grid
+        # json_pdn_grid = json_PDN.get("Grid", {})
+        # if len(json_pdn_grid) > 0:
+        #     layer = json_pdn_grid.get("layer", "")
+        #     power_net = json_pdn_grid.get("power net", "")
+        #     ground_net = json_pdn_grid.get("ground net", "")
+        #     width = json_pdn_grid.get("width", 0)
+        #     offset = json_pdn_grid.get("offset", 0)
+        #     eda_inst.create_pdn_grid(layer=layer,
+        #                              net_power=power_net,
+        #                              net_ground=ground_net,
+        #                              width=width,
+        #                              offset=offset)
+        
+        # # PDN stripe
+        # json_pdn_stripe = json_PDN.get("Stripe", {})
+        # for item in json_pdn_stripe:
+        #     layer = item.get("layer", "")
+        #     power_net = item.get("power net", "")
+        #     ground_net = item.get("ground net", "")
+        #     width = item.get("width", 0)
+        #     pitch = item.get("pitch", 0)
+        #     offset = item.get("offset", 0)
+        #     eda_inst.create_pdn_stripe(layer=layer,
+        #                                net_power=power_net,
+        #                                net_ground=ground_net,
+        #                                width=width,
+        #                                pitch=pitch,
+        #                                offset=offset)
             
-        # PDN connect layers
-        json_pdn_connect_layers= json_PDN.get("Connect layers", [])
-        for item in json_pdn_connect_layers:
-            layers = item.get("layers", [])
-            if len(layers) >= 2:
-                eda_inst.connect_pdn_layers(layers)
+        # # PDN connect layers
+        # json_pdn_connect_layers= json_PDN.get("Connect layers", [])
+        # for item in json_pdn_connect_layers:
+        #     layers = item.get("layers", [])
+        #     if len(layers) >= 2:
+        #         eda_inst.connect_pdn_layers(layers)
         
         # set clock net
         json_clocks = workspace.parameters.data.get("Clock", [])

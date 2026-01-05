@@ -10,7 +10,9 @@ sys.path.append(root)
 
 from chipcompiler.data import (
     create_workspace,
-    log_workspace
+    log_workspace,
+    StepEnum,
+    StateEnum
 )
 
 from chipcompiler.engine import (
@@ -24,9 +26,8 @@ from parameters import get_parameters
 def test_sky130_gcd():
     gcd_dir="{}/test/examples/sky130_test".format(root)
     
-    input_def = "/nfs/home/huangzengrong/ecos/aieda_fork/example/sky130_test/output/iEDA/result/gcd_floorplan.def.gz"
-    input_verilog = "/nfs/home/huangzengrong/ecos/aieda_fork/example/sky130_test/output/iEDA/result/gcd_floorplan.v"
-    # input_verilog = "{}/chipcompiler/thirdparty/iEDA/scripts/design/sky130_gcd/result/verilog/gcd.v".format(root)
+    input_def = ""
+    input_verilog = "{}/chipcompiler/thirdparty/iEDA/scripts/design/sky130_gcd/result/verilog/gcd.v".format(root)
 
     sdc="{}/chipcompiler/thirdparty/iEDA/scripts/foundry/sky130/sdc/gcd.sdc".format(root)
     spef="{}/chipcompiler/thirdparty/iEDA/scripts/foundry/sky130/spef/gcd.spef".format(root)
@@ -48,7 +49,18 @@ def test_sky130_gcd():
     # use the origin def and verilog in workspace for the first step.   
     # create eda tool instance
     engine_flow = EngineFlow(workspace=workspace)
-    engine_flow.build_default_steps()
+    if not engine_flow.has_init():
+        engine_flow.add_step(step=StepEnum.FLOORPLAN, tool="iEDA", state=StateEnum.Unstart)
+        engine_flow.add_step(step=StepEnum.NETLIST_OPT, tool="iEDA", state=StateEnum.Unstart)
+        engine_flow.add_step(step=StepEnum.PLACEMENT, tool="iEDA", state=StateEnum.Unstart)
+        engine_flow.add_step(step=StepEnum.CTS, tool="iEDA", state=StateEnum.Unstart)
+        engine_flow.add_step(step=StepEnum.TIMING_OPT_DRV, tool="iEDA", state=StateEnum.Unstart)
+        engine_flow.add_step(step=StepEnum.TIMING_OPT_HOLD, tool="iEDA", state=StateEnum.Unstart)
+        engine_flow.add_step(step=StepEnum.LEGALIZATION, tool="iEDA", state=StateEnum.Unstart)
+        engine_flow.add_step(step=StepEnum.ROUTING, tool="iEDA", state=StateEnum.Unstart)
+        engine_flow.add_step(step=StepEnum.DRC, tool="iEDA", state=StateEnum.Unstart)
+        engine_flow.add_step(step=StepEnum.FILLER, tool="iEDA", state=StateEnum.Unstart)
+        
     engine_flow.create_step_workspaces()
     
     log_workspace(workspace=workspace)
