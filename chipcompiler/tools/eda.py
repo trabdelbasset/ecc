@@ -81,3 +81,17 @@ def run_step(workspace: Workspace,
     return eda_module.run_step(workspace=workspace, 
                                step=step,
                                module=module)
+    
+def save_layout_image(workspace: Workspace,
+                      step: WorkspaceStep) -> bool:
+    """
+    Save the layout image for the given step.
+    """
+    # check eda tool exist
+    eda_module = load_eda_module("klayout")
+    if eda_module is None:
+        return False
+    
+    from chipcompiler.tools.klayout.runner import save_gds_image
+    return save_gds_image(workspace=workspace,
+                          step=step)

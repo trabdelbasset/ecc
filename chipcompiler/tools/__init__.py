@@ -1,11 +1,13 @@
 from .eda import (
     load_eda_module,
     create_step,
-    run_step
+    run_step,
+    save_layout_image
 )
 
 __all__ = [
     'load_eda_module',
     'create_step',
-    'run_step'
+    'run_step',
+    'save_layout_image'
 ]

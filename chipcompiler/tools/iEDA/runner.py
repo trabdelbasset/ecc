@@ -68,6 +68,7 @@ def save_data(step: WorkspaceStep,
     
     module.def_save(def_path=step.output["def"])
     module.verilog_save(output_verilog=step.output["verilog"])
+    module.gds_save(output_path=step.output["gds"])
     module.feature_sammry(json_path=step.feature["db"])
     module.feature_step(step=step.name,
                         json_path=step.feature["step"])

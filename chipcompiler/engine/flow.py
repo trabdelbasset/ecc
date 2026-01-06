@@ -153,7 +153,8 @@ class EngineFlow:
                     success = True
             case default:
                 if os.path.exists(workspace_step.output.get("def", "")) and \
-                    os.path.exists(workspace_step.output.get("verilog", "")):
+                    os.path.exists(workspace_step.output.get("verilog", "")) and \
+                        os.path.exists(workspace_step.output.get("gds", "")):
                     success = True
         return success
 
@@ -283,5 +284,10 @@ class EngineFlow:
                        tool=workspace_step.tool,
                        state=state,
                        runtime=runtime)
+        
+        if state == StateEnum.Success:
+            from chipcompiler.tools import save_layout_image
+            save_layout_image(workspace=self.workspace,
+                           step=workspace_step)
         
         return state

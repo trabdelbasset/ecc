@@ -54,11 +54,13 @@ def build_step(workspace: Workspace,
         output_verilog = f"{step.directory}/output/{workspace.design.name}_{step.name}.v"
     if output_gds is None:
         output_gds = f"{step.directory}/output/{workspace.design.name}_{step.name}.gds"
+    output_image = f"{step.directory}/output/{workspace.design.name}_{step.name}.png"
     step.output = {
         "dir": f"{step.directory}/output",
         "def": output_def,
         "verilog": output_verilog,
-        "gds": output_gds
+        "gds": output_gds,
+        "image": output_image
     }
     
     # build data paths
