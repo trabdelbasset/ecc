@@ -119,12 +119,20 @@ def create_workspace(directory : str,
     if os.path.exists(origin_def):
         shutil.copy(origin_def, f"{directory}/origin/{os.path.basename(origin_def)}")
         workspace.design.origin_def = f"{directory}/origin/{os.path.basename(origin_def)}"
+        
     if os.path.exists(origin_verilog):
         shutil.copy(origin_verilog, f"{directory}/origin/{os.path.basename(origin_verilog)}")
         workspace.design.origin_verilog = f"{directory}/origin/{os.path.basename(origin_verilog)}"
+        
     if os.path.exists(pdk.sdc):
         shutil.copy(pdk.sdc, f"{directory}/origin/{os.path.basename(pdk.sdc)}")
         workspace.pdk.sdc = f"{directory}/origin/{os.path.basename(pdk.sdc)}"
+    else:
+        # create default sdc file
+        from .workspace import create_default_sdc
+        workspace.pdk.sdc = f"{directory}/origin/{workspace.design.name}.sdc"
+        create_default_sdc(workspace)
+        
     if os.path.exists(pdk.spef):
         shutil.copy(pdk.spef, f"{directory}/origin/{os.path.basename(pdk.spef)}")
         workspace.pdk.spef = f"{directory}/origin/{os.path.basename(pdk.spef)}"
@@ -173,3 +181,21 @@ def log_workspace(workspace : Workspace):
                               format_string(step.get("state", "")),
                               format_string(step.get("runtime", "")))
     workspace.logger.info("######################################################################")
+
+def create_default_sdc(workspace : Workspace):
+    """
+    Create SDC file based on PDK and workspace parameters.
+    """
+    sdc_content = []
+    sdc_content.append("# Auto-generated SDC file\n")
+    sdc_content.append("\n")
+    sdc_content.append("set clk_name {} \n".format(workspace.parameters.data.get("Clock", "")))
+    sdc_content.append("set clk_port_name {}\n".format(workspace.parameters.data.get("Clock", "")))
+    sdc_content.append("set clk_freq_mhz {}\n".format(workspace.parameters.data.get("Frequency max [MHz]", 100)))
+    sdc_content.append("set clk_period [expr 1000.0 / $clk_freq_mhz]\n")
+    sdc_content.append("set clk_io_pct 0.2\n")
+    sdc_content.append("set clk_port [get_ports $clk_port_name]\n")
+    sdc_content.append("create_clock -name $clk_name -period $clk_period $clk_port\n")
+    
+    with open(workspace.pdk.sdc, 'w') as file:
+        file.writelines(sdc_content)

@@ -1,5 +1,6 @@
 from .workspace import (
     create_workspace,
+    create_default_sdc,
     Workspace, 
     WorkspaceStep, 
     PDK,
@@ -20,6 +21,7 @@ from .step import (
 
 __all__ = [
     'create_workspace',
+    'create_default_sdc',
     'Workspace', 
     'WorkspaceStep', 
     'PDK',

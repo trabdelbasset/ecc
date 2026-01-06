@@ -29,12 +29,11 @@ def test_sky130_gcd():
     input_def = ""
     input_verilog = "{}/chipcompiler/thirdparty/iEDA/scripts/design/sky130_gcd/result/verilog/gcd.v".format(root)
 
-    sdc="{}/chipcompiler/thirdparty/iEDA/scripts/foundry/sky130/sdc/gcd.sdc".format(root)
+    # sdc="{}/chipcompiler/thirdparty/iEDA/scripts/foundry/sky130/sdc/gcd.sdc".format(root)
     spef="{}/chipcompiler/thirdparty/iEDA/scripts/foundry/sky130/spef/gcd.spef".format(root)
     
     parameters=get_parameters("sky130", "gcd")
     pdk = get_pdk("sky130")
-    pdk.sdc = sdc
     pdk.spef = spef
 
     workspace = create_workspace(
@@ -74,13 +73,13 @@ def test_ics55_gcd():
 
     input_def = ""
     input_verilog = "/nfs/home/huangzengrong/ecos/testcase/gcd/gcd.v"
-    sdc="/nfs/home/huangzengrong/ecos/testcase/gcd/default.sdc"
+    # sdc="/nfs/home/huangzengrong/ecos/testcase/gcd/default.sdc"
+    # sdc="{}/chipcompiler/thirdparty/iEDA/scripts/foundry/sky130/sdc/gcd.sdc".format(root)
     spef="{}/chipcompiler/thirdparty/iEDA/scripts/foundry/sky130/spef/gcd.spef".format(root)
 
     parameters=get_parameters("ics55", "gcd")
     # use special different pdk setting for yosys
     pdk = get_pdk("ics55")
-    pdk.sdc = sdc
     pdk.spef = spef
 
     workspace = create_workspace(
@@ -92,7 +91,38 @@ def test_ics55_gcd():
     )
 
     engine_flow = EngineFlow(workspace=workspace)
-    engine_flow.build_default_steps()
+    if not engine_flow.has_init():
+        engine_flow.build_default_steps()
+    engine_flow.create_step_workspaces()
+    
+    log_workspace(workspace=workspace)
+    
+    engine_flow.run_steps()
+    
+def test_ics55_s713():
+    gcd_dir="{}/test/examples/ics55_test".format(root)
+
+    input_def = "/nfs/share/home/zhaoxueyan/dataset_cx55/20251120/task_100701/04_floorplan/s713_floorplan.def"
+    input_verilog = "/nfs/share/home/zhaoxueyan/dataset_cx55/20251120/task_100701/04_floorplan/s713_floorplan.v"
+
+    spef="{}/chipcompiler/thirdparty/iEDA/scripts/foundry/sky130/spef/gcd.spef".format(root)
+
+    parameters=get_parameters("ics55", "s713")
+    # use special different pdk setting for yosys
+    pdk = get_pdk("ics55")
+    pdk.spef = spef
+
+    workspace = create_workspace(
+        directory=gcd_dir,
+        origin_def=input_def,
+        origin_verilog=input_verilog,
+        pdk=pdk,
+        parameters=parameters
+    )
+
+    engine_flow = EngineFlow(workspace=workspace)
+    if not engine_flow.has_init():
+        engine_flow.build_default_steps()
     engine_flow.create_step_workspaces()
     
     log_workspace(workspace=workspace)
@@ -103,5 +133,7 @@ if __name__ == "__main__":
     test_sky130_gcd()
     
     # test_ics55_gcd()
+    
+    # test_ics55_s713()
 
     exit(0)

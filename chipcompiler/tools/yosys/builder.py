@@ -146,7 +146,7 @@ def build_step(workspace: Workspace,
     if output_verilog is None:
         output_verilog = f"{step.directory}/output/{workspace.design.name}_{step.name}.v"
     if output_def is None:
-        output_def = output_verilog
+        output_def = f"{step.directory}/output/{workspace.design.name}_{step.name}.def.gz"
     step.output = {
         "dir": f"{step.directory}/output",
         "def": output_def,
@@ -229,4 +229,11 @@ def build_step_config(workspace: Workspace,
     except (ValueError, IOError) as e:
         print(f"Error generating global_var.tcl: {e}")
         raise
+    
+def build_environment(workspace: Workspace,
+                      step: WorkspaceStep):
+    """
+    Build the environment for the given step.
+    """
+    pass
 

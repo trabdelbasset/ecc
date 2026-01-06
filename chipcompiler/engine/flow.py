@@ -146,11 +146,17 @@ class EngineFlow:
         check step output exist
         """
         import os
-        if os.path.exists(workspace_step.output.get("def", "")) and \
-            os.path.exists(workspace_step.output.get("verilog", "")):
-                return True
-        return False
-    
+        success = False
+        match workspace_step.name:
+            case StepEnum.SYNTHESIS.value:
+                if os.path.exists(workspace_step.output.get("verilog", "")):
+                    success = True
+            case default:
+                if os.path.exists(workspace_step.output.get("def", "")) and \
+                    os.path.exists(workspace_step.output.get("verilog", "")):
+                    success = True
+        return success
+
     def create_step_workspaces(self):
         """
         create all step workspaces
@@ -214,6 +220,8 @@ class EngineFlow:
                                 tool=workspace_step.tool,
                                 state=StateEnum.Success):
                 continue
+            
+            
                 
             state = self.run_step(workspace_step)
             
@@ -270,10 +278,10 @@ class EngineFlow:
         
         
         # save state
-        state = self.check_step_result(workspace_step=workspace_step)
+        state=StateEnum.Success if self.check_step_result(workspace_step=workspace_step) else StateEnum.Imcomplete
         self.set_state(name=workspace_step.name,
                        tool=workspace_step.tool,
-                       state=StateEnum.Success if state else StateEnum.Imcomplete,
+                       state=state,
                        runtime=runtime)
         
         return state
