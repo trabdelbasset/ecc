@@ -11,6 +11,8 @@ from .runner import (
 
 from .module import IEDAModule
 
+from .plot import IEDAPlot
+
 from .utility import ( 
     is_eda_exist
 )
@@ -23,5 +25,6 @@ __all__ = [
     'build_step_config',
     'run_step',
     'create_db_engine',
-    'IEDAModule'
+    'IEDAModule',
+    'IEDAPlot'
 ]
