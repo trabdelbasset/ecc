@@ -1,4 +1,4 @@
-# ECC (Engineering Computing Center)
+# ECC (ECOS Chip Compiler)
 
 ECC 是一个基于 **Tauri + Vue 3 + TypeScript** 构建的高性能桌面端绘图与 AI 交互应用程序。它结合了 Rust 的原生性能和现代前端框架的灵活性，旨在为工程师提供流畅的版图设计与 AI 辅助分析体验。
 
