@@ -19,23 +19,23 @@ import type { Project } from '../types'
 const router = useRouter()
 const { recentProjects, openProject, newProject, importProject } = useProject()
 
-const handleOpenProject = () => {
-  openProject()
+const handleOpenProject = async () => {
+  const success = await openProject()
+  if (success) router.push('/workspace')
+}
+
+const handleNewProject = async () => {
+  const success = await newProject()
+  if (success) router.push('/workspace')
+}
+
+const handleImportProject = async () => {
+  await importProject()
   router.push('/workspace')
 }
 
-const handleNewProject = () => {
-  newProject()
-  router.push('/workspace')
-}
-
-const handleImportProject = () => {
-  importProject()
-  router.push('/workspace')
-}
-
-const handleOpenRecent = (project: Project) => {
-  openProject(project)
-  router.push('/workspace')
+const handleOpenRecent = async (project: Project) => {
+  const success = await openProject(project)
+  if (success) router.push('/workspace')
 }
 </script>
