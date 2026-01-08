@@ -20,8 +20,7 @@ from chipcompiler.engine import (
     EngineFlow
 )
 
-from pdk import get_pdk
-from parameters import get_parameters
+from benchmark import get_pdk, get_parameters
 
 def test_sky130_gcd():
     workspace_dir="{}/test/examples/sky130_gcd".format(root)
@@ -147,9 +146,9 @@ def test_ics55_s713():
     engine_flow.run_steps()
     
 if __name__ == "__main__":
-    # test_sky130_gcd()
+    test_sky130_gcd()
     
-    test_ics55_gcd()
+    # test_ics55_gcd()
     
     # test_ics55_s713()
 

@@ -1,7 +1,7 @@
 {
     "benchmark_dir" : "/nfs/share/home/qiming/benchmark/dataset",
     "target_dir" : "/nfs/home/huangzengrong/benchmark",
-    "batch_name" : "ics55_batch_2",
+    "batch_name" : "ics55_batch_1",
     "pdk" : "ics55",
     "designs" : [
         {

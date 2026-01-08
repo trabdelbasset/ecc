@@ -102,8 +102,8 @@ class IEDAPlot:
         def process_path(input_path):
             return self.plot_array_map(input_path=input_path)
         
-        # Use ThreadPoolExecutor for multi-threading with progress bar
-        with concurrent.futures.ThreadPoolExecutor() as executor:
+        # Use ThreadPoolExecutor for multi-threading with progress bar (limit to 10 threads)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
             # Create a progress bar
             results = list(tqdm(
                 executor.map(process_path, valid_paths),
