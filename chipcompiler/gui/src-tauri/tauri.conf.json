@@ -1,24 +1,14 @@
 {
+  "productName": "ECC",
+  "version": "0.1.0",
+  "identifier": "com.ecc.client",
   "build": {
     "beforeDevCommand": "pnpm run dev",
     "beforeBuildCommand": "pnpm run build",
-    "frontendDist": "../dist",
-    "devUrl": "http://localhost:1420"
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../dist"
   },
-  "bundle": {
-    "active": true,
-    "targets": "all",
-    "icon": [
-      "icons/icon.png"
-    ]
-  },
-  "productName": "ECC",
-  "mainBinaryName": "ECC",
-  "version": "0.1.0",
-  "identifier": "com.ecc.client",
-  "plugins": {},
   "app": {
-    "withGlobalTauri": false,
     "windows": [
       {
         "fullscreen": false,
@@ -35,18 +25,15 @@
         "center": true,
         "visible": false,
         "alwaysOnTop": false,
-        "focus": true,
-        "useHttpsScheme": true
+        "focus": true
       }
-    ],
-    "security": {
-      "assetProtocol": {
-        "scope": [
-          "**"
-        ],
-        "enable": true
-      },
-      "csp": null
-    }
+    ]
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/icon.png"
+    ]
   }
 }

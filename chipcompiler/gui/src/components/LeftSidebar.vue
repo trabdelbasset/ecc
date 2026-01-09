@@ -231,7 +231,8 @@ const toggleNode = (nodeId: string) => {
 
 const handleRunFlow = async () => {
   // 增加环境检查：检查是否存在 Tauri 环境
-  if (!window.__TAURI_IPC__) {
+  const isTauriEnv = (window as any).__TAURI_IPC__;
+  if (!isTauriEnv) {
     console.warn('当前不在 Tauri 环境中，无法执行 Python 脚本');
     alert('请在桌面应用模式下运行以执行此功能');
     return;

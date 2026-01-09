@@ -292,7 +292,7 @@ class EngineFlow:
         tracker_thread.join(timeout=1.0)
         
         # get peak memory in mb
-        peak_memory_mb = peak_memory_result[0] / 1024.0
+        peak_memory_mb = round(peak_memory_result[0] / 1024.0, 3)
         
         # end time
         end_time = time.time()

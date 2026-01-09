@@ -42,18 +42,28 @@ fi
 # 4. 安装系统依赖（Linux）
 echo "\n4. 安装系统依赖..."
 sudo apt update
-sudo apt install -y libwebkit2gtk-4.0-dev build-essential curl wget file libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
+sudo apt install -y build-essential libwebkit2gtk-4.1-dev libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf libsoup-3.0-dev libjavascriptcoregtk-4.1-dev curl wget file
 
 echo "\n5. 进入 GUI 目录并安装项目依赖..."
 cd "$(dirname "$0")/chipcompiler/gui"
 
 # 6. 安装项目依赖
+echo "正在安装项目依赖..."
 pnpm install
 
 echo "\n6. 构建 GUI 项目..."
-cd /nfs/home/huangzengrong/ecos/chipcompiler/chipcompiler/gui && source $HOME/.cargo/env && pnpm run tauri:build
+# 确保加载 Rust 环境变量
+source "$HOME/.cargo/env"
+# 执行构建命令
+pnpm run tauri:build
 
 echo "\n====================================="
 echo "ECC GUI 构建完成！"
-echo "输出文件位于: $(find ./src-tauri/target -name "*.deb" -o -name "*.AppImage" 2>/dev/null | head -1)"
 echo "====================================="
+echo "构建产物目录: $PWD/src-tauri/target/release/"
+echo "可执行文件: $PWD/src-tauri/target/release/ecc-client"
+echo "打包文件位于: $PWD/src-tauri/target/release/bundle/"
+
+# 显示生成的包文件列表
+echo -e "\n生成的安装包:"
+find "$PWD/src-tauri/target/release/bundle" -type f -name "*.deb" -o -name "*.rpm" -o -name "*.AppImage" | sort
