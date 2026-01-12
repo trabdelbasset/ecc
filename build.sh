@@ -1,7 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # 设置项目根目录
 PROJECT_ROOT=$(cd "$(dirname "$0")";pwd)
+CHIPCOMPILER_ROOT="${PROJECT_ROOT}/chipcompiler"
 VENV_DIR="${PROJECT_ROOT}/.venv"
 PYTHON_VERSION="3.10"
 
@@ -39,6 +40,26 @@ pip install -e .
 
 # 如果需要安装开发依赖，可以使用下面的命令
 # pip install -e ".[dev]"
+
+# 下载 OSS CAD SUITE BUILD (如果不存在)
+OSS_CAD_DIR="${CHIPCOMPILER_ROOT}/thirdparty/oss-cad-suite"
+echo "==============================="
+if [ -d "${OSS_CAD_DIR}" ] && [ -f "${OSS_CAD_DIR}/bin/yosys" ]; then
+    echo "OSS CAD Suite already exists at ${OSS_CAD_DIR}, skipping download..."
+else
+    LATEST_TAG=$(curl -s "https://api.github.com/repos/YosysHQ/oss-cad-suite-build/releases/latest" | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)
+    OSS_CAD_URL="https://github.com/YosysHQ/oss-cad-suite-build/releases/download/${LATEST_TAG}/oss-cad-suite-linux-x64-${LATEST_TAG//-/}.tgz"
+    mkdir -p "${OSS_CAD_DIR}"
+    TMP_DIR=$(mktemp -d)
+    echo "Downloading OSS CAD SUITE BUILD from ${OSS_CAD_URL} to ${TMP_DIR}..."
+    curl -fL "${OSS_CAD_URL}" -o "${TMP_DIR}/oss-cad-suite.tgz"
+    tar -xzf "${TMP_DIR}/oss-cad-suite.tgz" -C "${OSS_CAD_DIR}" --strip-components=1
+    rm -rf "${TMP_DIR}/oss-cad-suite.tgz"
+fi
+echo "OSS CAD Suite is set up at ${OSS_CAD_DIR}, please remember to add it to your PATH:"
+echo -e "\033[1;33mexport PATH=\"${OSS_CAD_DIR}/bin:\$PATH\"\033[0m"
+echo "==============================="
+echo " "
 
 # 构建ieda_py
 echo "Building ieda_py..."
