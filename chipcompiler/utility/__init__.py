@@ -11,6 +11,11 @@ from .util import (
     track_process_memory
 )
 
+from .plot import (
+    plot_csv_map,
+    plot_metrics
+)
+
 __all__ = [
     'chmod_folder',
     'json_read',
@@ -18,5 +23,7 @@ __all__ = [
     'dict_to_str',
     'Logger',
     'create_logger',
-    'track_process_memory'
+    'track_process_memory',
+    'plot_csv_map',
+    'plot_metrics'
 ]

@@ -13,6 +13,11 @@ from .module import IEDAModule
 
 from .plot import IEDAPlot
 
+from .metrics import (
+    build_step_metrics,
+    build_metrics_net_opt
+)
+
 from .utility import ( 
     is_eda_exist
 )
@@ -26,5 +31,6 @@ __all__ = [
     'run_step',
     'create_db_engine',
     'IEDAModule',
-    'IEDAPlot'
+    'IEDAPlot',
+    'build_step_metrics'
 ]

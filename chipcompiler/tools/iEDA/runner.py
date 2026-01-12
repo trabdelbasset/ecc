@@ -7,6 +7,7 @@ from chipcompiler.data import WorkspaceStep, Workspace, StateEnum, StepEnum
 from chipcompiler.tools.iEDA.module import IEDAModule
 from chipcompiler.tools.iEDA.utility import is_eda_exist
 from chipcompiler.tools.iEDA.plot import IEDAPlot
+from chipcompiler.tools.iEDA.metrics import build_step_metrics 
 
 def create_db_engine(workspace: Workspace,
                      step: WorkspaceStep) -> IEDAModule:
@@ -127,9 +128,14 @@ def run_step(workspace: Workspace,
                                module=module)
             
     if state:
+        # plot layout image
         ploter = IEDAPlot(workspace=workspace, 
                           step=step)
         ploter.plot()   
+        
+        # save metrics
+        build_step_metrics(workspace=workspace, 
+                           step=step)
             
     return state
 

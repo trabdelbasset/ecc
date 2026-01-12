@@ -1,10 +1,5 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
-"""
-@File : log.py
-@Author : yell
-@Desc : logging
-"""
 
 import os
 import logging

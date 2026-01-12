@@ -111,7 +111,8 @@ def build_step(workspace: Workspace,
     
     # build analysis paths
     step.analysis = {
-        "dir": f"{step.directory}/analysis"
+        "dir": f"{step.directory}/analysis",
+        "metrics": f"{step.directory}/analysis/{step.name}_metrics.json"
     }    
     
     return step

@@ -43,7 +43,7 @@ class StateEnum(Enum):
     
 
 ###########################################################################
-# step definition for chip design flow
+# step definition for chip design flow in json format
 # step_definition =
 # {
 #     "name" : "", # step name
@@ -53,3 +53,33 @@ class StateEnum(Enum):
 #     "info" : {} # step additional infomation
 # }
 ###########################################################################
+
+@dataclass
+class StepMetrics:
+    """
+    Dataclass for step metrics
+    """
+    path : str = "" # metrics file path
+    data : dict = field(default_factory=dict) # metrics data
+    report : list = field(default_factory=list) # metrics report
+
+###########################################################################
+# step metrics definition in json format
+# step_metrics =
+# {
+#     "name" : "", # step name
+#     "tool" : "", # eda tool name
+# }
+###########################################################################
+
+def load_metrics(path : str) -> StepMetrics:
+    from chipcompiler.utility import json_read
+    metrics = StepMetrics() 
+    metrics.path = path
+    metrics.data = json_read(path)
+    return metrics
+
+def save_metrics(metrics : StepMetrics) -> bool:
+    from chipcompiler.utility import json_write
+    return json_write(file_path=metrics.path,
+                      data=metrics.data)
