@@ -7,11 +7,46 @@ ECOS chip design solution.
 软件架构说明
 
 
-#### 安装教程
+## 安装
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+### 方式一：Nix 一键安装（推荐给用户）
+
+Nix 提供了完整的依赖管理和可复现的构建环境，是最简单的安装方式。
+
+```bash
+# 安装 Nix（如果尚未安装）
+curl -LsSf https://nixos.org/nix/install | sh
+
+# 进入开发环境
+nix develop
+```
+
+也可以使用 [direnv](https://direnv.net/) 来自动加载 Nix 环境：
+
+```bash
+echo "use flake" > .envrc
+direnv allow
+```
+
+**支持的平台**：x86_64-linux
+
+### 方式二：使用 build.sh
+
+**注意**：此方式需要手动安装 iEDA 工具（iEDA）
+
+```bash
+# 创建虚拟环境并安装依赖
+./build.sh
+
+# 激活虚拟环境
+source .venv/bin/activate
+```
+
+## 开发者指南
+
+```bash
+./build.sh
+```
 
 #### 使用说明
 
