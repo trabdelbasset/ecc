@@ -61,8 +61,9 @@ def run_benchmark(benchmark_json : str,
         
         value_is_ok = True
         value_is_ok = value_is_ok & has_value(design_info.get("id", ""))
-        value_is_ok = value_is_ok & has_value(design_info.get("rtl", ""))
-        value_is_ok = value_is_ok & has_value(design_info.get("netlist", ""))
+        value_is_ok = value_is_ok & has_value(design_info.get("filelist", ""))
+        if not value_is_ok:
+            value_is_ok = value_is_ok & has_value(design_info.get("netlist", ""))
         value_is_ok = value_is_ok & has_value(design_info.get("Design", ""))
         value_is_ok = value_is_ok & has_value(design_info.get("Top module", ""))
         value_is_ok = value_is_ok & has_value(design_info.get("Clock", ""))
@@ -76,7 +77,7 @@ def run_benchmark(benchmark_json : str,
                            design_info,))
     
     # Run tasks with manual process management (max 10 concurrent processes)
-    max_processes = 10
+    max_processes = 5
     running_processes = []
     
     for task_args in design_tasks:

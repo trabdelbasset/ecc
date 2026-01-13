@@ -19,25 +19,25 @@ def build_step_metrics(workspace: Workspace,
     # step matrics
     match(step.name):
         case StepEnum.FLOORPLAN.value:
-            pass
+            return build_metrics_floorplan(workspace, step)
         case StepEnum.NETLIST_OPT.value:
             return build_metrics_net_opt(workspace, step)
         case StepEnum.PLACEMENT.value:
-            pass
+            return build_metrics_placement(workspace, step)
         case StepEnum.CTS.value:
-            pass
+            return build_metrics_cts(workspace, step)
         case StepEnum.TIMING_OPT_DRV.value:
-            pass
+            return build_metrics_timing_opt_drv(workspace, step)
         case StepEnum.TIMING_OPT_HOLD.value:
-            pass
+            return build_metrics_timing_opt_hold(workspace, step)
         case StepEnum.LEGALIZATION.value:
-            pass
+            return build_metrics_legalization(workspace, step)
         case StepEnum.ROUTING.value:
-            pass
+            return build_metrics_routing(workspace, step)
         case StepEnum.DRC.value:
-            pass
+            return build_metrics_drc(workspace, step)
         case StepEnum.FILLER.value:
-            pass
+            return build_metrics_filler(workspace, step)
     
     return None
 
@@ -79,6 +79,348 @@ def build_metrics_net_opt(workspace: Workspace,
     data = json_read(step.feature.get('step', ""))
     if len(data) > 0:
         metrics["Max fanout"] = workspace.parameters.data.get("Max fanout", 0)
+    
+    step_metrics.data = metrics
+    
+    # generate report image and dscription
+    image_path = f"{step.analysis.get('dir', '')}/statis.png"
+    plot_metrics(metrics=step_metrics.data, output_path=image_path)
+    
+    report = f"{step.name} step metrics:\n"
+    
+    step_metrics.report.append((image_path, report))
+      
+    if save_metrics(step_metrics):
+        return step_metrics
+    else:
+        return None 
+
+
+def build_metrics_filler(workspace: Workspace, 
+                           step: WorkspaceStep) -> StepMetrics:
+    """
+    Build and return filler metrics dictionary.
+    """
+    step_metrics = StepMetrics()
+    step_metrics.path = step.analysis['metrics']    
+    
+    metrics = {}
+    metrics['Design'] = workspace.design.name
+    metrics['Step'] = step.name
+    metrics['Tool'] = step.tool
+    
+    # db summary matrics
+    metrics.update(build_metrics_db(workspace, step))
+    
+    # step matrics
+    data = json_read(step.feature.get('step', ""))
+    if len(data) > 0:
+        # Add filler specific metrics here
+        pass
+    
+    step_metrics.data = metrics
+    
+    # generate report image and dscription
+    image_path = f"{step.analysis.get('dir', '')}/statis.png"
+    plot_metrics(metrics=step_metrics.data, output_path=image_path)
+    
+    report = f"{step.name} step metrics:\n"
+    
+    step_metrics.report.append((image_path, report))
+      
+    if save_metrics(step_metrics):
+        return step_metrics
+    else:
+        return None 
+
+
+def build_metrics_drc(workspace: Workspace, 
+                           step: WorkspaceStep) -> StepMetrics:
+    """
+    Build and return DRC metrics dictionary.
+    """
+    step_metrics = StepMetrics()
+    step_metrics.path = step.analysis['metrics']    
+    
+    metrics = {}
+    metrics['Design'] = workspace.design.name
+    metrics['Step'] = step.name
+    metrics['Tool'] = step.tool
+    
+    # db summary matrics
+    metrics.update(build_metrics_db(workspace, step))
+    
+    # step matrics
+    data = json_read(step.feature.get('step', ""))
+    if len(data) > 0:
+        # Add DRC specific metrics here
+        pass
+    
+    step_metrics.data = metrics
+    
+    # generate report image and dscription
+    image_path = f"{step.analysis.get('dir', '')}/statis.png"
+    plot_metrics(metrics=step_metrics.data, output_path=image_path)
+    
+    report = f"{step.name} step metrics:\n"
+    
+    step_metrics.report.append((image_path, report))
+      
+    if save_metrics(step_metrics):
+        return step_metrics
+    else:
+        return None 
+
+
+def build_metrics_routing(workspace: Workspace, 
+                           step: WorkspaceStep) -> StepMetrics:
+    """
+    Build and return routing metrics dictionary.
+    """
+    step_metrics = StepMetrics()
+    step_metrics.path = step.analysis['metrics']    
+    
+    metrics = {}
+    metrics['Design'] = workspace.design.name
+    metrics['Step'] = step.name
+    metrics['Tool'] = step.tool
+    
+    # db summary matrics
+    metrics.update(build_metrics_db(workspace, step))
+    
+    # step matrics
+    data = json_read(step.feature.get('step', ""))
+    if len(data) > 0:
+        # Add routing specific metrics here
+        pass
+    
+    step_metrics.data = metrics
+    
+    # generate report image and dscription
+    image_path = f"{step.analysis.get('dir', '')}/statis.png"
+    plot_metrics(metrics=step_metrics.data, output_path=image_path)
+    
+    report = f"{step.name} step metrics:\n"
+    
+    step_metrics.report.append((image_path, report))
+      
+    if save_metrics(step_metrics):
+        return step_metrics
+    else:
+        return None 
+
+
+def build_metrics_legalization(workspace: Workspace, 
+                           step: WorkspaceStep) -> StepMetrics:
+    """
+    Build and return legalization metrics dictionary.
+    """
+    step_metrics = StepMetrics()
+    step_metrics.path = step.analysis['metrics']    
+    
+    metrics = {}
+    metrics['Design'] = workspace.design.name
+    metrics['Step'] = step.name
+    metrics['Tool'] = step.tool
+    
+    # db summary matrics
+    metrics.update(build_metrics_db(workspace, step))
+    
+    # step matrics
+    data = json_read(step.feature.get('step', ""))
+    if len(data) > 0:
+        # Add legalization specific metrics here
+        pass
+    
+    step_metrics.data = metrics
+    
+    # generate report image and dscription
+    image_path = f"{step.analysis.get('dir', '')}/statis.png"
+    plot_metrics(metrics=step_metrics.data, output_path=image_path)
+    
+    report = f"{step.name} step metrics:\n"
+    
+    step_metrics.report.append((image_path, report))
+      
+    if save_metrics(step_metrics):
+        return step_metrics
+    else:
+        return None 
+
+
+def build_metrics_timing_opt_hold(workspace: Workspace, 
+                           step: WorkspaceStep) -> StepMetrics:
+    """
+    Build and return timing optimization (hold) metrics dictionary.
+    """
+    step_metrics = StepMetrics()
+    step_metrics.path = step.analysis['metrics']    
+    
+    metrics = {}
+    metrics['Design'] = workspace.design.name
+    metrics['Step'] = step.name
+    metrics['Tool'] = step.tool
+    
+    # db summary matrics
+    metrics.update(build_metrics_db(workspace, step))
+    
+    # step matrics
+    data = json_read(step.feature.get('step', ""))
+    if len(data) > 0:
+        # Add timing optimization (hold) specific metrics here
+        pass
+    
+    step_metrics.data = metrics
+    
+    # generate report image and dscription
+    image_path = f"{step.analysis.get('dir', '')}/statis.png"
+    plot_metrics(metrics=step_metrics.data, output_path=image_path)
+    
+    report = f"{step.name} step metrics:\n"
+    
+    step_metrics.report.append((image_path, report))
+      
+    if save_metrics(step_metrics):
+        return step_metrics
+    else:
+        return None 
+
+
+def build_metrics_timing_opt_drv(workspace: Workspace, 
+                           step: WorkspaceStep) -> StepMetrics:
+    """
+    Build and return timing optimization (driver) metrics dictionary.
+    """
+    step_metrics = StepMetrics()
+    step_metrics.path = step.analysis['metrics']    
+    
+    metrics = {}
+    metrics['Design'] = workspace.design.name
+    metrics['Step'] = step.name
+    metrics['Tool'] = step.tool
+    
+    # db summary matrics
+    metrics.update(build_metrics_db(workspace, step))
+    
+    # step matrics
+    data = json_read(step.feature.get('step', ""))
+    if len(data) > 0:
+        # Add timing optimization (driver) specific metrics here
+        pass
+    
+    step_metrics.data = metrics
+    
+    # generate report image and dscription
+    image_path = f"{step.analysis.get('dir', '')}/statis.png"
+    plot_metrics(metrics=step_metrics.data, output_path=image_path)
+    
+    report = f"{step.name} step metrics:\n"
+    
+    step_metrics.report.append((image_path, report))
+      
+    if save_metrics(step_metrics):
+        return step_metrics
+    else:
+        return None 
+
+
+def build_metrics_cts(workspace: Workspace, 
+                           step: WorkspaceStep) -> StepMetrics:
+    """
+    Build and return CTS metrics dictionary.
+    """
+    step_metrics = StepMetrics()
+    step_metrics.path = step.analysis['metrics']    
+    
+    metrics = {}
+    metrics['Design'] = workspace.design.name
+    metrics['Step'] = step.name
+    metrics['Tool'] = step.tool
+    
+    # db summary matrics
+    metrics.update(build_metrics_db(workspace, step))
+    
+    # step matrics
+    data = json_read(step.feature.get('step', ""))
+    if len(data) > 0:
+        # Add CTS specific metrics here
+        pass
+    
+    step_metrics.data = metrics
+    
+    # generate report image and dscription
+    image_path = f"{step.analysis.get('dir', '')}/statis.png"
+    plot_metrics(metrics=step_metrics.data, output_path=image_path)
+    
+    report = f"{step.name} step metrics:\n"
+    
+    step_metrics.report.append((image_path, report))
+      
+    if save_metrics(step_metrics):
+        return step_metrics
+    else:
+        return None 
+
+
+def build_metrics_placement(workspace: Workspace, 
+                           step: WorkspaceStep) -> StepMetrics:
+    """
+    Build and return placement metrics dictionary.
+    """
+    step_metrics = StepMetrics()
+    step_metrics.path = step.analysis['metrics']    
+    
+    metrics = {}
+    metrics['Design'] = workspace.design.name
+    metrics['Step'] = step.name
+    metrics['Tool'] = step.tool
+    
+    # db summary matrics
+    metrics.update(build_metrics_db(workspace, step))
+    
+    # step matrics
+    data = json_read(step.feature.get('step', ""))
+    if len(data) > 0:
+        # Add placement specific metrics here
+        pass
+    
+    step_metrics.data = metrics
+    
+    # generate report image and dscription
+    image_path = f"{step.analysis.get('dir', '')}/statis.png"
+    plot_metrics(metrics=step_metrics.data, output_path=image_path)
+    
+    report = f"{step.name} step metrics:\n"
+    
+    step_metrics.report.append((image_path, report))
+      
+    if save_metrics(step_metrics):
+        return step_metrics
+    else:
+        return None 
+
+
+def build_metrics_floorplan(workspace: Workspace, 
+                           step: WorkspaceStep) -> StepMetrics:
+    """
+    Build and return floorplan metrics dictionary.
+    """
+    step_metrics = StepMetrics()
+    step_metrics.path = step.analysis['metrics']    
+    
+    metrics = {}
+    metrics['Design'] = workspace.design.name
+    metrics['Step'] = step.name
+    metrics['Tool'] = step.tool
+    
+    # db summary matrics
+    metrics.update(build_metrics_db(workspace, step))
+    
+    # step matrics
+    data = json_read(step.feature.get('step', ""))
+    if len(data) > 0:
+        # Add floorplan specific metrics here
+        pass
     
     step_metrics.data = metrics
     
