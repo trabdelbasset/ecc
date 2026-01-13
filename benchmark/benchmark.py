@@ -131,7 +131,7 @@ def run_single_design(workspace_dir : str,
     input_netlist = ""
     if input_filelist and os.path.exists(input_filelist):
         # Use filelist for synthesis (input_netlist optional)
-        input_netlist = input_rtl if input_rtl and os.path.exists(input_rtl) else ""
+        input_netlist = input_filelist
         steps.append((StepEnum.SYNTHESIS, "yosys", StateEnum.Unstart))
     elif input_rtl and os.path.exists(input_rtl):
         # Use RTL for synthesis
