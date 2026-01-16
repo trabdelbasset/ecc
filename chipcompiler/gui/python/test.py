@@ -3,15 +3,6 @@ import json
 import argparse
 import os
 
-# Add project root to sys.path
-script_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.abspath(os.path.join(script_dir, "../../.."))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
-
-from chipcompiler.data.workspace import create_workspace, PDK
-from chipcompiler.data.parameter import Parameters
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--action', choices=['init', 'load'], required=True)
@@ -23,6 +14,15 @@ def main():
 
     try:
         if args.action == 'init':
+            # 延迟导入：只有 init 操作才需要完整的 chipcompiler 模块
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            project_root = os.path.abspath(os.path.join(script_dir, "../../.."))
+            if project_root not in sys.path:
+                sys.path.insert(0, project_root)
+            
+            from chipcompiler.data.workspace import create_workspace, PDK
+            from chipcompiler.data.parameter import Parameters
+            
             # Initialize a new workspace
             ws = create_workspace(
                 directory=args.path,
@@ -41,7 +41,7 @@ def main():
             }
         
         elif args.action == 'load':
-            # Load existing workspace state
+            # load 操作只需要读取 JSON 文件，不需要 chipcompiler 依赖
             flow_path = os.path.join(args.path, "flow.json")
             if not os.path.exists(flow_path):
                 raise Exception("Not a valid ECC project directory (flow.json missing)")

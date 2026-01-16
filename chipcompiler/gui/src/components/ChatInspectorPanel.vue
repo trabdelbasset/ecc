@@ -4,7 +4,7 @@
     <div class="h-10 flex items-center justify-between px-4 border-b border-(--border-color)">
       <div class="flex items-center gap-2">
         <h2 class="text-sm font-semibold text-(--text-primary)">
-          {{ activeTab === 'chat' ? 'AI Agent' : 'Inspector' }}
+          {{ activeTab === 'chat' ? '' : 'Inspector' }}
         </h2>
       </div>
 

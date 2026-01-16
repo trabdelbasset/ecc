@@ -9,22 +9,22 @@ const generateId = (): string => {
 
 export const useMessageStore = defineStore('messages', () => {
   const messages = ref<Message[]>([])
-  
+
   /**
    * 添加用户消息
    */
   const addMessage = (content: string): string => {
     const id = generateId()
-    messages.value.push({ 
+    messages.value.push({
       id,
-      role: 'user', 
-      content, 
+      role: 'user',
+      content,
       type: 'text',
       status: 'done'
     })
     return id
   }
-  
+
   /**
    * 添加 AI 助手消息（支持流式更新）
    */
@@ -39,7 +39,7 @@ export const useMessageStore = defineStore('messages', () => {
     })
     return id
   }
-  
+
   /**
    * 更新消息内容或状态（用于流式更新）
    */
@@ -54,7 +54,7 @@ export const useMessageStore = defineStore('messages', () => {
       }
     }
   }
-  
+
   /**
    * 追加内容到消息（用于流式更新）
    */
@@ -64,7 +64,7 @@ export const useMessageStore = defineStore('messages', () => {
       message.content += content
     }
   }
-  
+
   /**
    * 添加图片消息
    */
@@ -79,28 +79,29 @@ export const useMessageStore = defineStore('messages', () => {
       image: {
         url: thumbnail.imageUrl || thumbnail.thumbnailUrl || '',
         label: thumbnail.label,
+        description: thumbnail.description,
         dimensions: thumbnail.dimensions,
         thumbnailId: thumbnail.id
       }
     })
     return id
   }
-  
+
   /**
    * 清空所有消息
    */
   const clearMessages = () => {
     messages.value = []
   }
-  
-  return { 
-    messages, 
+
+  return {
+    messages,
     addMessage,
     addAssistantMessage,
     updateMessage,
     appendToMessage,
-    addImageMessage, 
-    clearMessages 
+    addImageMessage,
+    clearMessages
   }
 })
 

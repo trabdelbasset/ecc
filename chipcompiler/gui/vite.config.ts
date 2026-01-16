@@ -7,7 +7,8 @@ import { fileURLToPath, URL } from 'node:url'
 export default defineConfig({
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      '@data': fileURLToPath(new URL('./data/ics55_00001/place_iEDA', import.meta.url))
     }
   },
   plugins: [
@@ -28,6 +29,10 @@ export default defineConfig({
     strictPort: true,
     watch: {
       ignored: ['**/src-tauri/**']
+    },
+    // 配置 /data 路径服务 feature 图片等静态资源
+    fs: {
+      allow: ['..']
     }
   },
   build: {
