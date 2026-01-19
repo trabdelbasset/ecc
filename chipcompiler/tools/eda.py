@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
-from chipcompiler.data import Workspace, WorkspaceStep, PDK, Parameters
+from chipcompiler.data import Workspace, WorkspaceStep, StepMetrics
 import logging
 
 def load_eda_module(eda_tool: str):
@@ -95,3 +95,15 @@ def save_layout_image(workspace: Workspace,
     from chipcompiler.tools.klayout.runner import save_gds_image
     return save_gds_image(workspace=workspace,
                           step=step)
+    
+def build_step_metrics(workspace: Workspace, 
+                       step: WorkspaceStep) -> StepMetrics:
+    """
+    build step metrics
+    """
+    eda_module = load_eda_module(step.tool)
+    if eda_module is None:
+        return False
+
+    return eda_module.build_step_metrics(workspace=workspace,
+                                         step=step)

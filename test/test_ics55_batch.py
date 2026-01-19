@@ -13,9 +13,9 @@ from benchmark import run_benchmark, benchmark_statis, benchmark_result
 if __name__ == "__main__":
     benchmark_json = f"{root}/benchmark/ics55_benchmark.json"
     
-    # run_benchmark(benchmark_json=benchmark_json,
-    #               target_dir="/nfs/home/huangzengrong/benchmark",
-    #               batch_name="ics55_batch_0")
+    run_benchmark(benchmark_json=benchmark_json,
+                  target_dir="/nfs/home/huangzengrong/benchmark",
+                  batch_name="ics55_batch_0")
     
     benchmark_result(benchmark_dir="/nfs/home/huangzengrong/benchmark/ics55_batch_0")
     benchmark_statis(benchmark_dir="/nfs/home/huangzengrong/benchmark/ics55_batch_0")

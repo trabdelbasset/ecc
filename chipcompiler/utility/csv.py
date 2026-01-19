@@ -7,7 +7,13 @@ import csv
 
 def csv_write(file_path: str, header, data) -> bool:
     with open(file_path, 'w', newline='') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=header)
+            writer = csv.writer(csvfile)
+            # writer = csv.DictWriter(csvfile)
+            
+            writer.writerows(header)
+            writer.writerows(data)
+            
+            return True
             
             # Write headers
             writer.writeheader()

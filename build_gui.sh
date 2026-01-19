@@ -67,3 +67,6 @@ echo "打包文件位于: $PWD/src-tauri/target/release/bundle/"
 # 显示生成的包文件列表
 echo -e "\n生成的安装包:"
 find "$PWD/src-tauri/target/release/bundle" -type f -name "*.deb" -o -name "*.rpm" -o -name "*.AppImage" | sort
+
+# change listener ip
+# /usr/bin/vncserver -kill :2 && sleep 2 && /usr/bin/vncserver -depth 24 -geometry 1920x1080 -localhost no :2

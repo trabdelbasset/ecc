@@ -58,11 +58,10 @@ def build_metrics_db(workspace: Workspace,
 
     return metrics
 
-
-def build_metrics_net_opt(workspace: Workspace, 
-                          step: WorkspaceStep) -> StepMetrics:
+def build_metrics_floorplan(workspace: Workspace, 
+                            step: WorkspaceStep) -> StepMetrics:
     """
-    Build and return net operation metrics dictionary.
+    Build and return floorplan metrics dictionary.
     """
     step_metrics = StepMetrics()
     step_metrics.path = step.analysis['metrics']    
@@ -79,14 +78,53 @@ def build_metrics_net_opt(workspace: Workspace,
     json_path = step.feature.get('step', "")
     data = json_read(json_path)
     if len(data) > 0:
+        # Add floorplan specific metrics here
+        pass
+    
+    step_metrics.data = metrics
+    
+    # generate report image and dscription
+    image_path = json_path.replace(".json", ".png")
+    report = f"{step.name} step metrics:\n"
+    
+    step_metrics.report.append((image_path, report))
+      
+    if save_metrics(step_metrics):
+        return step_metrics
+    else:
+        return None 
+
+def build_metrics_net_opt(workspace: Workspace, 
+                          step: WorkspaceStep) -> StepMetrics:
+    """
+    Build and return net operation metrics dictionary.
+    """
+    step_metrics = StepMetrics()
+    step_metrics.path = step.analysis['metrics']    
+    
+    metrics = {}
+    # metrics['Design'] = workspace.design.name
+    # metrics['Step'] = step.name
+    # metrics['Tool'] = step.tool
+    
+    # db summary matrics
+    # metrics.update(build_metrics_db(workspace, step))
+    data = json_read(step.feature.get('db', ""))
+    metrics["Total instances"] = data.get('Design Statis', {}).get('num_instances', 0)
+    metrics["Total nets"] = data.get('Design Statis', {}).get('num_nets', 0)
+    
+    # step matrics
+    json_path = step.feature.get('step', "")
+    data = json_read(json_path)
+    if len(data) > 0:
         metrics["Max fanout"] = workspace.parameters.data.get("Max fanout", 0)
 
         for clk_item in data.get("fixFanout", {}).get("clocks_timing", []):
-            metrics["delta_hold_tns"] = clk_item.get("delta_hold_tns", 0)
-            metrics["delta_hold_wns"] = clk_item.get("delta_hold_wns", 0)
-            metrics["delta_setup_tns"] = clk_item.get("delta_setup_tns", 0)
-            metrics["delta_setup_wns"] = clk_item.get("delta_setup_wns", 0)
-            metrics["delta_suggest_freq"] = clk_item.get("delta_suggest_freq", 0)
+            metrics["suggest_freq"] = clk_item.get("opt_suggest_freq", 0)
+            metrics["setup_wns"] = clk_item.get("opt_setup_wns", 0)
+            metrics["setup_tns"] = clk_item.get("opt_setup_tns", 0)
+            metrics["hold_wns"] = clk_item.get("opt_hold_wns", 0)
+            metrics["hold_tns"] = clk_item.get("opt_hold_tns", 0)
             
             break
     
@@ -113,12 +151,14 @@ def build_metrics_filler(workspace: Workspace,
     step_metrics.path = step.analysis['metrics']    
     
     metrics = {}
-    metrics['Design'] = workspace.design.name
-    metrics['Step'] = step.name
-    metrics['Tool'] = step.tool
+    # metrics['Design'] = workspace.design.name
+    # metrics['Step'] = step.name
+    # metrics['Tool'] = step.tool
     
     # db summary matrics
-    metrics.update(build_metrics_db(workspace, step))
+    # metrics.update(build_metrics_db(workspace, step))
+    data = json_read(step.feature.get('db', ""))
+    metrics["Total instances"] = data.get('Design Statis', {}).get('num_instances', 0)
     
     # step matrics
     json_path = step.feature.get('step', "")
@@ -150,19 +190,18 @@ def build_metrics_drc(workspace: Workspace,
     step_metrics.path = step.analysis['metrics']    
     
     metrics = {}
-    metrics['Design'] = workspace.design.name
-    metrics['Step'] = step.name
-    metrics['Tool'] = step.tool
+    # metrics['Design'] = workspace.design.name
+    # metrics['Step'] = step.name
+    # metrics['Tool'] = step.tool
     
     # db summary matrics
-    metrics.update(build_metrics_db(workspace, step))
+    # metrics.update(build_metrics_db(workspace, step))
     
     # step matrics
     json_path = step.feature.get('step', "")
     data = json_read(json_path)
     if len(data) > 0:
-        # Add DRC specific metrics here
-        pass
+        metrics["drc_num"] = data.get("drc", {}).get("number", 0)
     
     step_metrics.data = metrics
     
@@ -187,19 +226,19 @@ def build_metrics_routing(workspace: Workspace,
     step_metrics.path = step.analysis['metrics']    
     
     metrics = {}
-    metrics['Design'] = workspace.design.name
-    metrics['Step'] = step.name
-    metrics['Tool'] = step.tool
+    # metrics['Design'] = workspace.design.name
+    # metrics['Step'] = step.name
+    # metrics['Tool'] = step.tool
     
     # db summary matrics
-    metrics.update(build_metrics_db(workspace, step))
+    # metrics.update(build_metrics_db(workspace, step))
     
     # step matrics
-    json_path = step.feature.get('step', "")
+    json_path = step.feature.get('db', "")
     data = json_read(json_path)
     if len(data) > 0:
-        # Add routing specific metrics here
-        pass
+        metrics["wire_len"] = data.get("Nets", {}).get("wire_len", 0)
+        metrics["num_via"] = data.get("Nets", {}).get("num_via", 0)
     
     step_metrics.data = metrics
     
@@ -224,19 +263,18 @@ def build_metrics_legalization(workspace: Workspace,
     step_metrics.path = step.analysis['metrics']    
     
     metrics = {}
-    metrics['Design'] = workspace.design.name
-    metrics['Step'] = step.name
-    metrics['Tool'] = step.tool
+    # metrics['Design'] = workspace.design.name
+    # metrics['Step'] = step.name
+    # metrics['Tool'] = step.tool
     
     # db summary matrics
-    metrics.update(build_metrics_db(workspace, step))
+    # metrics.update(build_metrics_db(workspace, step))
     
     # step matrics
     json_path = step.feature.get('step', "")
     data = json_read(json_path)
     if len(data) > 0:
-        # Add legalization specific metrics here
-        pass
+        metrics["total_movement"] = data.get("legalization", {}).get("total_movement", 0)
     
     step_metrics.data = metrics
     
@@ -261,19 +299,26 @@ def build_metrics_timing_opt_hold(workspace: Workspace,
     step_metrics.path = step.analysis['metrics']    
     
     metrics = {}
-    metrics['Design'] = workspace.design.name
-    metrics['Step'] = step.name
-    metrics['Tool'] = step.tool
+    # metrics['Design'] = workspace.design.name
+    # metrics['Step'] = step.name
+    # metrics['Tool'] = step.tool
     
     # db summary matrics
-    metrics.update(build_metrics_db(workspace, step))
+    # metrics.update(build_metrics_db(workspace, step))
+    data = json_read(step.feature.get('db', ""))
+    metrics["Total instances"] = data.get('Design Statis', {}).get('num_instances', 0)
+    metrics["Total nets"] = data.get('Design Statis', {}).get('num_nets', 0)
     
     # step matrics
     json_path = step.feature.get('step', "")
     data = json_read(json_path)
     if len(data) > 0:
-        # Add timing optimization (hold) specific metrics here
-        pass
+        for clk_item in data.get("optHold", {}).get("clocks_timing", []):
+            metrics["suggest_freq"] = clk_item.get("opt_suggest_freq", 0)
+            metrics["hold_wns"] = clk_item.get("opt_wns", 0)
+            metrics["hold_tns"] = clk_item.get("opt_tns", 0)
+            
+            break
     
     step_metrics.data = metrics
     
@@ -298,19 +343,26 @@ def build_metrics_timing_opt_drv(workspace: Workspace,
     step_metrics.path = step.analysis['metrics']    
     
     metrics = {}
-    metrics['Design'] = workspace.design.name
-    metrics['Step'] = step.name
-    metrics['Tool'] = step.tool
+    # metrics['Design'] = workspace.design.name
+    # metrics['Step'] = step.name
+    # metrics['Tool'] = step.tool
     
     # db summary matrics
-    metrics.update(build_metrics_db(workspace, step))
+    # metrics.update(build_metrics_db(workspace, step))
+    data = json_read(step.feature.get('db', ""))
+    metrics["Total instances"] = data.get('Design Statis', {}).get('num_instances', 0)
+    metrics["Total nets"] = data.get('Design Statis', {}).get('num_nets', 0)
     
     # step matrics
     json_path = step.feature.get('step', "")
     data = json_read(json_path)
     if len(data) > 0:
-        # Add timing optimization (driver) specific metrics here
-        pass
+        for clk_item in data.get("optDrv", {}).get("clocks_timing", []):
+            metrics["suggest_freq"] = clk_item.get("opt_suggest_freq", 0)
+            metrics["wns"] = clk_item.get("opt_wns", 0)
+            metrics["tns"] = clk_item.get("opt_tns", 0)
+            
+            break
     
     step_metrics.data = metrics
     
@@ -334,19 +386,34 @@ def build_metrics_cts(workspace: Workspace,
     step_metrics.path = step.analysis['metrics']    
     
     metrics = {}
-    metrics['Design'] = workspace.design.name
-    metrics['Step'] = step.name
-    metrics['Tool'] = step.tool
+    # metrics['Design'] = workspace.design.name
+    # metrics['Step'] = step.name
+    # metrics['Tool'] = step.tool
     
     # db summary matrics
-    metrics.update(build_metrics_db(workspace, step))
+    # metrics.update(build_metrics_db(workspace, step))
+    data = json_read(step.feature.get('db', ""))
+    metrics["Total instances"] = data.get('Design Statis', {}).get('num_instances', 0)
+    metrics["Total nets"] = data.get('Design Statis', {}).get('num_nets', 0)
     
     # step matrics
     json_path = step.feature.get('step', "")
     data = json_read(json_path)
     if len(data) > 0:
-        # Add CTS specific metrics here
-        pass
+        metrics["buffer_num"] = data.get("CTS", {}).get("buffer_num", 0)
+        metrics["buffer_area"] = data.get("CTS", {}).get("buffer_area", 0)
+        metrics["clock_path_max_buffer"] = data.get("CTS", {}).get("clock_path_max_buffer", 0)
+        metrics["clock_path_min_buffer"] = data.get("CTS", {}).get("clock_path_min_buffer", 0)
+        metrics["total_clock_wirelength"] = data.get("CTS", {}).get("total_clock_wirelength", 0)
+        
+        for clk_item in data.get("CTS", {}).get("clocks_timing", []):
+            metrics["suggest_freq"] = clk_item.get("suggest_freq", 0)
+            metrics["hold_wns"] = clk_item.get("hold_wns", 0)
+            metrics["hold_tns"] = clk_item.get("hold_tns", 0)
+            metrics["setup_wns"] = clk_item.get("setup_wns", 0)
+            metrics["setup_tns"] = clk_item.get("setup_tns", 0)
+            
+            break
     
     step_metrics.data = metrics
     
@@ -371,56 +438,22 @@ def build_metrics_placement(workspace: Workspace,
     step_metrics.path = step.analysis['metrics']    
     
     metrics = {}
-    metrics['Design'] = workspace.design.name
-    metrics['Step'] = step.name
-    metrics['Tool'] = step.tool
+    # metrics['Design'] = workspace.design.name
+    # metrics['Step'] = step.name
+    # metrics['Tool'] = step.tool
     
     # db summary matrics
-    metrics.update(build_metrics_db(workspace, step))
+    # metrics.update(build_metrics_db(workspace, step))
     
     # step matrics
     json_path = step.feature.get('step', "")
     data = json_read(json_path)
     if len(data) > 0:
-        # Add placement specific metrics here
-        pass
-    
-    step_metrics.data = metrics
-    
-    # generate report image and dscription
-    image_path = json_path.replace(".json", ".png")
-    report = f"{step.name} step metrics:\n"
-    
-    step_metrics.report.append((image_path, report))
-      
-    if save_metrics(step_metrics):
-        return step_metrics
-    else:
-        return None 
-
-
-def build_metrics_floorplan(workspace: Workspace, 
-                            step: WorkspaceStep) -> StepMetrics:
-    """
-    Build and return floorplan metrics dictionary.
-    """
-    step_metrics = StepMetrics()
-    step_metrics.path = step.analysis['metrics']    
-    
-    metrics = {}
-    metrics['Design'] = workspace.design.name
-    metrics['Step'] = step.name
-    metrics['Tool'] = step.tool
-    
-    # db summary matrics
-    metrics.update(build_metrics_db(workspace, step))
-    
-    # step matrics
-    json_path = step.feature.get('step', "")
-    data = json_read(json_path)
-    if len(data) > 0:
-        # Add floorplan specific metrics here
-        pass
+        metrics["overflow"] = data.get("place", {}).get("overflow", 0)
+        metrics["overflow_number"] = data.get("place", {}).get("overflow_number", 0)
+        metrics["bin_number"] = data.get("place", {}).get("bin_number", 0)
+        metrics["GP HPWL"] = data.get("place", {}).get("gplace", {}).get("HPWL", 0) / 1000
+        metrics["DP HPWL"] = data.get("place", {}).get("dplace", {}).get("STWL", 0) / 1000
     
     step_metrics.data = metrics
     

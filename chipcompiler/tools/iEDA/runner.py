@@ -437,7 +437,14 @@ def run_floorplan(workspace: Workspace,
         eda_inst.set_net(net_name=clock_name,
                          net_type="CLOCK")
                 
-            
-        return save_data(step=step, module=eda_inst)
+        # return save_data(step=step, module=eda_inst)
+    
+        eda_inst.def_save(def_path=step.output["def"])
+        eda_inst.verilog_save(output_verilog=step.output["verilog"])
+        eda_inst.gds_save(output_path=step.output["gds"])
+        eda_inst.feature_sammry(json_path=step.feature["db"])
+        
+        eda_inst.report_summary(path=step.report["db"])    
+        return True
     
     return False 
