@@ -231,6 +231,7 @@ def _copy_file_safely(src: str, dst: str, logger, context: str) -> bool:
             logger.error(f"Error copying {context}: {e}")
         return False
 
+                     
 def create_workspace(directory : str,
                      origin_def : str,
                      origin_verilog : str,
@@ -285,11 +286,15 @@ def create_workspace(directory : str,
     os.makedirs(f"{directory}/origin", exist_ok=True)
     if os.path.exists(origin_def):
         shutil.copy(origin_def, f"{directory}/origin/{os.path.basename(origin_def)}")
-    workspace.design.origin_def = f"{directory}/origin/{os.path.basename(origin_def)}"
+        workspace.design.origin_def = f"{directory}/origin/{os.path.basename(origin_def)}"
+    else:
+        workspace.design.origin_def = f"{directory}/origin/{workspace.design.name}.def"
 
     if os.path.exists(origin_verilog):
         shutil.copy(origin_verilog, f"{directory}/origin/{os.path.basename(origin_verilog)}")
-    workspace.design.origin_verilog = f"{directory}/origin/{os.path.basename(origin_verilog)}"
+        workspace.design.origin_verilog = f"{directory}/origin/{os.path.basename(origin_verilog)}"
+    else:
+        workspace.design.origin_verilog = f"{directory}/origin/{workspace.design.name}.v"
 
     # Copy filelist and all referenced source files
     if os.path.exists(input_filelist):

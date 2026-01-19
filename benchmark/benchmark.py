@@ -336,6 +336,8 @@ def benchmark_statis(benchmark_dir : str):
             results.append(workspace_result)
             
             print(f"process {dir} - {design_name} : {is_success}")
+            
+            break
     
     header = [header1, header2]
     csv_write(file_path=statis_csv,
