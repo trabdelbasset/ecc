@@ -11,12 +11,13 @@
     ]">
       <!-- 图片消息 -->
       <div v-if="message.type === 'image' && message.image" class="p-2">
+        <p class="text-xs opacity-90">{{ message.image.label }}:</p>
+        <p v-if="message.image.description" class="text-xs opacity-90 whitespace-pre-line mb-2">{{
+          message.image.description }}</p>
         <div class="rounded-lg overflow-hidden mb-2">
           <img :src="message.image.url" :alt="message.image.label" class="w-full h-auto object-contain max-h-[400px]"
             loading="lazy" @load="handleImageLoad" />
         </div>
-        <p class="text-xs opacity-90">{{ message.image.label }}</p>
-        <p v-if="message.image.dimensions" class="text-[10px] opacity-70 mt-1">{{ message.image.dimensions }}</p>
       </div>
 
       <!-- 文本消息 -->

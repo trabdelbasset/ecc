@@ -15,7 +15,7 @@
             <SplitterPanel :size="70" :minSize="30" class="flex flex-col">
               <DrawingArea />
             </SplitterPanel>
-            <SplitterPanel :size="13" class="flex flex-col">
+            <SplitterPanel :size="30" class="flex flex-col">
               <ThumbnailGallery />
             </SplitterPanel>
           </Splitter>
@@ -28,7 +28,7 @@
       </Splitter>
 
       <!-- 最右侧属性栏 -->
-      <RightSidebar />
+      <!-- <RightSidebar /> -->
     </main>
   </div>
 </template>

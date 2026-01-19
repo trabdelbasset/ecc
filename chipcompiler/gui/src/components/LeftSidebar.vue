@@ -29,158 +29,137 @@
       </router-link>
     </div>
 
-    <!-- 第二栏：Navigator 面板 -->
+    <!-- 第二栏：流程进度面板 -->
     <div
       class="w-[240px] min-w-[200px] max-w-[300px] bg-(--bg-primary) border-r border-(--border-color) flex flex-col overflow-hidden shrink-0">
-      <!-- 顶部标签栏 -->
-      <div v-if="hasData" class="h-10 flex items-center border-b border-(--border-color) px-3 gap-1">
-        <button v-for="tab in tabs" :key="tab.id" @click="activeTab = tab.id as 'hierarchy' | 'files' | 'search'"
-          class="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide transition-all rounded" :class="[
-            activeTab === tab.id
-              ? 'text-(--accent-color) bg-(--accent-color)/20 border-(--accent-color)/50' : 'text-(--text-secondary) border-transparent hover:bg-(--bg-hover)',
-            'h-8 px-2 flex items-center gap-1.5 rounded border transition-all'
-          ]">
-          {{ tab.label }}
-        </button>
-
-        <div class="ml-auto">
-          <button class="p-1 text-(--text-secondary) hover:text-(--text-primary) transition-colors">
-            <i class="ri-more-2-fill"></i>
-          </button>
+      <!-- 顶部标题栏 -->
+      <div class="px-4 py-3 border-b border-(--border-color)">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-(--accent-color)/20 flex items-center justify-center">
+            <i class="ri-focus-2-line text-(--accent-color) text-lg"></i>
+          </div>
+          <div>
+            <h3 class="text-[13px] font-bold text-(--text-primary)">Run Placement</h3>
+            <p class="text-[10px] text-(--text-secondary)">iEDA Place Engine</p>
+          </div>
         </div>
       </div>
 
-      <!-- Navigator 内容区 -->
-      <div class="flex-1 overflow-hidden">
-        <!-- 引导模式：只有在没有数据时显示 -->
-        <div v-if="!hasData" class="h-full flex flex-col p-5 bg-linear-to-b from-(--bg-primary) to-(--bg-secondary)/20">
-          <div class="mb-8">
-            <div class="flex items-center gap-2 mb-2">
-              <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-              <span class="text-[10px] font-bold text-amber-500 uppercase tracking-widest">Setup Required</span>
-            </div>
-            <h2 class="text-lg font-bold text-(--text-primary) leading-tight">Flow Roadmap</h2>
-            <p class="text-[11px] text-(--text-secondary) mt-1">Execute the design flow to initialize your project.</p>
-          </div>
-
-          <!-- 步骤路线图 -->
-          <div class="space-y-0 relative flex-1">
-            <div class="absolute left-[11px] top-2 bottom-8 w-px border-l border-dashed border-(--border-color)"></div>
-
-            <div class="relative pl-8 pb-8 group">
-              <div
-                class="absolute left-0 top-0.5 w-6 h-6 rounded-full bg-(--bg-secondary) border border-(--border-color) flex items-center justify-center group-hover:border-(--accent-color) transition-colors">
-                <i class="ri-file-settings-line text-[12px] text-(--text-secondary)"></i>
-              </div>
-              <h4 class="text-[12px] font-bold text-(--text-primary)">Parse Design</h4>
-              <p class="text-[10px] text-(--text-secondary) mt-0.5 leading-relaxed">Verilog parsing and SDC constraints
-                validation.</p>
-            </div>
-
-            <div class="relative pl-8 pb-8 group opacity-60">
-              <div
-                class="absolute left-0 top-0.5 w-6 h-6 rounded-full bg-(--bg-secondary) border border-(--border-color) flex items-center justify-center group-hover:border-(--accent-color) transition-colors">
-                <i class="ri-node-tree text-[12px] text-(--text-secondary)"></i>
-              </div>
-              <h4 class="text-[12px] font-bold text-(--text-primary)">Extract Hierarchy</h4>
-              <p class="text-[10px] text-(--text-secondary) mt-0.5 leading-relaxed">Generate netlist and build module
-                hierarchy tree.</p>
-            </div>
-
-            <div class="relative pl-8 group opacity-40">
-              <div
-                class="absolute left-0 top-0.5 w-6 h-6 rounded-full bg-(--bg-secondary) border border-(--border-color) flex items-center justify-center">
-                <i class="ri-layout-masonry-line text-[12px] text-(--text-secondary)"></i>
-              </div>
-              <h4 class="text-[12px] font-bold text-(--text-primary)">Floorplan View</h4>
-              <p class="text-[10px] text-(--text-secondary) mt-0.5 leading-relaxed">Enable physical visualization and
-                power routing.</p>
-            </div>
-          </div>
-
-          <div class="mt-auto pt-4 border-t border-(--border-color)/50">
-            <div class="p-3 rounded-lg bg-(--accent-color)/5 border border-(--accent-color)/10">
-              <p class="text-[11px] text-(--text-secondary) leading-relaxed">
-                <i class="ri-lightbulb-line text-(--accent-color) mr-1"></i>
-                The <span class="text-(--text-primary) font-semibold">Run Flow</span> button below will start the
-                pipeline from current stage.
-              </p>
-            </div>
-          </div>
+      <!-- 进度统计 -->
+      <div class="px-4 py-3 border-b border-(--border-color) bg-(--bg-secondary)/30">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[10px] text-(--text-secondary) uppercase tracking-wider">Progress</span>
+          <span class="text-[11px] font-bold text-(--accent-color)">{{ completedSteps }}/{{ placementSteps.length
+            }}</span>
         </div>
+        <div class="h-1.5 bg-(--bg-secondary) rounded-full overflow-hidden">
+          <div class="h-full bg-(--accent-color) rounded-full transition-all duration-500"
+            :style="{ width: `${(completedSteps / placementSteps.length) * 100}%` }"></div>
+        </div>
+        <div class="flex items-center justify-between mt-2 text-[9px] text-(--text-secondary)">
+          <span>Total: {{ totalTime }}</span>
+          <span
+            :class="overallStatus === 'completed' ? 'text-green-500' : overallStatus === 'running' ? 'text-blue-400' : 'text-(--text-secondary)'">
+            {{ overallStatus === 'completed' ? 'Completed' : overallStatus === 'running' ? 'Running...' : 'Ready' }}
+          </span>
+        </div>
+      </div>
 
-        <!-- 常规模式：数据加载后显示内容 -->
-        <template v-else>
-          <!-- Hierarchy Tab -->
-          <div v-if="activeTab === 'hierarchy'" class="h-full flex flex-col">
-            <!-- 搜索框 -->
-            <div class="px-3 py-2 border-b border-(--border-color)">
-              <div class="relative">
-                <i
-                  class="ri-search-line absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] text-(--text-secondary)"></i>
-                <input type="text" placeholder="Search Nets..."
-                  class="w-full pl-8 pr-3 py-1.5 text-[11px] bg-(--bg-secondary) border border-(--border-color) rounded text-(--text-primary) placeholder-text-(--text-secondary) focus:outline-none focus:border-(--accent-color) transition-all" />
-              </div>
-            </div>
+      <!-- 步骤列表 -->
+      <div class="flex-1 overflow-y-auto">
+        <div class="p-3 space-y-1">
+          <div v-for="(step, index) in placementSteps" :key="step.id" class="group relative"
+            :class="{ 'opacity-50': step.status === 'pending' && index > 0 && placementSteps[index - 1].status === 'pending' }">
+            <!-- 连接线：从圆形底部到下一个圆形顶部 -->
+            <div v-if="index < placementSteps.length - 1"
+              class="absolute left-[16px] top-[42px] w-0.5 h-[calc(100%-34px)]" :class="[
+                step.status === 'completed' ? 'bg-green-500/50' :
+                  step.status === 'running' ? 'bg-linear-to-b from-blue-400/50 to-(--border-color)' :
+                    'bg-(--border-color)'
+              ]"></div>
 
-            <!-- 层级树 (仅保留结构示意，实际建议动态生成) -->
-            <div class="flex-1 overflow-y-auto p-2">
-              <div class="space-y-0.5">
-                <div class="group">
-                  <button @click="toggleNode('top')"
-                    class="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-(--bg-secondary) rounded transition-all text-left">
-                    <i :class="expandedNodes.has('top') ? 'ri-arrow-down-s-line' : 'ri-arrow-right-s-line'"
-                      class="text-xs text-(--text-secondary)"></i>
-                    <i class="ri-folder-fill text-yellow-500"></i>
-                    <span class="text-[12px] font-semibold text-(--text-primary)">Top_Cell</span>
-                  </button>
-
-                  <div v-if="expandedNodes.has('top')" class="ml-4 space-y-0.5 mt-0.5">
-                    <button
-                      class="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-(--bg-secondary) rounded transition-all text-left group/item">
-                      <i class="ri-arrow-right-s-line text-xs text-(--text-secondary)"></i>
-                      <i class="ri-cpu-line text-blue-400"></i>
-                      <span
-                        class="text-[12px] text-(--text-secondary) group-hover/item:text-(--text-primary)">ALU_Core</span>
-                    </button>
-                    <!-- ... 其他节点 ... -->
-                    <button
-                      class="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-(--bg-secondary) rounded transition-all text-left group/item">
-                      <i class="ri-arrow-right-s-line text-xs text-(--text-secondary)"></i>
-                      <i class="ri-checkbox-blank-circle-line text-green-400"></i>
-                      <span
-                        class="text-[12px] text-(--text-secondary) group-hover/item:text-(--text-primary)">IO_Ring</span>
-                    </button>
-                  </div>
+            <!-- 步骤项 -->
+            <div
+              class="flex items-start gap-3 p-2 rounded-lg transition-all hover:bg-(--bg-secondary)/50 cursor-pointer"
+              :class="{ 'bg-(--bg-secondary)/30': step.status === 'running' }">
+              <!-- 状态图标 -->
+              <div class="relative shrink-0 mt-0.5">
+                <!-- 完成状态 -->
+                <div v-if="step.status === 'completed'"
+                  class="w-[30px] h-[30px] rounded-full bg-green-500/20 border-2 border-green-500 flex items-center justify-center">
+                  <i class="ri-check-line text-green-500 text-sm"></i>
+                </div>
+                <!-- 运行状态 -->
+                <div v-else-if="step.status === 'running'"
+                  class="w-[30px] h-[30px] rounded-full bg-blue-500/20 border-2 border-blue-400 flex items-center justify-center">
+                  <i class="ri-loader-4-line text-blue-400 text-sm animate-spin"></i>
+                </div>
+                <!-- 失败状态 -->
+                <div v-else-if="step.status === 'failed'"
+                  class="w-[30px] h-[30px] rounded-full bg-red-500/20 border-2 border-red-500 flex items-center justify-center">
+                  <i class="ri-close-line text-red-500 text-sm"></i>
+                </div>
+                <!-- 等待状态 -->
+                <div v-else
+                  class="w-[30px] h-[30px] rounded-full bg-(--bg-secondary) border-2 border-(--border-color) flex items-center justify-center">
+                  <span class="text-[10px] font-bold text-(--text-secondary)">{{ index + 1 }}</span>
                 </div>
               </div>
-            </div>
-          </div>
 
-          <!-- Files Tab -->
-          <div v-else-if="activeTab === 'files'" class="h-full p-3">
-            <!-- ... 原有内容 ... -->
-            <div class="text-[11px] text-(--text-secondary) space-y-2">
-              <div class="flex items-center gap-2 hover:text-(--text-primary) cursor-pointer">
-                <i class="ri-file-code-line"></i>
-                <span>design.v</span>
+              <!-- 步骤信息 -->
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="text-[12px] font-semibold truncate" :class="[
+                    step.status === 'completed' ? 'text-green-500' :
+                      step.status === 'running' ? 'text-blue-400' :
+                        step.status === 'failed' ? 'text-red-500' :
+                          'text-(--text-primary)'
+                  ]">
+                    {{ step.name }}
+                  </span>
+                  <!-- 运行中的脉冲动画 -->
+                  <span v-if="step.status === 'running'"
+                    class="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></span>
+                </div>
+                <p class="text-[10px] text-(--text-secondary) mt-0.5 truncate">{{ step.description }}</p>
+                <!-- 耗时显示 -->
+                <div v-if="step.duration || step.status === 'running'" class="flex items-center gap-2 mt-1">
+                  <i class="ri-time-line text-[10px] text-(--text-secondary)"></i>
+                  <span class="text-[10px]"
+                    :class="step.status === 'running' ? 'text-blue-400' : 'text-(--text-secondary)'">
+                    {{ step.duration || 'calculating...' }}
+                  </span>
+                </div>
               </div>
-              <div class="flex items-center gap-2 hover:text-(--text-primary) cursor-pointer">
-                <i class="ri-file-text-line"></i>
-                <span>constraints.sdc</span>
-              </div>
+
+              <!-- 展开箭头 -->
+              <i
+                class="ri-arrow-right-s-line text-(--text-secondary) opacity-0 group-hover:opacity-100 transition-opacity shrink-0"></i>
             </div>
           </div>
-        </template>
+        </div>
       </div>
 
-      <!-- 底部操作栏 (增强版) -->
-      <div class="p-3 border-t border-(--border-color) bg-(--bg-secondary)/30">
-        <button @click="handleRunFlow" :disabled="isLoading"
-          class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-(--accent-color) text-white text-[11px] font-bold rounded hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 shadow-lg shadow-(--accent-color)/20">
-          <i :class="isLoading ? 'ri-loader-4-line animate-spin' : 'ri-play-fill'"></i>
-          {{ isLoading ? 'RUNNING...' : 'RUN FLOW' }}
-        </button>
+      <!-- 底部操作栏 -->
+      <div class="p-3 border-t border-(--border-color) bg-(--bg-secondary)/30 space-y-2">
+        <!-- 操作按钮组 -->
+        <div class="flex gap-2">
+          <button @click="handleRunFlow" :disabled="isLoading"
+            class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-(--accent-color) text-white text-[11px] font-bold rounded hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 shadow-lg shadow-(--accent-color)/20">
+            <i :class="isLoading ? 'ri-loader-4-line animate-spin' : 'ri-play-fill'"></i>
+            {{ isLoading ? 'RUNNING' : 'RUN Flow' }}
+          </button>
+          <button
+            class="px-3 py-2 bg-(--bg-secondary) text-(--text-secondary) text-[11px] font-bold rounded border border-(--border-color) hover:text-(--text-primary) hover:border-(--accent-color) transition-all"
+            title="Stop">
+            <i class="ri-stop-fill"></i>
+          </button>
+          <button
+            class="px-3 py-2 bg-(--bg-secondary) text-(--text-secondary) text-[11px] font-bold rounded border border-(--border-color) hover:text-(--text-primary) hover:border-(--accent-color) transition-all"
+            title="Reset">
+            <i class="ri-refresh-line"></i>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -196,16 +175,81 @@ const { isInTauri, ensureTauri } = useTauri()
 
 const route = useRoute()
 const isLoading = ref(false)
-const hasData = ref(false) // 新增：标记是否已有编译数据
 
-// 标签页配置
-const tabs = [
-  { id: 'hierarchy', label: 'Navigator' },
-  { id: 'files', label: 'Files' },
-]
+// Placement 流程步骤定义
+interface PlacementStep {
+  id: string
+  name: string
+  description: string
+  status: 'pending' | 'running' | 'completed' | 'failed'
+  duration?: string
+}
 
-const activeTab = ref<'hierarchy' | 'files' | 'search'>('hierarchy')
-const expandedNodes = ref<Set<string>>(new Set(['top', 'cache']))
+const placementSteps = ref<PlacementStep[]>([
+  {
+    id: 'init',
+    name: 'Initialize',
+    description: 'Load design and setup environment',
+    status: 'completed',
+    duration: '2.3s'
+  },
+  {
+    id: 'global',
+    name: 'Global Placement',
+    description: 'Coarse cell spreading optimization',
+    status: 'completed',
+    duration: '45.8s'
+  },
+  {
+    id: 'optimize',
+    name: 'Place Optimization',
+    description: 'Timing-driven placement refinement',
+    status: 'completed',
+    duration: '23.1s'
+  },
+  {
+    id: 'detail',
+    name: 'Detail Placement',
+    description: 'Fine-grained cell positioning',
+    status: 'completed',
+    duration: '10.2s'
+  },
+  {
+    id: 'legal',
+    name: 'Legalization',
+    description: 'Remove overlaps and align to rows',
+    status: 'completed',
+    duration: '5.6s'
+  },
+  {
+    id: 'save',
+    name: 'Save Data',
+    description: 'Export DEF, features and reports',
+    status: 'completed',
+    duration: '2.3s'
+  }
+])
+
+// 计算属性
+const completedSteps = computed(() => {
+  return placementSteps.value.filter(s => s.status === 'completed').length
+})
+
+const totalTime = computed(() => {
+  const times = placementSteps.value
+    .filter(s => s.duration)
+    .map(s => parseFloat(s.duration!.replace('s', '')))
+  const total = times.reduce((a, b) => a + b, 0)
+  return total > 0 ? `${total.toFixed(1)}s` : '--'
+})
+
+const overallStatus = computed(() => {
+  if (placementSteps.value.some(s => s.status === 'running')) return 'running'
+  if (placementSteps.value.every(s => s.status === 'completed')) return 'completed'
+  if (placementSteps.value.some(s => s.status === 'failed')) return 'failed'
+  return 'pending'
+})
+
 
 // 流程步骤配置
 const flowStages = [
@@ -223,14 +267,6 @@ const currentStage = computed(() => {
   const pathParts = route.path.split('/')
   return pathParts[pathParts.length - 1] || 'home'
 })
-
-const toggleNode = (nodeId: string) => {
-  if (expandedNodes.value.has(nodeId)) {
-    expandedNodes.value.delete(nodeId)
-  } else {
-    expandedNodes.value.add(nodeId)
-  }
-}
 
 const handleRunFlow = async () => {
   // 检查是否在 Tauri 环境中

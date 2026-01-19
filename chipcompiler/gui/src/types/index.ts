@@ -9,6 +9,7 @@ export interface Message {
     label?: string
     dimensions?: string
     thumbnailId?: number
+    description?: string
   }
 }
 

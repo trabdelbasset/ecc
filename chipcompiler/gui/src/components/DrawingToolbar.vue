@@ -16,7 +16,12 @@ let unlistenTransform: (() => void) | null = null
 const tools = [
   { id: 'hand', icon: 'ri-hand', tooltip: '平移' },
   { id: 'select', icon: 'ri-cursor-fill', tooltip: '选择' },
-  { id: 'route', icon: 'ri-route-line', tooltip: '布线' }
+  { id: 'marquee', icon: 'ri-shape-line', tooltip: '框选' },
+  { id: 'route', icon: 'ri-route-line', tooltip: '布线' },
+  { id: 'measure', icon: 'ri-ruler-2-line', tooltip: '测量' },
+  { id: 'highlight', icon: 'ri-focus-3-line', tooltip: '高亮' },
+  { id: 'layers', icon: 'ri-stack-line', tooltip: '层次' },
+  { id: 'annotation', icon: 'ri-markup-line', tooltip: '标注' }
 ]
 
 const setActiveTool = (toolId: string) => {

@@ -17,39 +17,32 @@
       </div>
     </div>
 
-    <!-- 缩略图网格 -->
-    <ScrollPanel class="flex-1">
-      <div class="flex flex-row gap-4 p-4 overflow-x-auto">
-        <div v-for="thumb in thumbnails.slice(0, 4)" :key="thumb.id" class="shrink-0 w-48 group cursor-pointer"
+    <!-- 缩略图网格 2x3 -->
+    <div class="flex-1 p-2 min-h-0 overflow-hidden">
+      <div class="grid grid-cols-3 gap-2 h-full" style="grid-template-rows: 1fr 1fr;">
+        <div v-for="thumb in thumbnails.slice(0, 6)" :key="thumb.id" class="group cursor-pointer flex flex-col min-h-0"
           @click="handleImageClick(thumb)">
           <div
-            class="aspect-video bg-(--bg-secondary) rounded-lg border border-(--border-color) flex items-center justify-center overflow-hidden group-hover:border-(--accent-color) transition-all shadow-sm will-change-transform">
-            <img v-if="thumb.thumbnailUrl && !imageError.has(thumb.id)" 
-              :src="thumb.thumbnailUrl" 
-              :alt="thumb.label"
-              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 will-change-transform"
-              loading="lazy"
-              decoding="async"
-              @error="handleImageError(thumb.id)" />
-            <div v-else class="flex flex-col items-center gap-2">
-              <i class="ri-image-line text-3xl text-(--text-secondary)"></i>
-              <span class="text-[10px] text-(--text-secondary)">Image Loading...</span>
+            class="flex-1 min-h-0 bg-(--bg-secondary) rounded border border-(--border-color) flex items-center justify-center overflow-hidden group-hover:border-(--accent-color) transition-all shadow-sm">
+            <img v-if="thumb.thumbnailUrl && !imageError.has(thumb.id)" :src="thumb.thumbnailUrl" :alt="thumb.label"
+              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy"
+              decoding="async" @error="handleImageError(thumb.id)" />
+            <div v-else class="flex flex-col items-center gap-1">
+              <i class="ri-image-line text-xl text-(--text-secondary)"></i>
+              <span class="text-[8px] text-(--text-secondary)">Loading...</span>
             </div>
           </div>
-          <div class="mt-2 text-center">
-            <p class="text-xs font-medium text-(--text-primary)">
-              {{ thumb.label }}
-            </p>
-          </div>
+          <p class="text-[9px] font-medium text-(--text-primary) truncate text-center mt-1 shrink-0">
+            {{ thumb.label }}
+          </p>
         </div>
       </div>
-    </ScrollPanel>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import ScrollPanel from 'primevue/scrollpanel'
 import type { Thumbnail } from '../types'
 import { useMessageStore } from '../stores/messageStore'
 
@@ -58,66 +51,72 @@ const selectedImage = ref<Thumbnail | null>(null)
 const imageError = ref<Set<number>>(new Set())
 const zoom = ref(100)
 
-// 示例数据 - 你可以替换为真实的图片路径
+// Place 阶段特征分析图 - 6 张代表性图片
+const featureBasePath = '/data/ics55_00001/place_iEDA/feature'
+
 const thumbnails: Thumbnail[] = [
   {
     id: 1,
-    label: '版图 - 第一层',
-    description: '金属互连层 M1',
-    thumbnailUrl: '/images/thumbnails/layout1.png',
-    imageUrl: '/images/thumbnails/layout1.png',
-    size: '2.4 MB',
-    dimensions: '1920 × 1080',
-    format: 'PNG'
+    label: '单元密度图',
+    description: `Cell Density Avg Mean: 3.535e-01, 
+Avg Max: 1.000e+00 
+Avg Hotspot Ratio (>90th percentile): 9.1%`,
+    thumbnailUrl: `${featureBasePath}/density_map/place_allcell_density.png`,
+    imageUrl: `${featureBasePath}/density_map/place_allcell_density.png`,
+    size: '',
+    dimensions: '',
+    format: 'PNG',
   },
   {
     id: 2,
-    label: '版图 - 第二层',
-    description: '金属互连层 M2',
-    thumbnailUrl: '/images/thumbnails/layout2.png',
-    imageUrl: '/images/thumbnails/layout2.png',
-    size: '2.1 MB',
-    dimensions: '1920 × 1080',
+    label: '引脚密度图',
+    description: 'Stdcell Pin Density - 标准单元引脚分布热点',
+    thumbnailUrl: `${featureBasePath}/density_map/place_stdcell_pin_density.png`,
+    imageUrl: `${featureBasePath}/density_map/place_stdcell_pin_density.png`,
+    size: '',
+    dimensions: '',
     format: 'PNG'
   },
   {
     id: 3,
-    label: '版图 - 第三层',
-    description: '金属互连层 M3',
-    thumbnailUrl: '/images/thumbnails/layout3.png',
-    imageUrl: '/images/thumbnails/layout3.png',
-    size: '2.8 MB',
-    dimensions: '2048 × 1152',
+    label: '网络密度图',
+    description: 'All Net Density - 网络连接分布',
+    thumbnailUrl: `${featureBasePath}/density_map/place_allnet_density.png`,
+    imageUrl: `${featureBasePath}/density_map/place_allnet_density.png`,
+    size: '',
+    dimensions: '',
     format: 'PNG'
   },
   {
     id: 4,
-    label: '版图 - 第四层',
-    description: '金属互连层 M4',
-    thumbnailUrl: '/images/thumbnails/layout4.png',
-    imageUrl: '/images/thumbnails/layout4.png',
-    size: '3.2 MB',
-    dimensions: '2048 × 1152',
+    label: '拥塞预测图',
+    description: `Congestion Avg Mean: -9.242e+00, 
+Avg Max: 5.000e+01 
+Avg Hotspot Ratio (>90th percentile): 9.2%`,
+    thumbnailUrl: `${featureBasePath}/egr_congestion_map/place_egr_union_overflow.png`,
+    imageUrl: `${featureBasePath}/egr_congestion_map/place_egr_union_overflow.png`,
+    size: '',
+    dimensions: '',
     format: 'PNG'
   },
   {
     id: 5,
-    label: '版图 - 第五层',
-    description: '通孔层 VIA',
-    thumbnailUrl: '/images/thumbnails/layout5.png',
-    imageUrl: '/images/thumbnails/layout5.png',
-    size: '1.9 MB',
-    dimensions: '1920 × 1080',
+    label: '布线边距图',
+    description: 'Union Margin - 布线空间余量分析',
+    thumbnailUrl: `${featureBasePath}/margin_map/place_union_margin.png`,
+    imageUrl: `${featureBasePath}/margin_map/place_union_margin.png`,
+    size: '',
+    dimensions: '',
     format: 'PNG'
   },
   {
     id: 6,
-    label: '版图 - 第六层',
-    description: '顶层金属 MT',
-    thumbnailUrl: '/images/thumbnails/layout6.png',
-    imageUrl: '/images/thumbnails/layout6.png',
-    size: '2.6 MB',
-    dimensions: '1920 × 1080',
+    label: 'RUDY 预测图',
+    description: 'RUDY Union - 线密度预测分析',
+    thumbnailUrl: `${featureBasePath}/RUDY_map/place_rudy_union.png`,
+    imageUrl: `${featureBasePath}/RUDY_map/place_rudy_union.png`,
+    size: '',
+    dimensions: '',
     format: 'PNG'
   },
 ]

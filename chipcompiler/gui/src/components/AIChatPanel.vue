@@ -7,7 +7,7 @@
           <i class="ri-robot-2-line text-4xl text-(--text-secondary) opacity-50"></i>
         </div>
         <p class="text-[13px] text-(--text-secondary) leading-relaxed">
-          暂无消息，请输入指令开始与 AI Agent 交互
+          暂无消息，请输入指令开始与 Chat 交互
         </p>
       </div>
       <div v-else class="py-4 space-y-4">
@@ -18,7 +18,7 @@
     <!-- 输入区域 -->
     <div class="shrink-0 p-4 bg-(--bg-primary) border-t border-(--border-color)">
       <div class="bg-(--bg-secondary) rounded-xl border border-(--border-color) p-2">
-        <textarea v-model="inputValue" placeholder="输入指令与 AI Agent 交互..."
+        <textarea v-model="inputValue" placeholder=""
           class="w-full bg-transparent border-none focus:ring-0 focus:outline-none text-[13px] text-(--text-primary) min-h-[80px] p-2 resize-none"
           @keydown="handleKeyDown"></textarea>
 
@@ -42,9 +42,6 @@
           </button>
         </div>
       </div>
-      <p class="text-[10px] text-(--text-secondary) text-center mt-3 opacity-60">
-        AI output can be inaccurate.
-      </p>
     </div>
   </div>
 </template>

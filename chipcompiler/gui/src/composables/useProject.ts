@@ -185,7 +185,26 @@ export function useProject() {
         args: ['--action', 'load', '--path', selectedPath]
       }) as { code: number, stdout: string, stderr: string }
 
-      const response = JSON.parse(pyResult.stdout)
+      // 检查 Python 执行结果
+      if (!pyResult.stdout || pyResult.stdout.trim() === '') {
+        console.error('Python 脚本无输出:', {
+          code: pyResult.code,
+          stderr: pyResult.stderr
+        })
+        return false
+      }
+
+      let response
+      try {
+        response = JSON.parse(pyResult.stdout)
+      } catch (parseError) {
+        console.error('JSON 解析失败:', {
+          stdout: pyResult.stdout,
+          stderr: pyResult.stderr,
+          error: parseError
+        })
+        return false
+      }
 
       if (pyResult.code === 0 && response.status === 'success') {
         const loadedProject: Project = {
@@ -237,7 +256,26 @@ export function useProject() {
         args: ['--action', 'init', '--path', selectedPath as string, '--name', projectName]
       }) as { code: number, stdout: string, stderr: string }
 
-      const response = JSON.parse(pyResult.stdout)
+      // 检查 Python 执行结果
+      if (!pyResult.stdout || pyResult.stdout.trim() === '') {
+        console.error('Python 脚本无输出:', {
+          code: pyResult.code,
+          stderr: pyResult.stderr
+        })
+        return false
+      }
+
+      let response
+      try {
+        response = JSON.parse(pyResult.stdout)
+      } catch (parseError) {
+        console.error('JSON 解析失败:', {
+          stdout: pyResult.stdout,
+          stderr: pyResult.stderr,
+          error: parseError
+        })
+        return false
+      }
 
       if (pyResult.code === 0 && response.status === 'success') {
         const createdProject: Project = {
