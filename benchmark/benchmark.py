@@ -90,8 +90,7 @@ def run_benchmark(benchmark_json : str,
                   target_dir: str = "",
                   batch_name: str = "",
                   design:str = "",
-                  max_processes = 10):
-    
+                  max_processes = 10): 
     design_tasks = get_tasks(benchmark_json, target_dir, batch_name, design)
          
     # Run tasks with manual process management (max 10 concurrent processes)
@@ -187,8 +186,8 @@ def run_single_design(workspace_dir : str,
     
     engine_flow.run_steps()
 
-def benchmark_result(benchmark_dir : str):
-    statis_csv = f"{benchmark_dir}/benchmark.csv"
+def benchmark_statis(benchmark_dir : str):
+    statis_csv = f"{benchmark_dir}/benchmark.statis.csv"
     
     header = [
         "Workspace",
@@ -250,13 +249,13 @@ def benchmark_result(benchmark_dir : str):
     print(f"benchmark success {success_num} / {total}")
     
     csv_write(file_path=statis_csv,
-              header=header,
+              header=[header],
               data=results)
         
-def benchmark_statis(benchmark_json : str,
+def benchmark_metrics(benchmark_json : str,
               target_dir: str = "",
               batch_name: str = ""):
-    statis_csv = f"{target_dir}/{batch_name}/benchmark.csv"
+    statis_csv = f"{target_dir}/{batch_name}/benchmark.metrics.csv"
     
     design_tasks = get_tasks(benchmark_json, target_dir, batch_name)
 

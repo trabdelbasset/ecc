@@ -1,7 +1,7 @@
 from .benchmark import (
     run_benchmark,
     benchmark_statis,
-    benchmark_result
+    benchmark_metrics
 )
 
 from .parameters import (
@@ -15,7 +15,7 @@ from .pdk import (
 __all__ = [
     'run_benchmark',
     'benchmark_statis',
-    'benchmark_result',
+    'benchmark_metrics',
     'get_parameters',
     'get_pdk'
 ]
