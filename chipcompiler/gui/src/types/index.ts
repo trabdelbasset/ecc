@@ -30,3 +30,39 @@ export interface Project {
   path: string
   lastOpened: Date
 }
+
+// New Project Wizard Types
+export interface ProjectConfig {
+  // Step 1: Basic Info
+  name: string
+  description: string
+  location: string
+  
+  // Step 2: Design Files
+  designFiles: DesignFile[]
+  topModule: string
+  
+  // Step 3: Technology Config
+  pdk: string
+  technologyNode: string
+  targetFrequency: number
+  
+  // Step 4: Constraints (optional)
+  constraintFiles: DesignFile[]
+}
+
+export interface DesignFile {
+  id: string
+  name: string
+  path: string
+  type: 'verilog' | 'vhdl' | 'systemverilog' | 'constraint' | 'other'
+  size?: number
+}
+
+export interface WizardStep {
+  id: number
+  title: string
+  description: string
+  isCompleted: boolean
+  isActive: boolean
+}

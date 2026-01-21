@@ -24,6 +24,12 @@ export interface OpenProjectRequest {
 export interface CreateProjectRequest {
   path: string
   name?: string
+  description?: string
+  design_files?: string[]
+  top_module?: string
+  pdk?: string
+  technology_node?: string
+  target_frequency?: number
 }
 
 /**
@@ -40,11 +46,29 @@ export function openProjectApi(path: string) {
  * Create a new project
  * @param path - Parent directory where the project will be created
  * @param name - Name of the new project (optional, defaults to "New_Chip_Design")
+ * @param options - Additional project configuration options from wizard
  */
-export function createProjectApi(path: string, name?: string) {
+export function createProjectApi(
+  path: string,
+  name?: string,
+  options?: {
+    description?: string
+    designFiles?: string[]
+    topModule?: string
+    pdk?: string
+    technologyNode?: string
+    targetFrequency?: number
+  }
+) {
   return alovaInstance.Post<ProjectResponse>('/api/project/create', {
     path,
-    name: name || 'New_Chip_Design'
+    name: name || 'New_Chip_Design',
+    description: options?.description,
+    design_files: options?.designFiles,
+    top_module: options?.topModule,
+    pdk: options?.pdk,
+    technology_node: options?.technologyNode,
+    target_frequency: options?.targetFrequency
   } as CreateProjectRequest)
 }
 
