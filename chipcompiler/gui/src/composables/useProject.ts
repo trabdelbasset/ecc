@@ -4,7 +4,9 @@ import { open } from '@tauri-apps/plugin-dialog'
 import { invoke } from '@tauri-apps/api/core'
 import { LazyStore } from '@tauri-apps/plugin-store'
 import { exists } from '@tauri-apps/plugin-fs'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 import { openProjectApi, createProjectApi } from '../api'
+import { isTauri } from './useTauri'
 
 // 序列化对象（将 Date 转换为 ISO 字符串）
 interface SerializedProject {
@@ -23,6 +25,25 @@ const currentProject = ref<Project | null>({
   lastOpened: new Date()
 })
 const recentProjects = ref<Project[]>([])
+
+// 应用名称常量
+const APP_NAME = 'ECC'
+
+/**
+ * 更新窗口标题
+ * @param projectName 项目名称，为空时显示默认标题
+ */
+async function updateWindowTitle(projectName?: string) {
+  if (!isTauri()) return
+
+  try {
+    const window = getCurrentWindow()
+    const title = projectName ? `${projectName}` : APP_NAME
+    await window.setTitle(title)
+  } catch (error) {
+    console.error('Failed to update window title:', error)
+  }
+}
 
 export function useProject() {
 
@@ -192,6 +213,9 @@ export function useProject() {
 
         currentProject.value = loadedProject
 
+        // 更新窗口标题
+        await updateWindowTitle(loadedProject.name)
+
         // 添加到最近项目列表（包含路径标准化和持久化）
         await addToRecent(loadedProject)
 
@@ -206,28 +230,58 @@ export function useProject() {
     }
   }
 
-  const newProject = async () => {
+  /**
+   * 新建项目 - 支持 Wizard 配置
+   * @param config 项目配置（来自向导）
+   */
+  const newProject = async (config?: {
+    name: string
+    description?: string
+    location: string
+    designFiles?: { path: string }[]
+    topModule?: string
+    pdk?: string
+    technologyNode?: string
+    targetFrequency?: number
+  }) => {
     try {
-      // 1. 选择新项目存放的位置
-      const selectedPath = await open({
-        directory: true,
-        multiple: false,
-        title: '选择新项目保存位置'
-      })
+      let selectedPath: string
+      let projectName: string
 
-      if (!selectedPath) return
+      if (config) {
+        // 使用向导提供的配置
+        selectedPath = config.location
+        projectName = config.name
+      } else {
+        // 回退到旧的文件选择方式
+        const result = await open({
+          directory: true,
+          multiple: false,
+          title: '选择新项目保存位置'
+        })
+
+        if (!result) return false
+        selectedPath = result as string
+        projectName = 'New_Chip_Design'
+      }
 
       // 2. 请求 Rust 端动态授予该路径的访问权限（用于本地文件操作）
       try {
-        await invoke('request_project_permission', { path: selectedPath as string })
+        await invoke('request_project_permission', { path: selectedPath })
       } catch (permError) {
         console.error('请求访问权限失败:', permError)
         // 权限请求失败不阻止继续，API 服务端有独立的文件访问权限
       }
 
-      // 3. 通过 HTTP API 创建项目
-      const projectName = 'New_Chip_Design'
-      const response = await createProjectApi(selectedPath as string, projectName)
+      // 3. 通过 HTTP API 创建项目（传递更多配置信息）
+      const response = await createProjectApi(selectedPath, projectName, {
+        description: config?.description,
+        designFiles: config?.designFiles?.map(f => f.path),
+        topModule: config?.topModule,
+        pdk: config?.pdk,
+        technologyNode: config?.technologyNode,
+        targetFrequency: config?.targetFrequency
+      })
 
       if (response.status === 'success' && response.project) {
         const createdProject: Project = {
@@ -238,6 +292,9 @@ export function useProject() {
         }
 
         currentProject.value = createdProject
+
+        // 更新窗口标题
+        await updateWindowTitle(createdProject.name)
 
         // 添加到最近项目列表（包含路径标准化和持久化）
         await addToRecent(createdProject)
@@ -258,8 +315,10 @@ export function useProject() {
     openProject()
   }
 
-  const closeProject = () => {
+  const closeProject = async () => {
     currentProject.value = null
+    // 重置窗口标题为默认
+    await updateWindowTitle()
   }
 
   return {
@@ -269,7 +328,8 @@ export function useProject() {
     openProject,
     newProject,
     importProject,
-    closeProject
+    closeProject,
+    updateWindowTitle
   }
 }
 

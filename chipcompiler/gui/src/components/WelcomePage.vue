@@ -1,35 +1,55 @@
 <template>
   <div
-    class="flex flex-col items-center justify-center h-screen w-screen bg-(--bg-primary) text-(--text-primary) relative">
+    class="flex flex-col items-center justify-center h-screen w-screen bg-(--bg-primary) text-(--text-primary) relative overflow-hidden">
     <!-- 装饰性背景渐变 -->
     <div class="absolute inset-0 opacity-5 pointer-events-none welcome-gradient"></div>
+
+    <!-- 装饰性网格背景 -->
+    <div class="absolute inset-0 opacity-[0.02] pointer-events-none"
+      style="background-image: linear-gradient(var(--text-primary) 1px, transparent 1px), linear-gradient(90deg, var(--text-primary) 1px, transparent 1px); background-size: 50px 50px;">
+    </div>
 
     <div class="relative z-10 flex flex-col items-center w-full">
       <!-- Logo 和标题 -->
       <div class="flex items-center justify-center mb-12">
-        <i class="ri-cpu-line text-6xl text-(--accent-color)"></i>
-        <div class="flex flex-col ml-4">
-          <h1 class="text-4xl font-bold mb-2 text-center text-(--text-primary)">ECOS Chip Compiler</h1>
+        <div class="relative">
+          <div class="absolute -inset-4 bg-(--accent-color)/10 rounded-full blur-xl"></div>
+          <i class="ri-cpu-line text-6xl text-(--accent-color) relative"></i>
+        </div>
+        <div class="flex flex-col ml-5">
+          <h1 class="text-4xl font-bold text-(--text-primary) tracking-tight">ECOS Chip Compiler</h1>
         </div>
       </div>
 
       <!-- 操作按钮 -->
-      <div class="flex gap-4 mb-16">
+      <div class="flex gap-5 mb-16">
         <button @click="$emit('open-project')"
-          class="flex flex-col items-center gap-3 px-8 py-6 bg-(--bg-secondary) hover:bg-(--bg-sidebar) rounded-lg transition-all hover:scale-105 border border-(--border-color) hover:border-(--accent-color) min-w-[160px]">
-          <i class="ri-folder-open-line text-3xl text-(--text-primary)"></i>
+          class="group flex flex-col items-center gap-3 px-8 py-6 bg-(--bg-secondary) hover:bg-(--bg-sidebar) rounded-xl transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 border border-(--border-color) hover:border-(--accent-color) min-w-[180px] cursor-pointer shadow-sm hover:shadow-lg hover:shadow-(--accent-color)/5">
+          <div
+            class="w-14 h-14 rounded-xl bg-(--bg-primary) flex items-center justify-center group-hover:bg-(--accent-color)/10 transition-colors">
+            <i
+              class="ri-book-open-line text-2xl text-(--text-secondary) group-hover:text-(--accent-color) transition-colors"></i>
+          </div>
           <span class="text-sm font-medium text-(--text-primary)">打开工程</span>
         </button>
 
-        <button @click="$emit('new-project')"
-          class="flex flex-col items-center gap-3 px-8 py-6 bg-(--bg-secondary) hover:bg-(--bg-sidebar) rounded-lg transition-all hover:scale-105 border border-(--border-color) hover:border-(--accent-color) min-w-[160px]">
-          <i class="ri-add-circle-line text-3xl text-(--text-primary)"></i>
+        <button @click="showWizard = true"
+          class="group flex flex-col items-center gap-3 px-8 py-6 bg-(--bg-secondary) hover:bg-(--bg-sidebar) rounded-xl transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 border border-(--border-color) hover:border-(--accent-color) min-w-[180px] cursor-pointer shadow-sm hover:shadow-lg hover:shadow-(--accent-color)/5">
+          <div
+            class="w-14 h-14 rounded-xl bg-(--bg-primary) flex items-center justify-center group-hover:bg-(--accent-color)/10 transition-colors">
+            <i
+              class="ri-folder-open-line text-2xl text-(--text-secondary) group-hover:text-(--accent-color) transition-colors"></i>
+          </div>
           <span class="text-sm font-medium text-(--text-primary)">新建工程</span>
         </button>
 
         <button @click="$emit('import-project')"
-          class="flex flex-col items-center gap-3 px-8 py-6 bg-(--bg-secondary) hover:bg-(--bg-sidebar) rounded-lg transition-all hover:scale-105 border border-(--border-color) hover:border-(--accent-color) min-w-[160px]">
-          <i class="ri-download-cloud-line text-3xl text-(--text-primary)"></i>
+          class="group flex flex-col items-center gap-3 px-8 py-6 bg-(--bg-secondary) hover:bg-(--bg-sidebar) rounded-xl transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 border border-(--border-color) hover:border-(--accent-color) min-w-[180px] cursor-pointer shadow-sm hover:shadow-lg hover:shadow-(--accent-color)/5">
+          <div
+            class="w-14 h-14 rounded-xl bg-(--bg-primary) flex items-center justify-center group-hover:bg-(--accent-color)/10 transition-colors">
+            <i
+              class="ri-download-cloud-line text-2xl text-(--text-secondary) group-hover:text-(--accent-color) transition-colors"></i>
+          </div>
           <span class="text-sm font-medium text-(--text-primary)">导入工程</span>
         </button>
       </div>
@@ -37,40 +57,59 @@
       <!-- 最近项目 -->
       <div class="w-full max-w-3xl px-4">
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-semibold text-(--text-primary)">最近的工程</h2>
+          <h2 class="text-lg font-semibold text-(--text-primary) flex items-center gap-2">
+            <i class="ri-time-line text-(--text-secondary)"></i>
+            最近的工程
+          </h2>
           <button v-if="recentProjects.length > 5"
-            class="text-sm text-(--accent-color) hover:opacity-80 transition-opacity">
+            class="text-sm text-(--accent-color) hover:opacity-80 transition-opacity cursor-pointer flex items-center gap-1">
             查看全部 ({{ recentProjects.length }})
+            <i class="ri-arrow-right-s-line"></i>
           </button>
         </div>
 
-        <div v-if="recentProjects.length === 0" class="text-center py-12 text-(--text-secondary)">
-          <i class="ri-folder-2-line text-5xl mb-4 opacity-30"></i>
-          <p>暂无最近打开的工程</p>
+        <div v-if="recentProjects.length === 0"
+          class="text-center py-16 text-(--text-secondary) bg-(--bg-secondary)/50 rounded-xl border border-dashed border-(--border-color)">
+          <i class="ri-folder-2-line text-5xl mb-4 opacity-30 block"></i>
+          <p class="text-sm">暂无最近打开的工程</p>
+          <p class="text-xs mt-2 opacity-60">点击上方"新建工程"开始您的芯片设计之旅</p>
         </div>
 
         <div v-else class="space-y-2">
           <button v-for="project in recentProjects.slice(0, 5)" :key="project.id" @click="$emit('open-recent', project)"
-            class="w-full flex items-center justify-between px-4 py-3 bg-(--bg-secondary) hover:bg-(--bg-sidebar) rounded-lg transition-colors border border-(--border-color) hover:border-(--accent-color) text-left group">
-            <div class="flex items-center gap-3 flex-1 min-w-0">
-              <i class="ri-folder-line text-xl text-(--accent-color)"></i>
+            class="w-full flex items-center justify-between px-5 py-4 bg-(--bg-secondary) hover:bg-(--bg-sidebar) rounded-xl transition-all duration-200 border border-(--border-color) hover:border-(--accent-color) text-left group cursor-pointer hover:shadow-md">
+            <div class="flex items-center gap-4 flex-1 min-w-0">
+              <div
+                class="w-10 h-10 rounded-lg bg-(--accent-color)/10 flex items-center justify-center group-hover:bg-(--accent-color)/20 transition-colors">
+                <i class="ri-folder-line text-lg text-(--accent-color)"></i>
+              </div>
               <div class="flex-1 min-w-0">
                 <p class="font-medium text-(--text-primary) truncate">{{ project.name }}</p>
-                <p class="text-sm text-(--text-secondary) truncate">{{ project.path }}</p>
+                <p class="text-xs text-(--text-secondary) truncate mt-0.5">{{ project.path }}</p>
               </div>
             </div>
-            <span class="text-xs text-(--text-secondary) group-hover:text-(--text-primary) transition-colors">
-              {{ formatDate(project.lastOpened) }}
-            </span>
+            <div class="flex items-center gap-3">
+              <span
+                class="text-xs text-(--text-secondary) group-hover:text-(--text-primary) transition-colors whitespace-nowrap">
+                {{ formatDate(project.lastOpened) }}
+              </span>
+              <i
+                class="ri-arrow-right-s-line text-(--text-secondary) opacity-0 group-hover:opacity-100 transition-opacity"></i>
+            </div>
           </button>
         </div>
       </div>
     </div>
+
+    <!-- New Project Wizard Modal -->
+    <NewProjectWizard v-if="showWizard" @close="showWizard = false" @create="handleWizardCreate" />
   </div>
 </template>
 
 <script setup lang="ts">
-import type { Project } from '../types'
+import { ref } from 'vue'
+import type { Project, ProjectConfig } from '../types'
+import NewProjectWizard from './NewProjectWizard.vue'
 
 interface Props {
   recentProjects?: Project[]
@@ -78,7 +117,7 @@ interface Props {
 
 interface Emits {
   (e: 'open-project'): void
-  (e: 'new-project'): void
+  (e: 'new-project', config?: ProjectConfig): void
   (e: 'import-project'): void
   (e: 'open-recent', project: Project): void
 }
@@ -87,7 +126,14 @@ withDefaults(defineProps<Props>(), {
   recentProjects: () => []
 })
 
-defineEmits<Emits>()
+const emit = defineEmits<Emits>()
+
+const showWizard = ref(false)
+
+const handleWizardCreate = (config: ProjectConfig) => {
+  showWizard.value = false
+  emit('new-project', config)
+}
 
 const formatDate = (date: Date) => {
   const now = new Date()
@@ -103,12 +149,7 @@ const formatDate = (date: Date) => {
 </script>
 
 <style scoped>
-kbd {
-  font-family: ui-monospace, monospace;
-  font-size: 0.875em;
-}
-
 .welcome-gradient {
-  background: radial-gradient(circle at 50% 50%, var(--accent-color) 0%, transparent 70%);
+  background: radial-gradient(ellipse at 50% 30%, var(--accent-color) 0%, transparent 60%);
 }
 </style>

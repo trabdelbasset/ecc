@@ -4,21 +4,26 @@ use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
-use tauri::Manager;
+use tauri::{Emitter, Manager};
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri_plugin_fs::FsExt;
 
 // Global reference to the FastAPI server process
 type ApiServerProcess = Arc<Mutex<Option<Child>>>;
 
 /// Get the binary name for api-server based on the current platform
-fn get_api_server_binary_name() -> &'static str {
+/// Tauri's externalBin requires the target triple suffix
+fn get_api_server_binary_name() -> String {
+    // Get the target triple from build environment
+    let target = env!("TARGET");
+    
     #[cfg(target_os = "windows")]
     {
-        "api-server.exe"
+        format!("api-server-{}.exe", target)
     }
     #[cfg(not(target_os = "windows"))]
     {
-        "api-server"
+        format!("api-server-{}", target)
     }
 }
 
@@ -90,7 +95,7 @@ fn start_api_server(app_handle: &tauri::AppHandle) -> Option<Child> {
         let binary_name = get_api_server_binary_name();
         
         // Try multiple possible locations for the binary
-        let possible_paths = get_possible_binary_paths(app_handle, binary_name);
+        let possible_paths = get_possible_binary_paths(app_handle, &binary_name);
         
         let mut server_binary: Option<PathBuf> = None;
         for path in &possible_paths {
@@ -138,14 +143,25 @@ fn start_api_server(app_handle: &tauri::AppHandle) -> Option<Child> {
 /// Get possible paths where the api-server binary might be located
 /// This handles differences between macOS, Linux, and Windows
 #[cfg(not(debug_assertions))]
-fn get_possible_binary_paths(app_handle: &tauri::AppHandle, binary_name: &str) -> Vec<std::path::PathBuf> {
-    
+fn get_possible_binary_paths(app_handle: &tauri::AppHandle, binary_name: &str) -> Vec<std::path::PathBuf> {    
     let mut paths = Vec::new();
     
-    // Method 1: Next to the current executable (works for Linux and Windows)
+    // Method 1: Next to the current executable (works for bundled apps on Linux and Windows)
     if let Ok(exe_path) = std::env::current_exe() {
         if let Some(exe_dir) = exe_path.parent() {
             paths.push(exe_dir.join(binary_name));
+            
+            // Also check in binaries subdirectory next to executable
+            paths.push(exe_dir.join("binaries").join(binary_name));
+            
+            // Method 1b: For running directly from target/release, look in src-tauri/binaries
+            // exe is at: src-tauri/target/release/ecc-client
+            // binary is at: src-tauri/binaries/api-server-xxx
+            if let Some(target_dir) = exe_dir.parent() {  // target
+                if let Some(src_tauri_dir) = target_dir.parent() {  // src-tauri
+                    paths.push(src_tauri_dir.join("binaries").join(binary_name));
+                }
+            }
         }
     }
     
@@ -162,7 +178,7 @@ fn get_possible_binary_paths(app_handle: &tauri::AppHandle, binary_name: &str) -
     {
         if let Ok(exe_path) = std::env::current_exe() {
             // exe_path is typically: ECC.app/Contents/MacOS/ECC
-            // Binary should be at: ECC.app/Contents/MacOS/api-server
+            // Binary should be at: ECC.app/Contents/MacOS/api-server-xxx
             if let Some(macos_dir) = exe_path.parent() {
                 paths.push(macos_dir.join(binary_name));
                 
@@ -174,6 +190,10 @@ fn get_possible_binary_paths(app_handle: &tauri::AppHandle, binary_name: &str) -
             }
         }
     }
+    
+    // Remove duplicates while preserving order
+    let mut seen = std::collections::HashSet::new();
+    paths.retain(|p| seen.insert(p.clone()));
     
     paths
 }
@@ -190,77 +210,6 @@ fn stop_api_server(process: &mut Option<Child>) {
     }
 }
 
-#[derive(serde::Serialize)]
-struct PyResult {
-    code: i32,
-    stdout: String,
-    stderr: String,
-}
-
-#[tauri::command]
-async fn run_python(script: String, args: Option<Vec<String>>) -> Result<PyResult, String> {
-    use std::path::PathBuf;
-    use std::process::Command;
-
-    // 获取脚本绝对路径：相对于可执行文件所在目录或项目根目录
-    // 在开发环境下，CARGO_MANIFEST_DIR 是 src-tauri 目录
-    let mut script_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    script_path.push("..");
-    script_path.push("python");
-    script_path.push(&script);
-
-    let interpreter = if cfg!(windows) { "python" } else { "python3" };
-    let args_vec = args.unwrap_or_default();
-
-    let output = Command::new(interpreter)
-        .arg(&script_path)
-        .args(args_vec)
-        .output()
-        .map_err(|e| format!("Failed to execute python script: {}", e))?;
-
-    Ok(PyResult {
-        code: output.status.code().unwrap_or(-1),
-        stdout: String::from_utf8_lossy(&output.stdout).to_string(),
-        stderr: String::from_utf8_lossy(&output.stderr).to_string(),
-    })
-}
-
-#[tauri::command]
-async fn call_python_func(
-    script_path: String,
-    func_name: String,
-    args: Option<serde_json::Value>,
-) -> Result<PyResult, String> {
-    use std::path::PathBuf;
-    use std::process::Command;
-
-    let mut bridge_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    bridge_path.push("..");
-    bridge_path.push("python");
-    bridge_path.push("bridge.py");
-
-    let mut resolved_script_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    resolved_script_path.push("..");
-    resolved_script_path.push("python");
-    resolved_script_path.push(&script_path);
-
-    let interpreter = if cfg!(windows) { "python" } else { "python3" };
-    let args_json = args.unwrap_or(serde_json::json!({})).to_string();
-
-    let output = Command::new(interpreter)
-        .arg(&bridge_path)
-        .arg(&resolved_script_path)
-        .arg(&func_name)
-        .arg(args_json)
-        .output()
-        .map_err(|e| format!("Failed to execute python bridge: {}", e))?;
-
-    Ok(PyResult {
-        code: output.status.code().unwrap_or(-1),
-        stdout: String::from_utf8_lossy(&output.stdout).to_string(),
-        stderr: String::from_utf8_lossy(&output.stderr).to_string(),
-    })
-}
 
 #[tauri::command]
 fn show_main_window(window: tauri::Window) {
@@ -291,6 +240,127 @@ async fn request_project_permission(app: tauri::AppHandle, path: String) -> Resu
     Ok(())
 }
 
+/// 构建应用原生菜单
+fn build_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
+    // ===== macOS 应用菜单 (仅 macOS 显示在左上角) =====
+    let app_menu = Submenu::with_items(
+        app,
+        "ECC",
+        true,
+        &[
+            &PredefinedMenuItem::about(app, Some("About ECC"), None)?,
+            &PredefinedMenuItem::separator(app)?,
+            &PredefinedMenuItem::services(app, None)?,
+            &PredefinedMenuItem::separator(app)?,
+            &PredefinedMenuItem::hide(app, None)?,
+            &PredefinedMenuItem::hide_others(app, None)?,
+            &PredefinedMenuItem::show_all(app, None)?,
+            &PredefinedMenuItem::separator(app)?,
+            &PredefinedMenuItem::quit(app, None)?,
+        ],
+    )?;
+
+    // ===== File 菜单 =====
+    let file_menu = Submenu::with_items(
+        app,
+        "File",
+        true,
+        &[
+            &MenuItem::with_id(app, "new_project", "New Project", true, Some("CmdOrCtrl+N"))?,
+            &MenuItem::with_id(app, "open_project", "Open Project...", true, Some("CmdOrCtrl+O"))?,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "save", "Save", true, Some("CmdOrCtrl+S"))?,
+            &MenuItem::with_id(app, "save_as", "Save As...", true, Some("CmdOrCtrl+Shift+S"))?,
+            &PredefinedMenuItem::separator(app)?,
+            &PredefinedMenuItem::close_window(app, None)?,
+        ],
+    )?;
+
+    // // ===== Edit 菜单 =====
+    // let edit_menu = Submenu::with_items(
+    //     app,
+    //     "Edit",
+    //     true,
+    //     &[
+    //         &PredefinedMenuItem::undo(app, None)?,
+    //         &PredefinedMenuItem::redo(app, None)?,
+    //         &PredefinedMenuItem::separator(app)?,
+    //         &PredefinedMenuItem::cut(app, None)?,
+    //         &PredefinedMenuItem::copy(app, None)?,
+    //         &PredefinedMenuItem::paste(app, None)?,
+    //         &PredefinedMenuItem::select_all(app, None)?,
+    //     ],
+    // )?;
+
+    // // ===== View 菜单 =====
+    // let view_menu = Submenu::with_items(
+    //     app,
+    //     "View",
+    //     true,
+    //     &[
+    //         &MenuItem::with_id(app, "toggle_sidebar", "Toggle Sidebar", true, Some("CmdOrCtrl+B"))?,
+    //         &MenuItem::with_id(app, "toggle_inspector", "Toggle Inspector", true, Some("CmdOrCtrl+I"))?,
+    //         &PredefinedMenuItem::separator(app)?,
+    //         &MenuItem::with_id(app, "zoom_in", "Zoom In", true, Some("CmdOrCtrl+Plus"))?,
+    //         &MenuItem::with_id(app, "zoom_out", "Zoom Out", true, Some("CmdOrCtrl+Minus"))?,
+    //         &MenuItem::with_id(app, "zoom_reset", "Reset Zoom", true, Some("CmdOrCtrl+0"))?,
+    //         &PredefinedMenuItem::separator(app)?,
+    //         &PredefinedMenuItem::fullscreen(app, None)?,
+    //     ],
+    // )?;
+
+    // // ===== Window 菜单 =====
+    // let window_menu = Submenu::with_items(
+    //     app,
+    //     "Window",
+    //     true,
+    //     &[
+    //         &PredefinedMenuItem::minimize(app, None)?,
+    //         &PredefinedMenuItem::maximize(app, None)?,
+    //         &PredefinedMenuItem::separator(app)?,
+    //         &PredefinedMenuItem::close_window(app, None)?,
+    //     ],
+    // )?;
+
+    // ===== Help 菜单 =====
+    let help_menu = Submenu::with_items(
+        app,
+        "Help",
+        true,
+        &[
+            &MenuItem::with_id(app, "documentation", "Documentation", true, None::<&str>)?,
+            &MenuItem::with_id(app, "release_notes", "Release Notes", true, None::<&str>)?,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "report_issue", "Report Issue...", true, None::<&str>)?,
+        ],
+    )?;
+
+    // 组装完整菜单
+    Menu::with_items(
+        app,
+        &[
+            &app_menu,
+            &file_menu,
+            // &edit_menu,
+            // &view_menu,
+            // &window_menu,
+            &help_menu,
+        ],
+    )
+}
+
+/// 处理菜单事件
+fn handle_menu_event(app: &tauri::AppHandle, event: tauri::menu::MenuEvent) {
+    let id = event.id();
+    
+    println!("Menu clicked: {}", id.as_ref());
+    
+    // 向前端发送菜单事件，前端可以监听 "menu:xxx" 事件
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.emit(&format!("menu:{}", id.as_ref()), ());
+    }
+}
+
 fn main() {
     use std::path::PathBuf;
     
@@ -305,6 +375,16 @@ fn main() {
         .plugin(tauri_plugin_fs::init())
         .setup(move |app| {
             let window = app.get_webview_window("main").unwrap();
+
+            // 构建并设置原生菜单
+            let menu = build_menu(&app.handle())?;
+            app.set_menu(menu)?;
+
+            // 注册菜单事件处理器
+            let app_handle = app.handle().clone();
+            app.on_menu_event(move |_app, event| {
+                handle_menu_event(&app_handle, event);
+            });
 
             // Start the FastAPI server
             {
@@ -363,8 +443,6 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            run_python,
-            call_python_func,
             show_main_window,
             request_project_permission
         ])
