@@ -1,45 +1,27 @@
 #!/usr/bin/env bash
 
+set -e
+
 # 设置项目根目录
 PROJECT_ROOT=$(cd "$(dirname "$0")";pwd)
 CHIPCOMPILER_ROOT="${PROJECT_ROOT}/chipcompiler"
 VENV_DIR="${PROJECT_ROOT}/.venv"
 PYTHON_VERSION="3.10"
 
-# 检查Python 3.10是否可用
-if ! command -v python${PYTHON_VERSION} &> /dev/null; then
-    echo "Error: Python ${PYTHON_VERSION} is not installed or not in PATH"
+# 检查 uv 是否可用
+if ! command -v uv &> /dev/null; then
+    echo "Error: uv is not installed or not in PATH"
+    echo "Install it with: curl -LsSf https://astral.sh/uv/install.sh | sh"
     exit 1
 fi
 
-# 创建虚拟环境（如果不存在）
-if [ ! -d "${VENV_DIR}" ]; then
-    echo "Creating Python ${PYTHON_VERSION} virtual environment at ${VENV_DIR}..."
-    python${PYTHON_VERSION} -m venv "${VENV_DIR}"
-    if [ $? -ne 0 ]; then
-        echo "Error: Failed to create virtual environment"
-        exit 1
-    fi
-    echo "Virtual environment created successfully!"
-else
-    echo "Virtual environment already exists at ${VENV_DIR}"
-fi
+# 创建虚拟环境并安装依赖（包括 dev 依赖）
+echo "Setting up Python ${PYTHON_VERSION} environment with uv..."
+uv sync --frozen --all-groups --python ${PYTHON_VERSION}
 
-# 激活虚拟环境
+# 激活虚拟环境（用于后续脚本中的命令）
 echo "Activating virtual environment..."
 source "${VENV_DIR}/bin/activate"
-
-# 升级pip
-echo "Upgrading pip..."
-pip install --upgrade pip
-
-# 安装项目依赖
-echo "Installing project dependencies from pyproject.toml..."
-# 使用pyproject.toml安装项目依赖
-pip install -e .
-
-# 如果需要安装开发依赖，可以使用下面的命令
-# pip install -e ".[dev]"
 
 # 下载 OSS CAD SUITE BUILD (如果不存在)
 OSS_CAD_DIR="${CHIPCOMPILER_ROOT}/thirdparty/oss-cad-suite"
@@ -112,3 +94,14 @@ echo "ieda_py build completed successfully!"
 echo "Environment setup completed successfully!"
 echo "To activate the virtual environment in future sessions, run:"
 echo "source ${VENV_DIR}/bin/activate"
+
+if [ "$1" == "--release" ]; then
+    echo "Starting executable build process..."
+    export PYINSTALLER_ONEFILE=1
+    # Clean previous builds
+    echo "Cleaning previous builds..."
+    rm -rf build/ dist/
+
+    # Run pyinstaller via uv
+    uv run pyinstaller chipcompiler.spec
+fi
