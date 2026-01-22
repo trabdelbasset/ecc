@@ -11,17 +11,17 @@ from ..services import ecc_service
 
 ecc_serv = ecc_service()
 
-router = APIRouter(prefix="/api/project", tags=["project"])
+router = APIRouter(prefix="/api/workspace", tags=["workspace"])
 
-@router.post("/create", response_model=ECCResponse)
-async def create_project(request: ECCRequest):
+@router.post("/create_workspace", response_model=ECCResponse)
+async def create_workspace(request: ECCRequest):
     """
     Create a new ECC project.
     """
     return ecc_serv.create_workspace(request)
 
-@router.post("/open", response_model=ECCResponse)
-async def open_project(request: ECCRequest):
+@router.post("/load_workspace", response_model=ECCResponse)
+async def load_workspace(request: ECCRequest):
     """
     Open an existing ECC project.
     """

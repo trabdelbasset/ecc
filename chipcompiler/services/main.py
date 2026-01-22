@@ -4,7 +4,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routers import project_router
+from .routers import workspace_router
 
 # Create FastAPI application
 app = FastAPI(
@@ -31,7 +31,7 @@ app.add_middleware(
 )
 
 # Register routers
-app.include_router(project_router)
+app.include_router(workspace_router)
 
 
 @app.get("/")

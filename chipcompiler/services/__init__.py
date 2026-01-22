@@ -1,5 +1,5 @@
 from .main import app
-from .routers import project_router
+from .routers import workspace_router
 from .schemas import (
     CMDEnum,
     ResponseEnum,
@@ -14,7 +14,7 @@ from .services import (
 
 __all__ = [
     'app',
-    'project_router',
+    'workspace_router',
     'CMDEnum',
     'ResponseEnum',
     'DATA_TEMPLATE',
