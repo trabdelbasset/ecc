@@ -15,7 +15,7 @@
         },
         {
             "id": "ics55_tapeout_00002",
-            "filelist": "/nfs/share/home/qiming/benchmark/dataset/rtl/ics55/SimpleEdgeAiSoC/filelist",
+            "filelist": "/nfs/share/home/qiming/benchmark/dataset/rtl/ics55/SimpleEdgeAiSoC/filelist.f",
             "Design": "SimpleEdgeAiSoC",
             "Top module": "ip1_SimpleEdgeAiSoC",
             "Clock": "clock",
@@ -24,7 +24,7 @@
         },
         {
             "id": "ics55_tapeout_00003",
-            "filelist": "/nfs/share/home/qiming/benchmark/dataset/rtl/ics55/TJUT_TOP/filelist",
+            "filelist": "/nfs/share/home/qiming/benchmark/dataset/rtl/ics55/TJUT_TOP/filelist.f",
             "Design": "TJUT_TOP",
             "Top module": "ip2_TJUT_TOP",
             "Clock": "clk",
@@ -33,7 +33,7 @@
         },
         {
             "id": "ics55_tapeout_00004",
-            "filelist": "/nfs/share/home/qiming/benchmark/dataset/rtl/ics55/ysyxSoCTest/filelist",
+            "filelist": "/nfs/share/home/qiming/benchmark/dataset/rtl/ics55/ysyxSoCTest/filelist.f",
             "Design": "ysyxSoC",
             "Top module": "ysyxSoCASIC",
             "Clock": "clock",
@@ -60,7 +60,7 @@
         },
         {
             "id": "ics55_tapeout_00007",
-            "filelist": "/nfs/share/home/qiming/benchmark/dataset/rtl/ics55/stage_b_ysyx_23060170/filelist",
+            "filelist": "/nfs/share/home/qiming/benchmark/dataset/rtl/ics55/stage_b_ysyx_23060170/filelist.f",
             "Design": "stage_b_ysyx_23060170",
             "Top module": "ysyx_23060170",
             "Clock": "clock",
@@ -69,7 +69,7 @@
         },
         {
             "id": "ics55_tapeout_00008",
-            "filelist": "/nfs/share/home/qiming/benchmark/dataset/rtl/ics55/stage_b_ysyx_23060203/filelist",
+            "filelist": "/nfs/share/home/qiming/benchmark/dataset/rtl/ics55/stage_b_ysyx_23060203/filelist.f",
             "Design": "stage_b_ysyx_23060203",
             "Top module": "ysyx_23060203",
             "Clock": "clock",
@@ -78,7 +78,7 @@
         },
         {
             "id": "ics55_tapeout_00009",
-            "filelist": "/nfs/share/home/qiming/benchmark/dataset/rtl/ics55/stage_b_ysyx_23060229/filelist",
+            "filelist": "/nfs/share/home/qiming/benchmark/dataset/rtl/ics55/stage_b_ysyx_23060229/filelist.f",
             "Design": "stage_b_ysyx_23060229",
             "Top module": "ysyx_23060229",
             "Clock": "clock",
@@ -87,7 +87,7 @@
         },
         {
             "id": "ics55_tapeout_00010",
-            "filelist": "/nfs/share/home/qiming/benchmark/dataset/rtl/ics55/stage_d_ysyx_24080018/filelist",
+            "filelist": "/nfs/share/home/qiming/benchmark/dataset/rtl/ics55/stage_d_ysyx_24080018/filelist.f",
             "Design": "stage_d_ysyx_24080018",
             "Top module": "ysyx_24080018",
             "Clock": "clock",
@@ -96,7 +96,7 @@
         },
         {
             "id": "ics55_tapeout_00011",
-            "filelist": "/nfs/share/home/qiming/benchmark/dataset/rtl/ics55/stage_d_ysyx_24090003/filelist",
+            "filelist": "/nfs/share/home/qiming/benchmark/dataset/rtl/ics55/stage_d_ysyx_24090003/filelist.f",
             "Design": "stage_d_ysyx_24090003",
             "Top module": "ysyx_24090003",
             "Clock": "clock",
@@ -105,7 +105,7 @@
         },
         {
             "id": "ics55_tapeout_00012",
-            "filelist": "/nfs/share/home/qiming/benchmark/dataset/rtl/ics55/stage_d_ysyx_24090010/filelist",
+            "filelist": "/nfs/share/home/qiming/benchmark/dataset/rtl/ics55/stage_d_ysyx_24090010/filelist.f",
             "Design": "stage_d_ysyx_24090010",
             "Top module": "ysyx_24090010_exu",
             "Clock": "clock",
@@ -114,7 +114,7 @@
         },
         {
             "id": "ics55_tapeout_00013",
-            "filelist": "/nfs/share/home/qiming/benchmark/dataset/rtl/ics55/stage_d_ysyx_24090015/filelist",
+            "filelist": "/nfs/share/home/qiming/benchmark/dataset/rtl/ics55/stage_d_ysyx_24090015/filelist.f",
             "Design": "stage_d_ysyx_24090015",
             "Top module": "ysyx_24090015",
             "Clock": "clock",
