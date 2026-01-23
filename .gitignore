@@ -145,5 +145,8 @@ test/examples/
 .cursor/
 .cursor-user/
 
+# Egg info
+chipcompiler.egg-info/
+
 # OSS CAD Suite
 chipcompiler/thirdparty/oss-cad-suite/

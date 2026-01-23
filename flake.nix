@@ -29,8 +29,6 @@
       systems = [
         "x86_64-linux"
         "aarch64-linux"
-        "x86_64-darwin"
-        "aarch64-darwin"
       ];
       flake.hydraJobs = {
         x86_64-linux = {
@@ -55,27 +53,21 @@
           # Use `nix develop -c python3 test/test_tools_yosys.py` to run tests in dev shell
           devShells = {
             default = pkgs.mkShell {
+              inputsFrom = [ inputs'.infra.packages.iedaUnstable ];
               nativeBuildInputs =
                 with pkgs;
                 [
-                  python3
-                  python3Packages.pip
-                  python3Packages.virtualenv
                   git
                   black
                   isort
                   uv
+                  cargo
+                ] ++ [
                   inputs'.infra.packages.yosysWithSlang
-                  # inputs'.infra.packages.iedaUnstable
-                  # Python dependencies
-                  python3Packages.numpy
-                  python3Packages.pandas
-                  python3Packages.matplotlib
-                  python3Packages.scipy
-                  python3Packages.json5
-                  python3Packages.pyyaml
                 ];
               shellHook = ''
+                ENABLE_OSS_CAD_SUITE=false ./build.sh
+                source .venv/bin/activate
               '';
             };
           };

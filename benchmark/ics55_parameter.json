@@ -10,7 +10,7 @@
         "Size": [],
         "Bounding box": "",
         "Utilitization": 0.4,
-        "Margin" : [10, 10],
+        "Margin" : [2, 2],
         "Aspect ratio" : 1
     },
     "Max fanout" : 20,

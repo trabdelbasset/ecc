@@ -167,10 +167,10 @@ def PDK_SKY130() -> PDK:
             "sky130_fd_sc_hs__fill_2",
             "sky130_fd_sc_hs__fill_1"   
         ],
-        tie_high_cell = "",
-        tie_high_port = "",
-        tie_low_cell = "",
-        tie_low_port = "",
+        tie_high_cell = "sky130_fd_sc_hs__conb_1",
+        tie_high_port = "HI",
+        tie_low_cell = "sky130_fd_sc_hs__conb_1",
+        tie_low_port = "LO",
         dont_use=[]
     )
     

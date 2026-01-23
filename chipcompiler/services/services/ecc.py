@@ -47,6 +47,16 @@ class ECCService:
         
         return True, None
     
+    def __build_flow(self):
+        engine_flow = EngineFlow(workspace=self.workspace)
+        if not engine_flow.has_init():
+            steps = build_rtl2gds_flow()
+            for step, tool, state in steps:
+                engine_flow.add_step(step=step, tool=tool, state=state)
+        if engine_flow.is_flow_success():
+            return 
+        engine_flow.create_step_workspaces()
+    
     def create_workspace(self, request: ECCRequest) -> ECCResponse:
         # check cmd
         state, response = self.check_cmd(request, CMDEnum.create_workspace)
@@ -75,7 +85,7 @@ class ECCService:
             )
         else:
             self.workspace = workspace
-            self.build_flow()
+            self.__build_flow()
             
             response_data = {
                 "directory" : data.get("directory", "")
@@ -110,7 +120,7 @@ class ECCService:
             )
         else:
             self.workspace = workspace
-            self.build_flow()
+            self.__build_flow()
             
             response_data = {
                 "directory" : data.get("directory", "")
@@ -123,14 +133,36 @@ class ECCService:
             )
     
     def delete_workspace(self, request: ECCRequest) -> ECCResponse:
-        pass
-    
-    def build_flow(self):
-        engine_flow = EngineFlow(workspace=self.workspace)
-        if not engine_flow.has_init():
-            steps = build_rtl2gds_flow()
-            for step, tool, state in steps:
-                engine_flow.add_step(step=step, tool=tool, state=state)
-        if engine_flow.is_flow_success():
-            return 
-        engine_flow.create_step_workspaces()
+        # check cmd
+        state, response = self.check_cmd(request, CMDEnum.delete_workspace)
+        if not state:
+            return response 
+        
+        # get data
+        data = request.data
+ 
+        # check data
+        if self.workspace is None \
+            or self.workspace.directory != data.get('directory', '') \
+                or not os.path.exists(data.get('directory', '')):
+            return ECCResponse(
+                cmd=request.cmd,
+                response=ResponseEnum.error.value,
+                data={},
+                message = [f"workspace not exist : {data.get('directory', '')}"]
+            )
+            
+        # process cmd
+        self.workspace = None
+        import shutil
+        shutil.rmtree(data.get('directory', ''))
+            
+        response_data = {
+            "directory" : data.get("directory", "")
+        }
+        return ECCResponse(
+            cmd=request.cmd,
+            response=ResponseEnum.success.value,
+            data=response_data,
+            message = [f"delete workspace success : {data.get('directory', '')}"]
+        )

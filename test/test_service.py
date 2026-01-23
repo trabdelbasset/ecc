@@ -31,7 +31,7 @@ from chipcompiler.services import (
 from benchmark import get_parameters
 
 def test_sky130_gcd():
-    workspace_dir="{}/test/examples/sky130_gcd1".format(root)
+    workspace_dir="{}/test/examples/sky130_gcd".format(root)
 
     input_def = ""
     input_verilog = "{}/chipcompiler/thirdparty/iEDA/scripts/design/sky130_gcd/result/verilog/gcd.v".format(root)
@@ -60,6 +60,16 @@ def test_sky130_gcd():
         }
     )
     ecc_response = ecc_serv.load_workspace(ecc_req)
+    
+    ecc_req = ECCRequest(
+        cmd = "delete_workspace",
+        data = {
+            "directory" : workspace_dir
+        }
+    )
+    ecc_response = ecc_serv.delete_workspace(ecc_req)
+    
+    print(1)
   
 
     

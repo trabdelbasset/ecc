@@ -10,14 +10,8 @@ sys.path.append(root)
 
 from benchmark import run_benchmark, benchmark_statis, benchmark_metrics
 
-if __name__ == "__main__":
+def test_benchmark_batch():
     benchmark_json = f"{root}/benchmark/ics55_benchmark.json"
-    
-    # run single
-    # run_benchmark(benchmark_json=benchmark_json,
-    #               target_dir="/nfs/home/huangzengrong/benchmark",
-    #               batch_name="ics55_batch_0",
-    #               design="arm9")
     
     # run batch
     run_benchmark(benchmark_json=benchmark_json,
@@ -28,5 +22,35 @@ if __name__ == "__main__":
     benchmark_metrics(benchmark_json=benchmark_json,
                      target_dir="/nfs/home/huangzengrong/benchmark",
                      batch_name="ics55_batch_0")
+    
+def test_benchmark_single():
+    benchmark_json = f"{root}/benchmark/ics55_benchmark.json"
+    
+    # run batch
+    run_benchmark(benchmark_json=benchmark_json,
+                  target_dir="/nfs/home/huangzengrong/benchmark",
+                  batch_name="ics55_batch_0",
+                  design="arm9")
+    
+def test_benchmark_tapout():
+    benchmark_json = f"{root}/benchmark/ics55_tapeout.json"
+    
+    # run batch
+    run_benchmark(benchmark_json=benchmark_json,
+                  target_dir="/nfs/home/huangzengrong/benchmark",
+                  batch_name="ics55_tapeout")
+    
+    benchmark_statis(benchmark_dir="/nfs/home/huangzengrong/benchmark/ics55_tapeout")
+    benchmark_metrics(benchmark_json=benchmark_json,
+                     target_dir="/nfs/home/huangzengrong/benchmark",
+                     batch_name="ics55_tapeout")
+    
+    
+if __name__ == "__main__":
+    # test_benchmark_batch()
+    
+    # test_benchmark_single()
+    
+    test_benchmark_tapout()
 
     exit(0)
