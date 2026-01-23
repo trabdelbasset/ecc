@@ -22,17 +22,17 @@ class EngineFlow:
         steps = []
 
         steps.append(self.init_flow_step(StepEnum.SYNTHESIS, "yosys", StateEnum.Unstart))
-        steps.append(self.init_flow_step(StepEnum.FLOORPLAN, "iEDA", StateEnum.Unstart))
-        steps.append(self.init_flow_step(StepEnum.NETLIST_OPT, "iEDA", StateEnum.Unstart))
-        steps.append(self.init_flow_step(StepEnum.PLACEMENT, "iEDA", StateEnum.Unstart))
-        steps.append(self.init_flow_step(StepEnum.CTS, "iEDA", StateEnum.Unstart))
-        # steps.append(self.init_flow_step(StepEnum.TIMING_OPT_DRV, "iEDA", StateEnum.Unstart))
-        # steps.append(self.init_flow_step(StepEnum.TIMING_OPT_HOLD, "iEDA", StateEnum.Unstart))
-        steps.append(self.init_flow_step(StepEnum.LEGALIZATION, "iEDA", StateEnum.Unstart))
-        steps.append(self.init_flow_step(StepEnum.ROUTING, "iEDA", StateEnum.Unstart))
-        steps.append(self.init_flow_step(StepEnum.FILLER, "iEDA", StateEnum.Unstart))
+        steps.append(self.init_flow_step(StepEnum.FLOORPLAN, "ecc", StateEnum.Unstart))
+        steps.append(self.init_flow_step(StepEnum.NETLIST_OPT, "ecc", StateEnum.Unstart))
+        steps.append(self.init_flow_step(StepEnum.PLACEMENT, "ecc", StateEnum.Unstart))
+        steps.append(self.init_flow_step(StepEnum.CTS, "ecc", StateEnum.Unstart))
+        # steps.append(self.init_flow_step(StepEnum.TIMING_OPT_DRV, "ecc", StateEnum.Unstart))
+        # steps.append(self.init_flow_step(StepEnum.TIMING_OPT_HOLD, "ecc", StateEnum.Unstart))
+        steps.append(self.init_flow_step(StepEnum.LEGALIZATION, "ecc", StateEnum.Unstart))
+        steps.append(self.init_flow_step(StepEnum.ROUTING, "ecc", StateEnum.Unstart))
+        steps.append(self.init_flow_step(StepEnum.FILLER, "ecc", StateEnum.Unstart))
         # steps.append(self.init_flow_step(StepEnum.GDS, "klayout", StateEnum.Unstart))
-        # steps.append(self.init_flow_step(StepEnum.SIGNOFF, "iEDA", StateEnum.Unstart))
+        # steps.append(self.init_flow_step(StepEnum.SIGNOFF, "ecc", StateEnum.Unstart))
         
         self.workspace.flow.data = {"steps" : steps}
         

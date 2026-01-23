@@ -33,7 +33,7 @@ class StepEnum(Enum):
 
 class StateEnum(Enum):
     """flow running state"""
-    Invalid = "Invalid" # iEDA or config invalid
+    Invalid = "Invalid" # ecc tools or config invalid
     Unstart = "Unstart" # step unstart
     Success = "Success" # step run success
     Ongoing = "Ongoing" # step is running

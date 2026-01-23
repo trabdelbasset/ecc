@@ -34,7 +34,7 @@ def test_sky130_gcd():
     workspace_dir="{}/test/examples/sky130_gcd".format(root)
 
     input_def = ""
-    input_verilog = "{}/chipcompiler/thirdparty/iEDA/scripts/design/sky130_gcd/result/verilog/gcd.v".format(root)
+    input_verilog = "{}/chipcompiler/thirdparty/ecc-tools/scripts/design/sky130_gcd/result/verilog/gcd.v".format(root)
     
     ecc_serv = ecc_service()
     

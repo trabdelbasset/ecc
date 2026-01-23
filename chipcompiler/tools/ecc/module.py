@@ -2,27 +2,26 @@
 # -*- encoding: utf-8 -*-
 from numpy import double
 
-class IEDAModule:
+class ECCToolsModule:
     """
-    python api package of iEDA.
+    python api package of ECC.
     """
     def __init__(self):
         try:
-            from chipcompiler.tools.iEDA.utility import is_eda_exist
+            from chipcompiler.tools.ecc.utility import is_eda_exist
             if is_eda_exist():
-                # from chipcompiler.tools.iEDA.bin import ieda_py as ieda
-                from chipcompiler.thirdparty.iEDA.bin import ieda_py as ieda
+                from chipcompiler.tools.ecc.bin import ecc_py as ecc
         except ImportError:
-            raise ImportError("iEDA tool is not installed or not found.")
+            raise ImportError("ecc tool is not installed or not found.")
     
-        self.ieda = ieda
+        self.ecc = ecc
 
-    def get_ieda(self):
-        return self.ieda
+    def get_ecc(self):
+        return self.ecc
     
     def exit(self):
-        """exit iEDA"""
-        self.ieda.flow_exit()
+        """exit ECC tools"""
+        self.ecc.flow_exit()
     
     ########################################################################
     # config api
@@ -33,11 +32,11 @@ class IEDAModule:
                     output_dir : str,
                     feature_dir : str):
         """init_config"""
-        self.ieda.flow_init(
+        self.ecc.flow_init(
             flow_config=flow_config
         )
 
-        self.ieda.db_init(
+        self.ecc.db_init(
             config_path=db_config,
             output_path=output_dir,
             feature_path=feature_dir,
@@ -52,7 +51,7 @@ class IEDAModule:
         """
         set net type
         """
-        return self.ieda.set_net(net_name=net_name, net_type=net_type)
+        return self.ecc.set_net(net_name=net_name, net_type=net_type)
     
     def set_exclude_cell_names(self, cell_names: set):
         self.cell_names = cell_names
@@ -61,7 +60,7 @@ class IEDAModule:
                              dm_inst_ptr, 
                              node_x, 
                              node_y):
-        self.ieda.write_placement_back(dm_inst_ptr, 
+        self.ecc.write_placement_back(dm_inst_ptr, 
                                        node_x, 
                                        node_y)
     
@@ -70,40 +69,40 @@ class IEDAModule:
     ########################################################################
     def init_techlef(self, tech_lef_path : str):
         """init tech lef"""
-        self.ieda.tech_lef_init(tech_lef_path)
+        self.ecc.tech_lef_init(tech_lef_path)
 
     def init_lefs(self, lef_paths: list):
         """init_lef"""
-        self.ieda.lef_init(lef_paths=lef_paths)
+        self.ecc.lef_init(lef_paths=lef_paths)
 
     def read_def(self, path: str = ""):
         """init def"""
-        self.ieda.def_init(def_path=path)
+        self.ecc.def_init(def_path=path)
 
     def read_verilog(self, 
                      verilog : str, 
                      top_module: str):
         """init verilog"""
-        self.ieda.verilog_init(verilog, 
+        self.ecc.verilog_init(verilog, 
                                top_module)
 
     def def_save(self, def_path: str):
         """save def file"""
-        self.ieda.def_save(def_name=def_path)
+        self.ecc.def_save(def_name=def_path)
 
     def gds_save(self, output_path: str):
         """save gds file"""
-        self.ieda.gds_save(output_path)
+        self.ecc.gds_save(output_path)
 
     def tcl_save(self, output_path: str):
         """save tcl file"""
-        self.ieda.tcl_save(output_path)
+        self.ecc.tcl_save(output_path)
 
     def verilog_save(self, 
                      output_verilog, 
                      cell_names: set = set()):
         """verilog save"""
-        self.ieda.netlist_save(
+        self.ecc.netlist_save(
             netlist_path=output_verilog, 
             exclude_cell_names=cell_names
         )
@@ -115,7 +114,7 @@ class IEDAModule:
         """
         generate feature summary
         """
-        self.ieda.feature_summary(json_path)
+        self.ecc.feature_summary(json_path)
         
     def feature_step(self, 
                      step: str, 
@@ -123,7 +122,7 @@ class IEDAModule:
         """
         generate step feature
         """
-        self.ieda.feature_tool(json_path, step)
+        self.ecc.feature_tool(json_path, step)
         
     ########################################################################
     # reports api
@@ -133,7 +132,7 @@ class IEDAModule:
         """
         generate step report
         """
-        self.ieda.report_db(path)
+        self.ecc.report_db(path)
         
     ########################################################################
     # CTS api
@@ -141,10 +140,10 @@ class IEDAModule:
     def run_cts(self, 
                 config: str, 
                 output : str) -> bool:
-        return self.ieda.run_cts(config, output)
+        return self.ecc.run_cts(config, output)
     
     def report_cts(self, output : str):
-        self.ieda.cts_report(output)
+        self.ecc.cts_report(output)
     
     def feature_cts_map(self, 
                         json_path: str, 
@@ -152,7 +151,7 @@ class IEDAModule:
         """
         generate cts map feature
         """
-        self.ieda.feature_cts_eval(json_path, map_grid_size)
+        self.ecc.feature_cts_eval(json_path, map_grid_size)
     
     ########################################################################    
     # DRC api
@@ -163,7 +162,7 @@ class IEDAModule:
         """
         init drc config
         """
-        self.ieda.init_drc(
+        self.ecc.init_drc(
             temp_directory_path=output_dir,
             thread_number=therad_number)
         
@@ -173,13 +172,13 @@ class IEDAModule:
         """
         run drc check
         """
-        self.ieda.run_drc(config=config, report=report_path)
+        self.ecc.run_drc(config=config, report=report_path)
         
     def save_drc(self, feature_path: str):
         """
         generate drc result
         """
-        self.ieda.save_drc(path=feature_path)
+        self.ecc.save_drc(path=feature_path)
     
     ########################################################################    
     # floorplan api
@@ -201,7 +200,7 @@ class IEDAModule:
         die_area :  "0.0    0.0   1100    1100"
         core_area : "10.0   10.0  1090.0  1090.0"
         """
-        return self.ieda.init_floorplan(
+        return self.ecc.init_floorplan(
             die_area=die_area,
             core_area=core_area,
             core_site=core_site,
@@ -269,7 +268,7 @@ class IEDAModule:
         """
         generate track
         """
-        return self.ieda.gern_track(
+        return self.ecc.gern_track(
             layer=layer, 
             x_start=x_start, 
             x_step=x_step, 
@@ -283,7 +282,7 @@ class IEDAModule:
                    pin_name: str = None):
         if pin_name is None:
             pin_name = net_name
-        return self.ieda.add_pdn_io(pin_name=pin_name, 
+        return self.ecc.add_pdn_io(pin_name=pin_name, 
                                     net_name=net_name, 
                                     direction=direction, 
                                     is_power=is_power)
@@ -292,7 +291,7 @@ class IEDAModule:
                            net_name: str, 
                            instance_pin_name: str, 
                            is_power: bool):
-        return self.ieda.global_net_connect(net_name=net_name, 
+        return self.ecc.global_net_connect(net_name=net_name, 
                                             instance_pin_name=instance_pin_name, 
                                             is_power=is_power)
         
@@ -302,7 +301,7 @@ class IEDAModule:
                         net_ground : str,
                         width : double,
                         offset : double):
-        return self.ieda.create_grid(layer_name=layer,
+        return self.ecc.create_grid(layer_name=layer,
                                      net_name_power=net_power,
                                      net_name_ground=net_ground,
                                      width=width,
@@ -315,7 +314,7 @@ class IEDAModule:
                           width : double,
                           pitch : double,
                           offset : double):
-        return self.ieda.create_stripe(layer_name=layer,
+        return self.ecc.create_stripe(layer_name=layer,
                                        net_name_power=net_power,
                                        net_name_ground=net_ground,
                                        width=width,
@@ -324,7 +323,7 @@ class IEDAModule:
         
     def connect_pdn_layers(self,
                            layers : list[str]):
-        return self.ieda.connect_two_layer(layers=layers)
+        return self.ecc.connect_two_layer(layers=layers)
 
     def auto_place_pins(self, 
                         layer: str, 
@@ -337,7 +336,7 @@ class IEDAModule:
         height : io pin height, in dbu
         sides : "left", "rigth", "top", "bottom", if empty, place io pins around die.
         """
-        return self.ieda.auto_place_pins(
+        return self.ecc.auto_place_pins(
             layer=layer, 
             width=width, 
             height=height, 
@@ -348,7 +347,7 @@ class IEDAModule:
                 tapcell: str, 
                 distance: double, 
                 endcap: str):
-        return self.ieda.tapcell(tapcell=tapcell, 
+        return self.ecc.tapcell(tapcell=tapcell, 
                                  distance=distance, 
                                  endcap=endcap)
         
@@ -356,34 +355,34 @@ class IEDAModule:
     # pdn api
     ########################################################################
     def pnp(self, config: str):
-        self.ieda.run_pnp(config)
+        self.ecc.run_pnp(config)
     
     ########################################################################
     # placement api
     ########################################################################
     def run_placement(self, config: str):
-        self.ieda.run_placer(config)
+        self.ecc.run_placer(config)
         
     def feature_placement_map(self, json_path: str, map_grid_size=1):
         """
         generate placement map feature
         """
-        self.ieda.feature_pl_eval(json_path, map_grid_size)
+        self.ecc.feature_pl_eval(json_path, map_grid_size)
         
     def run_legalize(self, config: str):
-        self.ieda.run_incremental_lg()
+        self.ecc.run_incremental_lg()
         
     def run_filler(self, config: str):
-        self.ieda.run_filler(config)
+        self.ecc.run_filler(config)
         
     def run_macro_placement(self, config: str, tcl_path=""):
         """
         run macro placement
         """
-        self.ieda.runMP(config, tcl_path)
+        self.ecc.runMP(config, tcl_path)
         
     def run_refinement(self, tcl_path=""):
-        self.ieda.runRef(tcl_path)
+        self.ecc.runRef(tcl_path)
         
     def run_ai_placement(self,
                         config: str, 
@@ -396,7 +395,7 @@ class IEDAModule:
             onnx_path: Path to the ONNX model file
             normalization_path: Path to the normalization parameters JSON file
         """
-        self.ieda.run_ai_placement(config, 
+        self.ecc.run_ai_placement(config, 
                                    onnx_path, 
                                    normalization_path)
         
@@ -406,27 +405,27 @@ class IEDAModule:
         """
         build macro drc distribution
         """
-        self.ieda.feature_macro_drc(path=path, 
+        self.ecc.feature_macro_drc(path=path, 
                                     drc_path=drc_path)
     
     ########################################################################
     # routing api
     ########################################################################
     def run_routing(self, config: str):
-        self.ieda.init_rt(config=config)
-        self.ieda.run_rt()
-        self.ieda.destroy_rt()
+        self.ecc.init_rt(config=config)
+        self.ecc.run_rt()
+        self.ecc.destroy_rt()
         
     def close_routing(self):
-        self.ieda.destroy_rt()
+        self.ecc.destroy_rt()
         
-    # read route json file to iEDA route data
+    # read route json file to ecc route data
     def feature_route_read(self, json_path: str):
-        self.ieda.feature_route_read(path=json_path)
+        self.ecc.feature_route_read(path=json_path)
 
     # read route def and save route data to json
     def feature_route(self, json_path: str):
-        self.ieda.feature_route(path=json_path)  
+        self.ecc.feature_route(path=json_path)  
         
     def is_rt_timing_enable(self, config : str):
         import os
@@ -447,42 +446,42 @@ class IEDAModule:
                  design : str,
                  lib_paths : list[str],
                  sdc_path: str):
-        self.ieda.set_design_workspace(output_dir)
+        self.ecc.set_design_workspace(output_dir)
 
-        self.ieda.read_liberty(lib_paths)
-        self.ieda.link_design(design)
-        self.ieda.read_sdc(sdc_path)
+        self.ecc.read_liberty(lib_paths)
+        self.ecc.link_design(design)
+        self.ecc.read_sdc(sdc_path)
         
     def read_liberty(self, lib_paths : list[str]):
-        self.ieda.read_liberty(lib_paths)
+        self.ecc.read_liberty(lib_paths)
         
     def link_design(self, design : str):
-        self.ieda.link_design(design)
+        self.ecc.link_design(design)
 
     def read_sdc(self, sdc_path : str):
-        self.ieda.read_sdc(sdc_path)
+        self.ecc.read_sdc(sdc_path)
         
     def create_data_flow(self):
-        self.ieda.create_data_flow()
+        self.ecc.create_data_flow()
 
     def get_used_libs(self):
         """
         get lib files that use in the disign
         """
-        libs = self.ieda.get_used_libs()
+        libs = self.ecc.get_used_libs()
 
         return libs
     ########################################################################
     # timing opt api
     ########################################################################
     def run_timing_opt_drv(self, config: str):
-        self.ieda.run_to_drv(config)
+        self.ecc.run_to_drv(config)
         
     def run_timing_opt_hold(self, config: str):
-        self.ieda.run_to_hold(config)
+        self.ecc.run_to_hold(config)
         
     def run_timing_opt_setup(self, config: str):
-        self.ieda.run_to_setup(config)
+        self.ecc.run_to_setup(config)
     
     ########################################################################
     # data vectorization
@@ -497,7 +496,7 @@ class IEDAModule:
         """
         generate vectorized data from design
         """
-        self.ieda.generate_vectors(
+        self.ecc.generate_vectors(
             dir=vectors_dir,
             patch_row_step=patch_row_step,
             patch_col_step=patch_col_step,
@@ -511,13 +510,13 @@ class IEDAModule:
         """
         save vectorized data to def
         """
-        self.ieda.read_vectors_nets(dir=vectors_dir)
+        self.ecc.read_vectors_nets(dir=vectors_dir)
 
     def vectors_nets_patterns_to_def(self, path):
-        self.ieda.read_vectors_nets_patterns(path=path)
+        self.ecc.read_vectors_nets_patterns(path=path)
     
     ########################################################################
     # net optimization
     ########################################################################
     def run_net_opt(self, config : str):
-        return self.ieda.run_no_fixfanout(config)
+        return self.ecc.run_no_fixfanout(config)

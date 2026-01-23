@@ -4,19 +4,17 @@ import sys
 import os
        
 from chipcompiler.data import WorkspaceStep, Workspace, StateEnum, StepEnum
-from chipcompiler.tools.iEDA.module import IEDAModule
-from chipcompiler.tools.iEDA.utility import is_eda_exist
-from chipcompiler.tools.iEDA.plot import IEDAPlot
-from chipcompiler.tools.iEDA.metrics import build_step_metrics 
+from chipcompiler.tools.ecc.module import ECCToolsModule
+from chipcompiler.tools.ecc.utility import is_eda_exist
+from chipcompiler.tools.ecc.plot import ECCToolsPlot
+from chipcompiler.tools.ecc.metrics import build_step_metrics 
 
 def create_db_engine(workspace: Workspace,
-                     step: WorkspaceStep) -> IEDAModule:
+                     step: WorkspaceStep) -> ECCToolsModule:
     """"""
     if not is_eda_exist():
         return False
-    
-    from chipcompiler.tools.iEDA.module import IEDAModule
-    eda_inst = IEDAModule()
+    eda_inst = ECCToolsModule()
     
     eda_inst.init_config(flow_config=step.config["flow"],
                          db_config=step.config["db"],
@@ -41,9 +39,9 @@ def create_db_engine(workspace: Workspace,
 
 def get_eda_instance(workspace: Workspace,
                  step: WorkspaceStep,
-                 instance: IEDAModule=None) -> IEDAModule:
+                 instance: ECCToolsModule=None) -> ECCToolsModule:
     """
-    module is iEDA module from db engine, 
+    module is ecc module from db engine, 
     eda instacnce may initialize data from this module if module has been set
     """
     eda_inst = None
@@ -52,16 +50,16 @@ def get_eda_instance(workspace: Workspace,
         # TBD
         eda_inst = instance
     else:
-        # init iEDA module
+        # init ecc module
         eda_inst = create_db_engine(workspace=workspace,
                                     step=step)
     
     return eda_inst
 
 def save_data(step: WorkspaceStep,
-              module : IEDAModule) -> bool:
+              module : ECCToolsModule) -> bool:
     """
-    module is iEDA module from db engine, 
+    module is ecc module from db engine, 
     eda instacnce may initialize data from this module if module has been set
     """
     if module is None:
@@ -80,7 +78,7 @@ def save_data(step: WorkspaceStep,
     
 def run_step(workspace: Workspace,
              step: WorkspaceStep,
-             module : IEDAModule = None) -> bool:
+             module : ECCToolsModule = None) -> bool:
     if not is_eda_exist():
         return StateEnum.Invalid
         
@@ -133,7 +131,7 @@ def run_step(workspace: Workspace,
                            step=step)
         
         # plot layout image
-        ploter = IEDAPlot(workspace=workspace, 
+        ploter = ECCToolsPlot(workspace=workspace, 
                           step=step)
         ploter.plot()   
             
@@ -141,7 +139,7 @@ def run_step(workspace: Workspace,
 
 def run_net_opt(workspace: Workspace,
                 step: WorkspaceStep,
-                module : IEDAModule = None) -> bool:
+                module : ECCToolsModule = None) -> bool:
     """
     run net optimization
     """
@@ -157,7 +155,7 @@ def run_net_opt(workspace: Workspace,
     
 def run_placement(workspace: Workspace,
                   step: WorkspaceStep,
-                  module : IEDAModule = None) -> bool:
+                  module : ECCToolsModule = None) -> bool:
     """
     run placement
     """
@@ -175,7 +173,7 @@ def run_placement(workspace: Workspace,
 
 def run_cts(workspace: Workspace,
             step: WorkspaceStep,
-            module : IEDAModule = None) -> bool:
+            module : ECCToolsModule = None) -> bool:
     """
     run CTS
     """
@@ -199,7 +197,7 @@ def run_cts(workspace: Workspace,
 
 def run_timing_opt_drv(workspace: Workspace,
                        step: WorkspaceStep,
-                       module : IEDAModule = None) -> bool:
+                       module : ECCToolsModule = None) -> bool:
     """
     run timing optization drv
     """
@@ -216,7 +214,7 @@ def run_timing_opt_drv(workspace: Workspace,
 
 def run_timing_opt_hold(workspace: Workspace,
                         step: WorkspaceStep,
-                        module : IEDAModule = None) -> bool:
+                        module : ECCToolsModule = None) -> bool:
     """
     run timing optization hold 
     """
@@ -233,7 +231,7 @@ def run_timing_opt_hold(workspace: Workspace,
 
 def run_routing(workspace: Workspace,
                 step: WorkspaceStep,
-                module : IEDAModule = None) -> bool:
+                module : ECCToolsModule = None) -> bool:
     """
     run routing
     """
@@ -258,7 +256,7 @@ def run_routing(workspace: Workspace,
 
 def run_drc(workspace: Workspace,
             step: WorkspaceStep,
-            module : IEDAModule = None) -> bool:
+            module : ECCToolsModule = None) -> bool:
     """
     run chip drc
     """
@@ -282,7 +280,7 @@ def run_drc(workspace: Workspace,
 
 def run_legalization(workspace: Workspace,
                      step: WorkspaceStep,
-                     module : IEDAModule = None) -> bool:
+                     module : ECCToolsModule = None) -> bool:
     """
     run placement legalization
     """
@@ -299,7 +297,7 @@ def run_legalization(workspace: Workspace,
 
 def run_filler(workspace: Workspace,
                step: WorkspaceStep,
-               module : IEDAModule = None) -> bool:
+               module : ECCToolsModule = None) -> bool:
     """
     run placement filler
     """
@@ -316,7 +314,7 @@ def run_filler(workspace: Workspace,
 
 def run_floorplan(workspace: Workspace,
                   step: WorkspaceStep,
-                  module : IEDAModule = None) -> bool:
+                  module : ECCToolsModule = None) -> bool:
     """
     run floorplan
     """

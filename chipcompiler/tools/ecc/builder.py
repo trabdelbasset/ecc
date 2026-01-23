@@ -16,7 +16,7 @@ def build_step(workspace: Workspace,
     
     step = WorkspaceStep()
     step.name = step_name
-    step.tool = "iEDA"
+    step.tool = "ecc"
     step.version = "0.1"
 
     # build step directory

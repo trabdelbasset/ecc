@@ -9,9 +9,9 @@ from .runner import (
     run_step
 )
 
-from .module import IEDAModule
+from .module import ECCToolsModule
 
-from .plot import IEDAPlot
+from .plot import ECCToolsPlot
 
 from .metrics import (
     build_step_metrics,
@@ -30,7 +30,7 @@ __all__ = [
     'build_step_config',
     'run_step',
     'create_db_engine',
-    'IEDAModule',
-    'IEDAPlot',
+    'ECCToolsModule',
+    'ECCToolsPlot',
     'build_step_metrics'
 ]

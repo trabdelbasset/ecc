@@ -31,8 +31,8 @@ block_cipher = None
 
 # Collect all data files that need to be included
 datas = [
-    # iEDA config files
-    (str(PROJ_ROOT / 'chipcompiler' / 'tools' / 'iEDA' / 'configs'), 'chipcompiler/tools/iEDA/configs'),
+    # ecc config files
+    (str(PROJ_ROOT / 'chipcompiler' / 'tools' / 'ecc' / 'configs'), 'chipcompiler/tools/ecc/configs'),
     # Yosys scripts
     (str(PROJ_ROOT / 'chipcompiler' / 'tools' / 'yosys' / 'configs'), 'chipcompiler/tools/yosys/configs'),
     (str(PROJ_ROOT / 'chipcompiler' / 'tools' / 'yosys' / 'scripts'), 'chipcompiler/tools/yosys/scripts'),
@@ -40,14 +40,14 @@ datas = [
     (str(PROJ_ROOT / 'benchmark'), 'benchmark'),
 ]
 
-ieda_bin_dir = PROJ_ROOT / 'chipcompiler' / 'thirdparty' / 'iEDA' / 'bin'
-ieda_py_files = list(ieda_bin_dir.glob('ieda_py*.so'))
-if not ieda_py_files:
+ecc_bin_dir = PROJ_ROOT / 'chipcompiler' / 'thirdparty' / 'ecc-tools' / 'bin'
+ecc_py_files = list(ecc_bin_dir.glob('ecc_py*.so'))
+if not ecc_py_files:
     raise FileNotFoundError(
-        f"ieda_py module not found in {ieda_bin_dir}. "
+        f"ecc_py module not found in {ecc_bin_dir}. "
         "Please build it first with: ./build.sh"
     )
-binaries = [(str(f), 'chipcompiler/thirdparty/iEDA/bin') for f in ieda_py_files]
+binaries = [(str(f), 'chipcompiler/thirdparty/ecc-tools/bin') for f in ecc_py_files]
 
 # Hidden imports that PyInstaller might miss
 hiddenimports = [
@@ -87,11 +87,11 @@ hiddenimports = [
     'chipcompiler.data',
     'chipcompiler.engine',
     'chipcompiler.tools',
-    'chipcompiler.tools.iEDA',
-    'chipcompiler.tools.iEDA.builder',
-    'chipcompiler.tools.iEDA.runner',
-    'chipcompiler.tools.iEDA.module',
-    'chipcompiler.thirdparty.iEDA.bin.ieda_py',
+    'chipcompiler.tools.ecc',
+    'chipcompiler.tools.ecc.builder',
+    'chipcompiler.tools.ecc.runner',
+    'chipcompiler.tools.ecc.module',
+    'chipcompiler.thirdparty.ecc-tools.bin.ecc_py',
     'chipcompiler.tools.yosys',
     'chipcompiler.tools.yosys.builder',
     'chipcompiler.tools.yosys.runner',

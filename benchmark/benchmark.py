@@ -155,14 +155,14 @@ def run_single_design(workspace_dir : str,
     else:
         raise ValueError(f"No valid input file found for design {design_info.get('Design', '')}")
             
-    steps.append((StepEnum.FLOORPLAN, "iEDA", StateEnum.Unstart))
-    steps.append((StepEnum.NETLIST_OPT, "iEDA", StateEnum.Unstart))
-    steps.append((StepEnum.PLACEMENT, "iEDA", StateEnum.Unstart))
-    steps.append((StepEnum.CTS, "iEDA", StateEnum.Unstart))
-    steps.append((StepEnum.LEGALIZATION, "iEDA", StateEnum.Unstart))
-    steps.append((StepEnum.ROUTING, "iEDA", StateEnum.Unstart))
-    steps.append((StepEnum.DRC, "iEDA", StateEnum.Unstart))
-    steps.append((StepEnum.FILLER, "iEDA", StateEnum.Unstart))
+    steps.append((StepEnum.FLOORPLAN, "ecc", StateEnum.Unstart))
+    steps.append((StepEnum.NETLIST_OPT, "ecc", StateEnum.Unstart))
+    steps.append((StepEnum.PLACEMENT, "ecc", StateEnum.Unstart))
+    steps.append((StepEnum.CTS, "ecc", StateEnum.Unstart))
+    steps.append((StepEnum.LEGALIZATION, "ecc", StateEnum.Unstart))
+    steps.append((StepEnum.ROUTING, "ecc", StateEnum.Unstart))
+    steps.append((StepEnum.DRC, "ecc", StateEnum.Unstart))
+    steps.append((StepEnum.FILLER, "ecc", StateEnum.Unstart))
             
     # create workspace
     workspace = create_workspace(

@@ -12,7 +12,7 @@ from chipcompiler.utility import (
     plot_metrics
 )
 
-class IEDAPlot:
+class ECCToolsPlot:
     def __init__(self, workspace: Workspace, step: WorkspaceStep):
         self.workspace = workspace
         self.step = step

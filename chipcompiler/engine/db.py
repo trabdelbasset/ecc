@@ -5,10 +5,10 @@ from chipcompiler.data import Workspace, WorkspaceStep
 class EngineDB:
     """
     this class is for ECC lifecycle management
-    db : use iEDA-idb as the database engine
+    db : use ecc-tools-idb as the database engine
     """
-    from chipcompiler.tools.iEDA import IEDAModule
-    def __init__(self, workspace : Workspace, eda : IEDAModule= None):
+    from chipcompiler.tools.ecc import ECCToolsModule
+    def __init__(self, workspace : Workspace, eda : ECCToolsModule= None):
         self.workspace = workspace
         self.eda = eda
     
@@ -18,18 +18,18 @@ class EngineDB:
 
     def create_db_engine(self, step: WorkspaceStep) -> bool:
         """
-        create db engine from iEDA module
+        create db engine from ecc module
         """
         if self.eda is not None:
             return True
         
         # check eda tool exist
         from chipcompiler.tools import load_eda_module
-        eda_module = load_eda_module("iEDA")
+        eda_module = load_eda_module("ecc")
         if eda_module is None:
             return False
         
-        from chipcompiler.tools.iEDA import create_db_engine
+        from chipcompiler.tools.ecc import create_db_engine
         self.eda = create_db_engine(self.workspace, step)
         if self.eda is not None:
             return True
