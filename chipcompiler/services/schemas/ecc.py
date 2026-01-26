@@ -9,6 +9,8 @@ class CMDEnum(Enum):
     create_workspace = "create_workspace"
     load_workspace = "load_workspace"
     delete_workspace = "delete_workspace"
+    rtl2gds = "rtl2gds"
+    run_step = "run_step"
 
 class ResponseEnum(Enum):
     success = "success"
@@ -45,6 +47,25 @@ DATA_TEMPLATE = {
         },
         "response" : {
             "directory" : ""
+        }
+    },
+    
+    "rtl2gds" : {
+        "requeset" : {
+            "rerun" : False
+        },
+        "response" : {
+            "rerun" : False
+        }
+    },
+    
+    "run_step" : {
+        "requeset" : {
+            "step" : ""
+        },
+        "response" : {
+            "step" : "",
+            "state" : "Unstart"
         }
     },
 }

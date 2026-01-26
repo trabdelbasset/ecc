@@ -45,7 +45,7 @@ const handleStageChange = async (stage: string) => {
 
   try {
     // 1.调用接口获取数据
-    const res = null; // TODO: 调用接口获取数据
+    // const res = null; // TODO: 调用接口获取数据
 
 
     // if (res.status === 'success' && res.payload?.exists) {

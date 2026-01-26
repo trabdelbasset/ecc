@@ -95,6 +95,14 @@ class EngineFlow:
         
         return None
     
+    def get_workspace_step(self,
+                           name : str):
+        for workspace_step in self.workspace_steps:
+            if workspace_step.name == name:
+                return workspace_step
+        
+        return None
+    
     def check_state(self,
                    name : str,
                    tool : str,
@@ -251,10 +259,15 @@ class EngineFlow:
         return True
             
     def run_step(self,
-                 workspace_step : WorkspaceStep) -> StateEnum:
+                 workspace_step : WorkspaceStep | str) -> StateEnum:
         """
         run single step
         """
+        if isinstance(workspace_step, str):
+            workspace_step = self.get_workspace_step(workspace_step)
+        if workspace_step is None:
+            return StateEnum.Invalid
+            
         if self.check_state(name=workspace_step.name,
                             tool=workspace_step.tool,
                             state=StateEnum.Success):

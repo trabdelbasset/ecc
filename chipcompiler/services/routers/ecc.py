@@ -13,6 +13,11 @@ ecc_serv = ecc_service()
 
 router = APIRouter(prefix="/api/workspace", tags=["workspace"])
 
+@router.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {"status": "ok"}
+
 @router.post("/create_workspace", response_model=ECCResponse)
 async def create_workspace(request: ECCRequest):
     """
@@ -27,7 +32,16 @@ async def load_workspace(request: ECCRequest):
     """
     return ecc_serv.load_workspace(request)
 
-@router.get("/health")
-async def health_check():
-    """Health check endpoint"""
-    return {"status": "ok"}
+@router.post("/delete_workspace", response_model=ECCResponse)
+async def delete_workspace(request: ECCRequest):
+    """
+    Delete an existing ECC project.
+    """
+    return ecc_serv.delete_workspace(request)
+
+@router.post("/rtl2gds", response_model=ECCResponse)
+async def rtl2gds(request: ECCRequest):
+    """
+    run rtl2gds flow for current workspace.
+    """
+    return ecc_serv.rtl2gds(request)

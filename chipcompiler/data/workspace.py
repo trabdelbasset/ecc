@@ -335,10 +335,10 @@ def load_workspace(directory : str) -> Workspace:
     pdk = get_pdk(pdk_name=parameters.data.get("PDK", ""))
     sdc_path = find_files(f"{directory}/origin", ".sdc")
     if len(sdc_path) > 0:
-        pdk.sdc = sdc_path
+        pdk.sdc = sdc_path[0]
     spef_path = find_files(f"{directory}/origin", ".spef")
     if len(spef_path) > 0:
-        pdk.spef = spef_path
+        pdk.spef = spef_path[0]
         
     workspace.pdk = pdk
     
@@ -348,16 +348,16 @@ def load_workspace(directory : str) -> Workspace:
     def_path = find_files(f"{directory}/origin", ".def")
     def_gz_path = find_files(f"{directory}/origin", ".def.gz")
     if len(def_path) > 0:
-        workspace.design.origin_def = def_path
+        workspace.design.origin_def = def_path[0]
     if len(def_gz_path) > 0:
-        workspace.design.origin_def = def_gz_path
+        workspace.design.origin_def = def_gz_path[0]
         
     verilog_path = find_files(f"{directory}/origin", ".v")
     verilog_gz_path = find_files(f"{directory}/origin", ".v.gz")
     if len(verilog_path) > 0:
-        workspace.design.origin_verilog = verilog_path
+        workspace.design.origin_verilog = verilog_path[0]
     if len(verilog_gz_path) > 0:
-        workspace.design.origin_verilog = verilog_gz_path
+        workspace.design.origin_verilog = verilog_gz_path[0]
     
     filelist_path = f"{directory}/origin/filelist"
     if os.path.exists(filelist_path):

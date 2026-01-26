@@ -60,14 +60,37 @@ def test_sky130_gcd():
         }
     )
     ecc_response = ecc_serv.load_workspace(ecc_req)
+    print(ecc_response)
     
-    ecc_req = ECCRequest(
-        cmd = "delete_workspace",
-        data = {
-            "directory" : workspace_dir
-        }
-    )
-    ecc_response = ecc_serv.delete_workspace(ecc_req)
+    # ecc_req = ECCRequest(
+    #     cmd = "delete_workspace",
+    #     data = {
+    #         "directory" : workspace_dir
+    #     }
+    # )
+    # ecc_response = ecc_serv.delete_workspace(ecc_req)
+    
+    # ecc_req = ECCRequest(
+    #     cmd = "rtl2gds",
+    #     data = {
+    #         "rerun" : True
+    #     }
+    # )
+    # ecc_response = ecc_serv.rtl2gds(ecc_req)
+    
+    
+    # test step    
+    from chipcompiler.rtl2gds import build_rtl2gds_flow
+    steps = build_rtl2gds_flow()
+    for step, tool, state in steps:
+        ecc_req = ECCRequest(
+            cmd = "run_step",
+            data = {
+                "step" : step.value
+            }
+        )
+        ecc_response = ecc_serv.run_step(ecc_req)
+        print(ecc_response)
     
     print(1)
   
