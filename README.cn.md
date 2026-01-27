@@ -147,7 +147,7 @@ engine_flow.run_steps()
 
 <div align="center">
 
-**Built with ❤️ by the ECOS Team**
+**Built by the ECOS Team**
 
 [报告问题](https://github.com/openecos-projects/ecc/issues) · [讨论交流](https://github.com/openecos-projects/ecc/discussions)
 

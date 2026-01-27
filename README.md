@@ -148,7 +148,7 @@ Special thanks to these open-source projects:
 
 <div align="center">
 
-**Built with ❤️ by the ECOS Team**
+**Built by the ECOS Team**
 
 [Report Issues](https://github.com/openecos-projects/ecc/issues) · [Discussions](https://github.com/openecos-projects/ecc/discussions)
 
