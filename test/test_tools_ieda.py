@@ -29,7 +29,7 @@ def test_sky130_gcd():
     input_def = ""
     # input_verilog = "{}/chipcompiler/thirdparty/ecc-tools/scripts/design/sky130_gcd/result/verilog/gcd.v".format(root) # verilog file
     input_verilog = ""
-    input_filelist = "{}/test/fixtures/benchmark/dummy/filelist".format(root) # file list
+    input_filelist = "{}/test/fixtures/gcd/filelist.f".format(root) # file list
     spef="{}/chipcompiler/thirdparty/ecc-tools/scripts/foundry/sky130/spef/gcd.spef".format(root)
     parameters=get_parameters("sky130", "gcd")
     pdk = get_pdk("sky130")

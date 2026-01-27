@@ -35,8 +35,7 @@ def test_sky130_gcd():
 
     input_def = ""
     input_verilog = ""
-    input_filelist = "{}/test/fixtures/benchmark/dummy/filelist".format(root)
-    
+    input_filelist = "{}/test/fixtures/gcd/filelist.f".format(root)
     ecc_serv = ecc_service()
     
     parameters=get_parameters("sky130", "gcd")
