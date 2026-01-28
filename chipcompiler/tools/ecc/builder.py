@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
 import os
-from chipcompiler.data import WorkspaceStep, Workspace, Parameters, StepEnum
+from chipcompiler.data import WorkspaceStep, Workspace, Parameters, StepEnum, StateEnum
 
 def build_step(workspace: Workspace, 
                step_name: str,
@@ -115,7 +115,21 @@ def build_step(workspace: Workspace,
         "statis_csv": f"{step.directory}/analysis/{step.name}_statis.csv"
     }    
     
+    # build sub flow paths
+    step.subflow = {
+        "path": f"{step.directory}/subflow.json",
+        "steps": []
+    }  
+    
     return step
+
+def build_sub_flow(workspace : Workspace,
+                   workspace_step : WorkspaceStep):
+    from .subflow import EccSubFlow
+    subflow = EccSubFlow(workspace=workspace,
+                         workspace_step=workspace_step)
+    
+    subflow.build_sub_flow()    
 
 def build_step_space(step: WorkspaceStep) -> None:
     """
@@ -142,7 +156,7 @@ def build_step_space(step: WorkspaceStep) -> None:
     os.makedirs(f"{step.directory}/data/pl/gui", exist_ok=True)
     os.makedirs(f"{step.directory}/data/pl/log", exist_ok=True)
     os.makedirs(f"{step.directory}/data/pl/plot", exist_ok=True)
-    os.makedirs(f"{step.directory}/data/pl/report", exist_ok=True)
+    os.makedirs(f"{step.directory}/data/pl/report", exist_ok=True)  
         
 
 def build_step_config(workspace: Workspace,
@@ -150,6 +164,10 @@ def build_step_config(workspace: Workspace,
     """
     Build the configuration files for the given step based on the parameters.
     """
+    # build subflow json
+    build_sub_flow(workspace=workspace,
+                   workspace_step=step)
+    
     # update config by parameters
     from chipcompiler.utility import json_read, json_write
     

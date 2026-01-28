@@ -14,9 +14,14 @@ from .module import ECCToolsModule
 from .plot import ECCToolsPlot
 
 from .metrics import (
-    build_step_metrics,
+    build_step_metrics
+)
+
+from .service import(
     get_step_info
 )
+
+from .subflow import EccSubFlow
 
 from .utility import ( 
     is_eda_exist
@@ -33,5 +38,6 @@ __all__ = [
     'ECCToolsModule',
     'ECCToolsPlot',
     'build_step_metrics',
-    'get_step_info'
+    'get_step_info',
+    'EccSubFlow'
 ]

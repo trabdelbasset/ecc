@@ -5,9 +5,12 @@ from chipcompiler.data import (
     WorkspaceStep, 
     StepMetrics, 
     save_metrics,
-    StepEnum
+    StepEnum,
+    StateEnum
 )
 from chipcompiler.utility import json_read
+
+from chipcompiler.tools.ecc.subflow import EccSubFlow
 
 
 def build_step_metrics(workspace: Workspace, 
@@ -15,31 +18,37 @@ def build_step_metrics(workspace: Workspace,
     """
     Build and return a StepMetrics instance for the given workspace step.
     """
-    
     # step matrics
+    metrics = None
     match(step.name):
         case StepEnum.FLOORPLAN.value:
-            return build_metrics_floorplan(workspace, step)
+            metrics = build_metrics_floorplan(workspace, step)
         case StepEnum.NETLIST_OPT.value:
-            return build_metrics_net_opt(workspace, step)
+            metrics = build_metrics_net_opt(workspace, step)
         case StepEnum.PLACEMENT.value:
-            return build_metrics_placement(workspace, step)
+            metrics = build_metrics_placement(workspace, step)
         case StepEnum.CTS.value:
-            return build_metrics_cts(workspace, step)
+            metrics = build_metrics_cts(workspace, step)
         case StepEnum.TIMING_OPT_DRV.value:
-            return build_metrics_timing_opt_drv(workspace, step)
+            metrics = build_metrics_timing_opt_drv(workspace, step)
         case StepEnum.TIMING_OPT_HOLD.value:
-            return build_metrics_timing_opt_hold(workspace, step)
+            metrics = build_metrics_timing_opt_hold(workspace, step)
         case StepEnum.LEGALIZATION.value:
-            return build_metrics_legalization(workspace, step)
+            metrics = build_metrics_legalization(workspace, step)
         case StepEnum.ROUTING.value:
-            return build_metrics_routing(workspace, step)
+            metrics = build_metrics_routing(workspace, step)
         case StepEnum.DRC.value:
-            return build_metrics_drc(workspace, step)
+            metrics = build_metrics_drc(workspace, step)
         case StepEnum.FILLER.value:
-            return build_metrics_filler(workspace, step)
+            metrics = build_metrics_filler(workspace, step)
     
-    return None
+    # update sub flow metrics state
+    sub_flow = EccSubFlow(workspace=workspace,
+                          workspace_step=step)
+    sub_flow.update_step(step_name="analysis",
+                         state=StateEnum.Invalid if metrics is None else StateEnum.Success)
+    
+    return metrics
 
 def build_metrics_db(workspace: Workspace, 
                     step: WorkspaceStep) -> dict:
@@ -467,48 +476,3 @@ def build_metrics_placement(workspace: Workspace,
         return step_metrics
     else:
         return None 
-    
-def get_step_info(workspace: Workspace, 
-                  step: WorkspaceStep,
-                  id : str) -> dict:
-    """
-    get step info by step and command id, return dict as resource definition
-    """
-    def build_metrics() -> dict:
-        metrics = build_step_metrics(workspace=workspace,
-                                     step=step)
-        info = {
-            "metrics" : metrics.path
-        }
-        
-        return info
-    
-    def build_layout() -> dict:
-        info = {
-            "image" : step.output.get("image", ""),
-        }
-        
-        info.update(build_metrics())
-        
-        return info
-    
-    def build_views() -> dict:
-        info = {}
-        
-        info.update(build_layout())
-        
-        info["information"] = {}
-        
-        return info
-    
-    step_info = {}
-    
-    match id:
-        case "views":
-            step_info = build_views()
-        case "layout":
-            step_info = build_layout()
-        case "metrics":
-            step_info = build_metrics()
-
-    return step_info

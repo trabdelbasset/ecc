@@ -13,8 +13,15 @@ from .runner import (
 )
 
 from .metrics import (
-    build_step_metrics,
+    build_step_metrics
+)
+
+from .service import(
     get_step_info
+)
+
+from .subflow import (
+    YosysSubFlow
 )
 
 __all__ = [
@@ -24,5 +31,6 @@ __all__ = [
     'build_step_config',
     'run_step',
     'build_step_metrics',
-    'get_step_info'
+    'get_step_info',
+    'YosysSubFlow'
 ]

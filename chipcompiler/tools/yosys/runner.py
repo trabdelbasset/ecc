@@ -5,6 +5,7 @@ import os
 from chipcompiler.data import WorkspaceStep, Workspace, StateEnum, StepEnum
 from chipcompiler.tools.yosys.utility import is_eda_exist, get_yosys_command
 from chipcompiler.tools.yosys.metrics import build_step_metrics
+from chipcompiler.tools.yosys.subflow import YosysSubFlow
 
 
 def run_step(workspace: Workspace,
@@ -26,6 +27,8 @@ def run_step(workspace: Workspace,
     """
     if not is_eda_exist():
         return False
+    
+    sub_flow = YosysSubFlow(workspace=workspace, workspace_step=step)
 
     input_verilog = step.input.get("verilog", "")
     input_filelist = workspace.design.input_filelist if workspace.design.input_filelist else ""
@@ -59,15 +62,23 @@ def run_step(workspace: Workspace,
             )
 
         if os.path.exists(step.output["verilog"]):
+            sub_flow.update_step(step_name="run yosys", state=StateEnum.Success)
+            
             build_step_metrics(workspace=workspace, step=step)
+            
+            sub_flow.update_step(step_name="analysis", state=StateEnum.Success)
             return True
         else:
+            sub_flow.update_step(step_name="run yosys", state=StateEnum.Invalid)
+            
             print(f"Error: Output netlist not generated at {step.output['verilog']}")
             return False
 
     except subprocess.TimeoutExpired:
+        sub_flow.update_step(step_name="run yosys", state=StateEnum.Imcomplete)
         print("Error: Yosys synthesis timed out")
         return False
     except Exception as e:
+        sub_flow.update_step(step_name="run yosys", state=StateEnum.Imcomplete)
         print(f"Error running yosys: {e}")
         return False

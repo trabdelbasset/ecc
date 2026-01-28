@@ -7,3 +7,4 @@ class InfoEnum(Enum):
     views = "views" # information while switch web page
     layout = "layout" # step design layout
     metrics = "metrics" # step metrics
+    subflow = "subflow" # sub steps for this step

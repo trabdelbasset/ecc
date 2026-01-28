@@ -172,6 +172,7 @@ def build_step(workspace: Workspace,
         "verilog": output_verilog,
         "json": f"{step.directory}/output/{workspace.design.name}_{step.name}.json",
         "report": f"{step.directory}/output/{workspace.design.name}_{step.name}.rpt",
+        "image": f"{step.directory}/output/{workspace.design.name}_{step.name}.png"
     }
 
     step.data = {
@@ -204,6 +205,12 @@ def build_step(workspace: Workspace,
     step.analysis = {
         "dir": f"{step.directory}/analysis",
         "metrics": f"{step.directory}/analysis/{step.name}_metrics.json"
+    }  
+    
+    # build sub flow paths
+    step.subflow = {
+        "path": f"{step.directory}/subflow.json",
+        "steps": []
     }  
 
     return step
