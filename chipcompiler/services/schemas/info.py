@@ -8,3 +8,5 @@ class InfoEnum(Enum):
     layout = "layout" # step design layout
     metrics = "metrics" # step metrics
     subflow = "subflow" # sub steps for this step
+    analysis = "analysis" # analysis metrics
+    maps = "maps" # maps for this step such as density map
