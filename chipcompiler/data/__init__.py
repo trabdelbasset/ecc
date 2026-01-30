@@ -17,6 +17,7 @@ from .parameter import (
 from .step import (
     StepEnum,
     StateEnum,
+    CheckState,
     StepMetrics,
     load_metrics,
     save_metrics
@@ -41,6 +42,7 @@ __all__ = [
     'save_parameter',
     'StepEnum',
     'StateEnum',
+    'CheckState',
     'StepMetrics',
     'load_metrics',
     'save_metrics'

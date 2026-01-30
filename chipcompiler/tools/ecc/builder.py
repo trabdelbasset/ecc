@@ -121,6 +121,12 @@ def build_step(workspace: Workspace,
         "steps": []
     }  
     
+    # build checklist paths and data
+    step.checklist = {
+        "path": f"{step.directory}/checklist.json",
+        "checklist": []
+    }
+    
     return step
 
 def build_sub_flow(workspace : Workspace,
@@ -130,6 +136,14 @@ def build_sub_flow(workspace : Workspace,
                          workspace_step=workspace_step)
     
     subflow.build_sub_flow()    
+    
+def build_checklist(workspace : Workspace,
+                    workspace_step : WorkspaceStep):
+    from .checklist import EccChecklist
+    checklist = EccChecklist(workspace=workspace,
+                           workspace_step=workspace_step)
+    
+    checklist.build_checklist() 
 
 def build_step_space(step: WorkspaceStep) -> None:
     """
@@ -167,6 +181,9 @@ def build_step_config(workspace: Workspace,
     # build subflow json
     build_sub_flow(workspace=workspace,
                    workspace_step=step)
+    
+    build_checklist(workspace=workspace,
+                    workspace_step=step)
     
     # update config by parameters
     from chipcompiler.utility import json_read, json_write

@@ -64,6 +64,7 @@ class WorkspaceStep:
     script : dict = field(default_factory=dict) # script path about this step
     analysis : dict = field(default_factory=dict) # analysis path about this step
     subflow : dict = field(default_factory=dict) # sub flow for this step
+    checklist : dict = field(default_factory=dict) # checklist for this step
 
     # step result info
     result : dict = field(default_factory=dict) # result info about this step

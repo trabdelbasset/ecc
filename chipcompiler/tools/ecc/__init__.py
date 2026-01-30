@@ -23,6 +23,8 @@ from .service import(
 
 from .subflow import EccSubFlow
 
+from .checklist import EccChecklist
+
 from .utility import ( 
     is_eda_exist
 )

@@ -24,6 +24,10 @@ from .subflow import (
     YosysSubFlow
 )
 
+from .checklist import (
+    YosysChecklist
+)
+
 __all__ = [
     'is_eda_exist',
     'build_step',
@@ -32,5 +36,6 @@ __all__ = [
     'run_step',
     'build_step_metrics',
     'get_step_info',
-    'YosysSubFlow'
+    'YosysSubFlow',
+    'YosysChecklist'
 ]

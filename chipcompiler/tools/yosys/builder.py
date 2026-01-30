@@ -207,11 +207,17 @@ def build_step(workspace: Workspace,
         "metrics": f"{step.directory}/analysis/{step.name}_metrics.json"
     }  
     
-    # build sub flow paths
+    # build sub flow paths and data
     step.subflow = {
         "path": f"{step.directory}/subflow.json",
         "steps": []
     }  
+    
+    # build checklist paths and data
+    step.checklist = {
+        "path": f"{step.directory}/checklist.json",
+        "checklist": []
+    }
 
     return step
 
@@ -269,6 +275,30 @@ def build_step_config(workspace: Workspace,
         print(f"Error generating global_var.tcl: {e}")
         raise
     
+    # build subflow json
+    build_sub_flow(workspace=workspace,
+                   workspace_step=step)
+    
+    build_checklist(workspace=workspace,
+                    workspace_step=step)
+
+
+def build_sub_flow(workspace : Workspace,
+                   workspace_step : WorkspaceStep):
+    from .subflow import YosysSubFlow
+    subflow = YosysSubFlow(workspace=workspace,
+                           workspace_step=workspace_step)
+    
+    subflow.build_sub_flow()    
+    
+def build_checklist(workspace : Workspace,
+                    workspace_step : WorkspaceStep):
+    from .checklist import YosysChecklist
+    checklist = YosysChecklist(workspace=workspace,
+                               workspace_step=workspace_step)
+    
+    checklist.build_checklist() 
+        
 def build_environment(workspace: Workspace,
                       step: WorkspaceStep):
     """

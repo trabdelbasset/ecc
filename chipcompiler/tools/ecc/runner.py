@@ -9,6 +9,7 @@ from chipcompiler.tools.ecc.utility import is_eda_exist
 from chipcompiler.tools.ecc.plot import ECCToolsPlot
 from chipcompiler.tools.ecc.metrics import build_step_metrics 
 from chipcompiler.tools.ecc.subflow import EccSubFlow
+from chipcompiler.tools.ecc.checklist import EccChecklist
 
 def create_db_engine(workspace: Workspace,
                      step: WorkspaceStep) -> ECCToolsModule:
@@ -135,6 +136,10 @@ def run_step(workspace: Workspace,
         ploter = ECCToolsPlot(workspace=workspace, 
                           step=step)
         ploter.plot()   
+        
+        # do checklist 
+        checklist = EccChecklist(workspace=workspace, workspace_step=step)
+        checklist.check()
             
     return state
 
