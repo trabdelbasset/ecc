@@ -38,8 +38,14 @@ fi
 
 # Install dependencies
 echo "Installing Python dependencies..."
-pip install -e "$PROJECT_ROOT" --quiet
-pip install pyinstaller --quiet
+if command -v uv &> /dev/null; then
+    uv pip install -e "$PROJECT_ROOT" --quiet
+    uv pip install pyinstaller --quiet
+else
+    python -m ensurepip --upgrade --default-pip
+    python -m pip install -e "$PROJECT_ROOT" --quiet
+    python -m pip install pyinstaller --quiet
+fi
 echo "Python environment ready."
 echo ""
 
