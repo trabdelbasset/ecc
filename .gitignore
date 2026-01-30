@@ -145,6 +145,8 @@ test/examples/
 .cursor/
 .cursor-user/
 
+.vscode/
+
 # Egg info
 chipcompiler.egg-info/
 
