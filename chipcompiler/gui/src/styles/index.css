@@ -122,3 +122,17 @@ img {
   contain: layout style paint;
 }
 
+/* 拖拽 Splitter 分割条时禁用全局文本选择 */
+body.splitter-resizing,
+body.splitter-resizing * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  cursor: col-resize !important;
+}
+
+/* 垂直分割条拖拽时使用 row-resize 光标 */
+body.splitter-resizing-vertical,
+body.splitter-resizing-vertical * {
+  cursor: row-resize !important;
+}
+

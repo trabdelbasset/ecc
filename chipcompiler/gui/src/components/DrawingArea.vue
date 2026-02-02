@@ -4,11 +4,22 @@ import { useRoute } from 'vue-router'
 import { EditorContainer, type Editor } from '@/applications/editor'
 import DrawingToolbar from './DrawingToolbar.vue'
 import { useWorkspace } from '@/composables/useWorkspace'
+import { useEDA } from '@/composables/useEDA'
+import { getInfoApi } from '@/api/flow'
+import { CMDEnum, InfoEnum, StepEnum, ResponseEnum } from '@/api/type'
 
 const route = useRoute()
 const { currentProject } = useWorkspace()
+const { getResourceUrl } = useEDA()
 
 const editor = shallowRef<Editor | null>(null)
+
+// 从 StepEnum 动态生成路由路径映射（忽略大小写）
+const stepEnumValues = Object.values(StepEnum)
+
+function getStepEnumFromPath(path: string): StepEnum | undefined {
+  return stepEnumValues.find(step => step.toLowerCase() === path.toLowerCase())
+}
 
 const onEditorReady = (editorInstance: Editor) => {
   console.log('Editor ready:', editorInstance)
@@ -24,41 +35,53 @@ const onEditorReady = (editorInstance: Editor) => {
  * 处理阶段切换，加载对应的 EDA 结果
  */
 const handleStageChange = async (stage: string) => {
-  console.log('handleStageChange:', stage)
-  console.log('currentProject.value:', currentProject.value)
-  if (!editor.value || !currentProject.value || !stage) return
+  if (!editor.value || !stage) return
 
-  // 映射前端路径名到 EDA 逻辑中的步骤名
-  const stageMap: Record<string, string> = {
-    'floorplan': 'Floorplan',
-    'place': 'Placement',
-    'cts': 'CTS',
-    'route': 'Routing'
-  }
-  const edaStep = stageMap[stage]
-  if (!edaStep) {
+  // 从路由路径获取对应的 StepEnum
+  const stepEnum = getStepEnumFromPath(stage)
+  if (!stepEnum) {
+    console.log('No step enum found for stage:', stage)
     editor.value.clearBackground()
     return
   }
 
-  console.log(`Loading EDA results for stage: ${stage} (${edaStep})`)
 
   try {
-    // 1.调用接口获取数据
-    // const res = null; // TODO: 调用接口获取数据
+    // 1. 调用 getInfoApi 获取 layout 图片路径
+    const response = await getInfoApi({
+      cmd: CMDEnum.get_info,
+      data: {
+        step: stepEnum,
+        id: InfoEnum.layout
+      }
+    })
 
+    console.log('getInfoApi layout response:', response)
 
-    // if (res.status === 'success' && res.payload?.exists) {
-    //   // 2. 转换为可访问的 URL (现在是异步的)
-    //   const imgUrl = await getResourceUrl(res.payload.image_path, currentProject.value.path)
-    //   // 3. 更新编辑器背景（会自动调用fit进行适应）
-    //   await editor.value.setBackgroundImage(imgUrl)
-    // } else {
-    //   console.warn('No visual result for this stage:', res.message || 'File not found')
-    //   editor.value.clearBackground()
-    // }
+    if (response.response !== ResponseEnum.success) {
+      console.warn('Failed to get layout info:', response.message)
+      editor.value.clearBackground()
+      return
+    }
+
+    if (stepEnum === StepEnum.SYNTHESIS) return;
+    const imagePath = response.data?.info?.image
+    if (!imagePath) {
+      console.warn('No image path in response')
+      editor.value.clearBackground()
+      return
+    }
+
+    // 2. 将本地文件路径转换为可访问的 blob URL
+    const imageUrl = await getResourceUrl(imagePath, currentProject.value?.path || '')
+    console.log('Image URL:', imageUrl)
+
+    // 3. 更新编辑器背景
+    await editor.value.setBackgroundImage(imageUrl)
+
   } catch (error) {
     console.error('Failed to load stage results:', error)
+    editor.value?.clearBackground()
   }
 }
 
@@ -66,7 +89,6 @@ const handleStageChange = async (stage: string) => {
 watch(() => route.path, (newPath) => {
   const pathParts = newPath.split('/')
   const stage = pathParts[pathParts.length - 1] || 'home'
-  console.log('route.path changed to:', stage)
   handleStageChange(stage)
 })
 </script>

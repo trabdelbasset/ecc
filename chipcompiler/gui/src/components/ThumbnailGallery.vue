@@ -1,40 +1,65 @@
 <template>
-  <!-- 列表视图 -->
   <div class="flex flex-col h-full bg-(--bg-primary)">
-    <!-- 标题 -->
-    <div class="flex items-center justify-between px-4 py-1 border-b border-(--border-color)">
-      <div class="flex items-center gap-2">
-        <i class="ri-stack-line text-(--text-secondary)"></i>
-        <h3 class="text-sm font-semibold text-(--text-primary)">Information</h3>
-      </div>
-      <div class="flex items-center gap-2">
-        <button class="p-1 text-(--text-secondary) hover:text-(--text-primary) transition-colors">
-          <i class="ri-filter-3-line text-sm"></i>
-        </button>
-        <button class="p-1 text-(--text-secondary) hover:text-(--text-primary) transition-colors">
-          <i class="ri-more-2-line text-sm"></i>
-        </button>
-      </div>
+    <!-- Tabs 标题栏 -->
+    <div class="flex items-center border-b border-(--border-color)">
+      <button v-for="tab in tabs" :key="tab.id" @click="handleTabChange(tab.id)" :class="[
+        'flex-1 flex items-center justify-center gap-2 px-4 py-2 text-xs font-medium transition-all border-b-2',
+        activeTab === tab.id
+          ? 'text-(--accent-color) border-(--accent-color) bg-(--accent-color)/5'
+          : 'text-(--text-secondary) border-transparent hover:text-(--text-primary) hover:bg-(--bg-secondary)/50'
+      ]">
+        <i :class="tab.icon"></i>
+        <span>{{ tab.label }}</span>
+      </button>
     </div>
 
-    <!-- 缩略图网格 2x3 -->
-    <div class="flex-1 p-2 min-h-0 overflow-hidden">
-      <div class="grid grid-cols-3 gap-2 h-full" style="grid-template-rows: 1fr 1fr;">
-        <div v-for="thumb in thumbnails.slice(0, 6)" :key="thumb.id" class="group cursor-pointer flex flex-col min-h-0"
-          @click="handleImageClick(thumb)">
-          <div
-            class="flex-1 min-h-0 bg-(--bg-secondary) rounded border border-(--border-color) flex items-center justify-center overflow-hidden group-hover:border-(--accent-color) transition-all shadow-sm">
-            <img v-if="thumb.thumbnailUrl && !imageError.has(thumb.id)" :src="thumb.thumbnailUrl" :alt="thumb.label"
-              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy"
-              decoding="async" @error="handleImageError(thumb.id)" />
-            <div v-else class="flex flex-col items-center gap-1">
-              <i class="ri-image-line text-xl text-(--text-secondary)"></i>
-              <span class="text-[8px] text-(--text-secondary)">Loading...</span>
-            </div>
+    <!-- Tab 内容区域 -->
+    <div class="flex-1 min-h-0 overflow-auto">
+      <!-- 加载状态 -->
+      <div v-if="isLoadingTab" class="flex items-center justify-center h-full">
+        <div class="text-center">
+          <i class="ri-loader-4-line text-2xl text-(--accent-color) animate-spin"></i>
+          <p class="text-[11px] text-(--text-secondary) mt-2">Loading...</p>
+        </div>
+      </div>
+
+      <!-- 无 step 时的提示 -->
+      <div v-else-if="!currentStep" class="flex items-center justify-center h-full">
+        <div class="text-center px-4">
+          <i class="ri-information-line text-3xl text-(--text-secondary) opacity-50"></i>
+          <p class="text-[11px] text-(--text-secondary) mt-2">请先选择一个流程步骤</p>
+        </div>
+      </div>
+
+      <!-- 空数据提示 -->
+      <div v-else-if="Object.keys(currentTabInfo).length === 0" class="flex items-center justify-center h-full">
+        <div class="text-center px-4">
+          <i class="ri-file-list-3-line text-3xl text-(--text-secondary) opacity-50"></i>
+          <p class="text-[11px] text-(--text-secondary) mt-2">暂无数据</p>
+        </div>
+      </div>
+
+      <!-- Info Keys 列表 -->
+      <div v-else class="p-3 space-y-2">
+        <button v-for="(path, key) in currentTabInfo" :key="key" @click="handleKeyClick(key as string, path as string)"
+          :disabled="loadingKey === key"
+          class="w-full flex items-center gap-3 p-3 rounded-lg border border-(--border-color) bg-(--bg-secondary) hover:border-(--accent-color) hover:bg-(--accent-color)/5 transition-all text-left disabled:opacity-50">
+          <div class="w-8 h-8 rounded-lg bg-(--accent-color)/20 flex items-center justify-center shrink-0">
+            <i v-if="loadingKey === key" class="ri-loader-4-line text-(--accent-color) animate-spin"></i>
+            <i v-else :class="getFileIcon(path as string)" class="text-(--accent-color)"></i>
           </div>
-          <p class="text-[9px] font-medium text-(--text-primary) truncate text-center mt-1 shrink-0">
-            {{ thumb.label }}
-          </p>
+          <div class="flex-1 min-w-0">
+            <p class="text-xs font-medium text-(--text-primary) truncate">{{ key }}</p>
+            <p class="text-[10px] text-(--text-secondary) truncate">{{ getFileName(path as string) }}</p>
+          </div>
+          <i class="ri-arrow-right-s-line text-(--text-secondary)"></i>
+        </button>
+      </div>
+
+      <!-- 错误提示 -->
+      <div v-if="errorMessage" class="p-3">
+        <div class="p-3 rounded-lg bg-red-500/10 border border-red-500/30">
+          <p class="text-[11px] text-red-500">{{ errorMessage }}</p>
         </div>
       </div>
     </div>
@@ -42,94 +67,175 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import type { Thumbnail } from '../types'
+import { ref, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useMessageStore } from '../stores/messageStore'
+import { getInfoApi } from '../api/flow'
+import { CMDEnum, InfoEnum, StepEnum, ResponseEnum } from '../api/type'
+import { useTauri } from '../composables/useTauri'
+import { readTextFile } from '@tauri-apps/plugin-fs'
 
+const route = useRoute()
 const messageStore = useMessageStore()
-const selectedImage = ref<Thumbnail | null>(null)
-const imageError = ref<Set<number>>(new Set())
-const zoom = ref(100)
+const { isInTauri } = useTauri()
 
-// Place 阶段特征分析图 - 6 张代表性图片
-// const featureBasePath = '/data/ics55_00001/place_iEDA/feature'
-
-const thumbnails: Thumbnail[] = [
-//   {
-//     id: 1,
-//     label: '单元密度图',
-//     description: `Cell Density Avg Mean: 3.535e-01, 
-// Avg Max: 1.000e+00 
-// Avg Hotspot Ratio (>90th percentile): 9.1%`,
-//     thumbnailUrl: `${featureBasePath}/density_map/place_allcell_density.png`,
-//     imageUrl: `${featureBasePath}/density_map/place_allcell_density.png`,
-//     size: '',
-//     dimensions: '',
-//     format: 'PNG',
-//   },
-//   {
-//     id: 2,
-//     label: '引脚密度图',
-//     description: 'Stdcell Pin Density - 标准单元引脚分布热点',
-//     thumbnailUrl: `${featureBasePath}/density_map/place_stdcell_pin_density.png`,
-//     imageUrl: `${featureBasePath}/density_map/place_stdcell_pin_density.png`,
-//     size: '',
-//     dimensions: '',
-//     format: 'PNG'
-//   },
-//   {
-//     id: 3,
-//     label: '网络密度图',
-//     description: 'All Net Density - 网络连接分布',
-//     thumbnailUrl: `${featureBasePath}/density_map/place_allnet_density.png`,
-//     imageUrl: `${featureBasePath}/density_map/place_allnet_density.png`,
-//     size: '',
-//     dimensions: '',
-//     format: 'PNG'
-//   },
-//   {
-//     id: 4,
-//     label: '拥塞预测图',
-//     description: `Congestion Avg Mean: -9.242e+00, 
-// Avg Max: 5.000e+01 
-// Avg Hotspot Ratio (>90th percentile): 9.2%`,
-//     thumbnailUrl: `${featureBasePath}/egr_congestion_map/place_egr_union_overflow.png`,
-//     imageUrl: `${featureBasePath}/egr_congestion_map/place_egr_union_overflow.png`,
-//     size: '',
-//     dimensions: '',
-//     format: 'PNG'
-//   },
-//   {
-//     id: 5,
-//     label: '布线边距图',
-//     description: 'Union Margin - 布线空间余量分析',
-//     thumbnailUrl: `${featureBasePath}/margin_map/place_union_margin.png`,
-//     imageUrl: `${featureBasePath}/margin_map/place_union_margin.png`,
-//     size: '',
-//     dimensions: '',
-//     format: 'PNG'
-//   },
-//   {
-//     id: 6,
-//     label: 'RUDY 预测图',
-//     description: 'RUDY Union - 线密度预测分析',
-//     thumbnailUrl: `${featureBasePath}/RUDY_map/place_rudy_union.png`,
-//     imageUrl: `${featureBasePath}/RUDY_map/place_rudy_union.png`,
-//     size: '',
-//     dimensions: '',
-//     format: 'PNG'
-//   },
+// Tabs 定义
+const tabs = [
+  { id: InfoEnum.analysis, label: 'Analysis', icon: 'ri-pie-chart-line' },
+  { id: InfoEnum.maps, label: 'Maps', icon: 'ri-map-2-line' },
+  { id: InfoEnum.checklist, label: 'Checklist', icon: 'ri-list-check-line' }
 ]
 
-const handleImageClick = (thumb: Thumbnail) => {
-  selectedImage.value = thumb
-  zoom.value = 100 // 重置缩放
-  // 将图片添加到消息流中
-  messageStore.addImageMessage(thumb)
+const activeTab = ref<InfoEnum>(InfoEnum.analysis)
+const isLoadingTab = ref(false)
+const loadingKey = ref<string | null>(null)
+const errorMessage = ref<string | null>(null)
+
+// 存储每个 tab 的 info 数据
+const tabInfoCache = ref<Record<string, Record<string, string>>>({})
+
+// 获取当前 step
+const stepEnumValues = Object.values(StepEnum)
+
+function getStepEnumFromPath(path: string): StepEnum | undefined {
+  return stepEnumValues.find(step => step.toLowerCase() === path.toLowerCase())
 }
 
-const handleImageError = (id: number) => {
-  imageError.value = new Set(imageError.value).add(id)
+const currentStep = computed(() => {
+  const pathParts = route.path.split('/')
+  const currentPath = pathParts[pathParts.length - 1] || ''
+  return getStepEnumFromPath(currentPath)
+})
+
+// 当前 tab 的 info 数据
+const currentTabInfo = computed(() => {
+  if (!currentStep.value) return {}
+  const cacheKey = `${currentStep.value}_${activeTab.value}`
+  return tabInfoCache.value[cacheKey] || {}
+})
+
+// 根据文件扩展名获取图标
+function getFileIcon(path: string): string {
+  const ext = path.split('.').pop()?.toLowerCase()
+  if (ext === 'json') return 'ri-braces-line'
+  if (ext === 'csv') return 'ri-table-line'
+  if (ext === 'png' || ext === 'jpg' || ext === 'jpeg') return 'ri-image-line'
+  if (ext === 'rpt' || ext === 'txt') return 'ri-file-text-line'
+  return 'ri-file-line'
 }
 
+// 获取文件名
+function getFileName(path: string): string {
+  return path.split('/').pop() || path
+}
+
+// 根据文件扩展名确定格式
+function getFileFormat(path: string): 'json' | 'csv' | 'text' {
+  const ext = path.split('.').pop()?.toLowerCase()
+  if (ext === 'json') return 'json'
+  if (ext === 'csv') return 'csv'
+  return 'text'
+}
+
+// 获取 Tab 数据
+async function fetchTabInfo(tabId: InfoEnum) {
+  if (!currentStep.value) return
+
+  const cacheKey = `${currentStep.value}_${tabId}`
+
+  // 如果已有缓存，不重新请求
+  if (tabInfoCache.value[cacheKey]) return
+
+  isLoadingTab.value = true
+  errorMessage.value = null
+
+  try {
+    const response = await getInfoApi({
+      cmd: CMDEnum.get_info,
+      data: {
+        step: currentStep.value,
+        id: tabId
+      }
+    })
+
+    console.log('getInfoApi response:', response)
+
+    if (response.response !== ResponseEnum.success) {
+      errorMessage.value = response.message?.join(', ') || '获取信息失败'
+      return
+    }
+
+    const infoObj = response.data?.info
+    if (infoObj && typeof infoObj === 'object') {
+      tabInfoCache.value[cacheKey] = infoObj as Record<string, string>
+    }
+  } catch (err) {
+    console.error('fetchTabInfo error:', err)
+    errorMessage.value = err instanceof Error ? err.message : '未知错误'
+  } finally {
+    isLoadingTab.value = false
+  }
+}
+
+// 处理 Tab 切换
+async function handleTabChange(tabId: InfoEnum) {
+  activeTab.value = tabId
+  await fetchTabInfo(tabId)
+}
+
+// 处理 Key 点击 - 读取文件并显示到 chat
+async function handleKeyClick(key: string, path: string) {
+  if (!currentStep.value) return
+
+  loadingKey.value = key
+  errorMessage.value = null
+
+  try {
+    let content: any
+    const format = getFileFormat(path)
+
+    if (!isInTauri) {
+      content = `文件路径: ${path}\n(需要在 Tauri 环境中才能读取)`
+    } else {
+      const fileContent = await readTextFile(path)
+
+      if (format === 'json') {
+        try {
+          content = JSON.parse(fileContent)
+        } catch {
+          content = fileContent
+        }
+      } else {
+        content = fileContent
+      }
+    }
+
+    // 发送到 chat
+    messageStore.addInfoMessage({
+      title: key,
+      step: currentStep.value,
+      items: [{
+        label: getFileName(path),
+        content,
+        format
+      }]
+    })
+
+  } catch (err) {
+    console.error('handleKeyClick error:', err)
+    errorMessage.value = err instanceof Error ? err.message : '读取文件失败'
+  } finally {
+    loadingKey.value = null
+  }
+}
+
+// 监听 step 变化，重新获取数据
+watch(currentStep, async (newStep) => {
+  if (newStep) {
+    // 清除缓存
+    tabInfoCache.value = {}
+    // 获取当前 tab 的数据
+    await fetchTabInfo(activeTab.value)
+  }
+}, { immediate: true })
 </script>

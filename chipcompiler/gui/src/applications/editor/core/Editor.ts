@@ -293,7 +293,7 @@ export class Editor {
    * 适应当前背景图片，使其在编辑器中居中显示
    * @param padding 四周留白（像素）
    */
-  public fit(padding = 40): this {
+  public fit(padding = 10): this {
     if (!this.viewport || !this.app || !this.backgroundContainer) return this
 
     // 获取背景容器中的第一个子元素（背景图片 Sprite）

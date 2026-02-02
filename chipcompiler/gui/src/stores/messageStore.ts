@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { Message, Thumbnail } from '../types'
+import type { Message, Thumbnail, InfoData } from '../types'
 
 // 生成唯一 ID
 const generateId = (): string => {
@@ -88,6 +88,22 @@ export const useMessageStore = defineStore('messages', () => {
   }
 
   /**
+   * 添加 Info 消息（展示结构化数据）
+   */
+  const addInfoMessage = (infoData: InfoData): string => {
+    const id = generateId()
+    messages.value.push({
+      id,
+      role: 'assistant',
+      content: `${infoData.title} - ${infoData.step}`,
+      type: 'info',
+      status: 'done',
+      infoData
+    })
+    return id
+  }
+
+  /**
    * 清空所有消息
    */
   const clearMessages = () => {
@@ -101,6 +117,7 @@ export const useMessageStore = defineStore('messages', () => {
     updateMessage,
     appendToMessage,
     addImageMessage,
+    addInfoMessage,
     clearMessages
   }
 })

@@ -1,5 +1,6 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import { StepEnum } from '@/api/type'
 
 // 使用 Hash 模式，因为 Tauri 应用使用本地文件系统
 const routes: RouteRecordRaw[] = [
@@ -19,12 +20,14 @@ const routes: RouteRecordRaw[] = [
     children: [
       { path: 'home', name: 'Home', component: () => import('../views/HomeView.vue') },
       { path: 'configure', name: 'Configure', component: () => import('../views/ConfigureView.vue') },
-      { path: 'synthesis', name: 'Synthesis', component: () => import('../views/EditorView.vue') },
-      { path: 'floorplan', name: 'Floorplan', component: () => import('../views/EditorView.vue') },
-      { path: 'place', name: 'Place', component: () => import('../views/EditorView.vue') },
-      { path: 'cts', name: 'CTS', component: () => import('../views/EditorView.vue') },
-      { path: 'route', name: 'Route', component: () => import('../views/EditorView.vue') },
-      { path: 'signoff', name: 'Signoff', component: () => import('../views/EditorView.vue') }
+      { path: StepEnum.SYNTHESIS, name: StepEnum.SYNTHESIS, component: () => import('../views/EditorView.vue') },
+      { path: StepEnum.FLOORPLAN, name: StepEnum.FLOORPLAN, component: () => import('../views/EditorView.vue') },
+      { path: StepEnum.PLACEMENT, name: StepEnum.PLACEMENT, component: () => import('../views/EditorView.vue') },
+      { path: StepEnum.CTS, name: StepEnum.CTS, component: () => import('../views/EditorView.vue') },
+      { path: StepEnum.ROUTING, name: StepEnum.ROUTING, component: () => import('../views/EditorView.vue') },
+      { path: StepEnum.SIGNOFF, name: StepEnum.SIGNOFF, component: () => import('../views/EditorView.vue') },
+      { path: StepEnum.DRC, name: StepEnum.DRC, component: () => import('../views/EditorView.vue') },
+      { path: StepEnum.FILLER, name: StepEnum.FILLER, component: () => import('../views/EditorView.vue') }
     ],
     meta: {
       title: '工作区',

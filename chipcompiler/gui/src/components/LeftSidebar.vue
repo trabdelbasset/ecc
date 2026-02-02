@@ -46,8 +46,8 @@
             <i class="ri-focus-2-line text-(--accent-color) text-lg"></i>
           </div>
           <div>
-            <h3 class="text-[13px] font-bold text-(--text-primary)">Run Placement</h3>
-            <p class="text-[10px] text-(--text-secondary)">iEDA Place Engine</p>
+            <h3 class="text-[13px] font-bold text-(--text-primary)">{{ currentStepTitle }}</h3>
+            <p class="text-[10px] text-(--text-secondary)">{{ currentStepEngine }}</p>
           </div>
         </div>
       </div>
@@ -56,12 +56,12 @@
       <div class="px-4 py-3 border-b border-(--border-color) bg-(--bg-secondary)/30">
         <div class="flex items-center justify-between mb-2">
           <span class="text-[10px] text-(--text-secondary) uppercase tracking-wider">Progress</span>
-          <span class="text-[11px] font-bold text-(--accent-color)">{{ completedSteps }}/{{ placementSteps.length
-          }}</span>
+          <span class="text-[11px] font-bold text-(--accent-color)">{{ completedSteps }}/{{ totalSteps || 0
+            }}</span>
         </div>
         <div class="h-1.5 bg-(--bg-secondary) rounded-full overflow-hidden">
           <div class="h-full bg-(--accent-color) rounded-full transition-all duration-500"
-            :style="{ width: `${(completedSteps / placementSteps.length) * 100}%` }"></div>
+            :style="{ width: `${progressPercent}%` }"></div>
         </div>
         <div class="flex items-center justify-between mt-2 text-[9px] text-(--text-secondary)">
           <span>Total: {{ totalTime }}</span>
@@ -74,12 +74,30 @@
 
       <!-- 步骤列表 -->
       <div class="flex-1 overflow-y-auto">
-        <div class="p-3 space-y-1">
-          <div v-for="(step, index) in placementSteps" :key="step.id" class="group relative"
-            :class="{ 'opacity-50': step.status === 'pending' && index > 0 && placementSteps[index - 1].status === 'pending' }">
+        <!-- 加载状态 -->
+        <div v-if="isLoadingSubflow" class="flex items-center justify-center h-full">
+          <div class="text-center">
+            <i class="ri-loader-4-line text-2xl text-(--accent-color) animate-spin"></i>
+            <p class="text-[11px] text-(--text-secondary) mt-2">Loading subflow...</p>
+          </div>
+        </div>
+
+        <!-- 空状态 -->
+        <div v-else-if="subflowSteps.length === 0" class="flex items-center justify-center h-full">
+          <div class="text-center px-4">
+            <i class="ri-file-list-3-line text-3xl text-(--text-secondary) opacity-50"></i>
+            <p class="text-[11px] text-(--text-secondary) mt-2">No subflow data available</p>
+            <p class="text-[10px] text-(--text-secondary) opacity-70 mt-1">Run the step to generate subflow</p>
+          </div>
+        </div>
+
+        <!-- 步骤列表 -->
+        <div v-else class="p-3 space-y-1">
+          <div v-for="(step, index) in subflowSteps" :key="step.id" class="group relative"
+            :class="{ 'opacity-50': step.status === 'pending' && index > 0 && subflowSteps[index - 1].status === 'pending' }">
             <!-- 连接线：从圆形底部到下一个圆形顶部 -->
-            <div v-if="index < placementSteps.length - 1"
-              class="absolute left-[16px] top-[42px] w-0.5 h-[calc(100%-34px)]" :class="[
+            <div v-if="index < subflowSteps.length - 1"
+              class="absolute left-[22px] top-[42px] w-0.5 h-[calc(100%-34px)]" :class="[
                 step.status === 'completed' ? 'bg-green-500/50' :
                   step.status === 'running' ? 'bg-linear-to-b from-blue-400/50 to-(--border-color)' :
                     'bg-(--border-color)'
@@ -151,17 +169,17 @@
       <div class="p-3 border-t border-(--border-color) bg-(--bg-secondary)/30 space-y-2">
         <!-- 操作按钮组 -->
         <div class="flex gap-2">
-          <button @click="handleRunFlow" :disabled="isLoading"
+          <button @click="handleRunFlow" :disabled="isRunning"
             class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-(--accent-color) text-white text-[11px] font-bold rounded hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 shadow-lg shadow-(--accent-color)/20">
-            <i :class="isLoading ? 'ri-loader-4-line animate-spin' : 'ri-play-fill'"></i>
-            {{ isLoading ? 'RUNNING' : 'RUN Flow' }}
+            <i :class="isRunning ? 'ri-loader-4-line animate-spin' : 'ri-play-fill'"></i>
+            {{ isRunning ? 'RUNNING' : 'RUN Flow' }}
           </button>
-          <button
+          <button @click="handleStopFlow"
             class="px-3 py-2 bg-(--bg-secondary) text-(--text-secondary) text-[11px] font-bold rounded border border-(--border-color) hover:text-(--text-primary) hover:border-(--accent-color) transition-all"
             title="Stop">
             <i class="ri-stop-fill"></i>
           </button>
-          <button
+          <button @click="handleResetFlow"
             class="px-3 py-2 bg-(--bg-secondary) text-(--text-secondary) text-[11px] font-bold rounded border border-(--border-color) hover:text-(--text-primary) hover:border-(--accent-color) transition-all"
             title="Reset">
             <i class="ri-refresh-line"></i>
@@ -173,137 +191,63 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { useTauri } from '@/composables/useTauri'
 import { useThemeStore } from '@/stores/themeStore'
-const { isInTauri, ensureTauri } = useTauri()
-const themeStore = useThemeStore()
+import { useFlowStages } from '@/composables/useFlowStages'
+import { useSubflow } from '@/composables/useSubflow'
+import { useFlowRunner } from '@/composables/useFlowRunner'
+import { useCurrentStage } from '@/composables/useCurrentStage'
+
+// ============ Composables ============
 const route = useRoute()
+const themeStore = useThemeStore()
+
+// 流程阶段管理
+const { flowStages } = useFlowStages()
+
+// 子流程管理
+const {
+  subflowSteps,
+  isLoading: isLoadingSubflow,
+  currentStepTitle,
+  currentStepEngine,
+  completedSteps,
+  progressPercent,
+  totalTime,
+  overallStatus,
+  totalSteps
+} = useSubflow()
+
+// 流程运行器
+const {
+  isRunning,
+  runFlow,
+  stopFlow,
+  resetFlow
+} = useFlowRunner()
+
+// 当前阶段
+const { currentStage, showProgressPanel } = useCurrentStage()
+
+// ============ 主题相关 ============
 const isDark = computed(() => themeStore.themeName === 'dark')
-const isLoading = ref(false)
 
-// Placement 流程步骤定义
-interface PlacementStep {
-  id: string
-  name: string
-  description: string
-  status: 'pending' | 'running' | 'completed' | 'failed'
-  duration?: string
-}
-
-const placementSteps = ref<PlacementStep[]>([
-  {
-    id: 'init',
-    name: 'Initialize',
-    description: 'Load design and setup environment',
-    status: 'completed',
-    duration: '2.3s'
-  },
-  {
-    id: 'global',
-    name: 'Global Placement',
-    description: 'Coarse cell spreading optimization',
-    status: 'completed',
-    duration: '45.8s'
-  },
-  {
-    id: 'optimize',
-    name: 'Place Optimization',
-    description: 'Timing-driven placement refinement',
-    status: 'completed',
-    duration: '23.1s'
-  },
-  {
-    id: 'detail',
-    name: 'Detail Placement',
-    description: 'Fine-grained cell positioning',
-    status: 'completed',
-    duration: '10.2s'
-  },
-  {
-    id: 'legal',
-    name: 'Legalization',
-    description: 'Remove overlaps and align to rows',
-    status: 'completed',
-    duration: '5.6s'
-  },
-  {
-    id: 'save',
-    name: 'Save Data',
-    description: 'Export DEF, features and reports',
-    status: 'completed',
-    duration: '2.3s'
-  }
-])
-
-// 计算属性
-const completedSteps = computed(() => {
-  return placementSteps.value.filter(s => s.status === 'completed').length
-})
 const toggleTheme = () => {
   themeStore.toggleTheme()
 }
-const totalTime = computed(() => {
-  const times = placementSteps.value
-    .filter(s => s.duration)
-    .map(s => parseFloat(s.duration!.replace('s', '')))
-  const total = times.reduce((a, b) => a + b, 0)
-  return total > 0 ? `${total.toFixed(1)}s` : '--'
-})
 
-const overallStatus = computed(() => {
-  if (placementSteps.value.some(s => s.status === 'running')) return 'running'
-  if (placementSteps.value.every(s => s.status === 'completed')) return 'completed'
-  if (placementSteps.value.some(s => s.status === 'failed')) return 'failed'
-  return 'pending'
-})
-
-
-// 流程步骤配置
-const flowStages = [
-  { label: 'Home', path: 'home', icon: 'ri-home-4-line', group: 'setup', completed: false, available: true },
-  { label: 'Config', path: 'configure', icon: 'ri-settings-3-line', group: 'setup', completed: false, available: true },
-  { label: 'Synth', path: 'synthesis', icon: 'ri-node-tree', group: 'run', completed: true, available: true },
-  { label: 'Floor', path: 'floorplan', icon: 'ri-layout-4-line', group: 'run', completed: true, available: true },
-  { label: 'Place', path: 'place', icon: 'ri-focus-2-line', group: 'run', completed: true, available: true },
-  { label: 'CTS', path: 'cts', icon: 'ri-git-merge-line', group: 'run', completed: false, available: false },
-  { label: 'Route', path: 'route', icon: 'ri-route-line', group: 'run', completed: false, available: false },
-  { label: 'Signoff', path: 'signoff', icon: 'ri-checkbox-circle-line', group: 'run', completed: false, available: false }
-]
-
-const currentStage = computed(() => {
-  const pathParts = route.path.split('/')
-  return pathParts[pathParts.length - 1] || 'home'
-})
-
-// 是否显示进度面板 (Configure 页面不显示)
-const showProgressPanel = computed(() => {
-  return currentStage.value !== 'configure' && currentStage.value !== 'home'
-})
-
+// ============ 事件处理 ============
 const handleRunFlow = async () => {
-  // 检查是否在 Tauri 环境中
-  if (!isInTauri) {
-    console.warn('当前不在 Tauri 环境中，无法执行 Python 脚本');
-    ensureTauri(true) // 显示警告弹窗
-    return;
-  }
+  await runFlow()
+}
 
-  if (isLoading.value) return
+const handleStopFlow = async () => {
+  await stopFlow()
+}
 
-  isLoading.value = true
-
-  // 获取当前路由名称
-  const routeName = route.name || route.path || 'unknown'
-
-  try {
-    console.log('handleRunFlow', routeName)
-  } catch (error) {
-    console.error('❌ 调用 Python 失败:', error)
-  } finally {
-    isLoading.value = false
-  }
+const handleResetFlow = async () => {
+  await resetFlow()
 }
 </script>
 

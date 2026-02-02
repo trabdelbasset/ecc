@@ -203,7 +203,6 @@ export function useWorkspace() {
 
       // 3. 通过 HTTP API 加载项目状态
       const response = await loadWorkspaceApi(selectedPath)
-      console.log(response)
       if (response.response === 'success') {
         const loadedProject: Project = {
           id: response.data.directory,

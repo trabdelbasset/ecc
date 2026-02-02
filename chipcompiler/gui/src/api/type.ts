@@ -14,22 +14,26 @@ export enum InfoEnum {
   metrics = "metrics",
   subflow = "subflow",
   analysis = "analysis",
-  maps = "maps"
+  maps = "maps",
+  checklist = "checklist"
 }
 
 export enum StepEnum {
-  synthesis = "synthesis",
-  floorplan = "floorplan",
-  placement = "placement",
-  cts = "cts",
-  routing = "routing",
-  signoff = "signoff",
+  SYNTHESIS = "Synthesis",
+  FLOORPLAN = "Floorplan",
+  PLACEMENT = "place",
+  CTS = "CTS",
+  ROUTING = "route",
+  SIGNOFF = "Signoff",
+  DRC = "drc",
+  FILLER = "filler",
 }
 
 export enum ResponseEnum {
   success = "success",
   failed = "failed",
-  error = "error"
+  error = "error",
+  warning = "warning"
 }
 
 export interface RequestData<T> {

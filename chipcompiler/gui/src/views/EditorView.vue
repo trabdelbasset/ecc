@@ -1,9 +1,58 @@
 <script setup lang="ts">
+import { onMounted, onUnmounted } from 'vue'
 import Splitter from 'primevue/splitter'
 import SplitterPanel from 'primevue/splitterpanel'
 import DrawingArea from '../components/DrawingArea.vue'
 import ChatInspectorPanel from '../components/ChatInspectorPanel.vue'
 import ThumbnailGallery from '../components/ThumbnailGallery.vue'
+
+let isResizing = false
+
+// 阻止拖拽时的文本选择
+const handleSelectStart = (e: Event) => {
+  if (isResizing) {
+    e.preventDefault()
+    return false
+  }
+}
+
+const handleMouseDown = (e: MouseEvent) => {
+  // 检查是否点击的是 gutter（分割条）
+  const target = e.target as HTMLElement
+  const gutter = target.closest('.p-splitter-gutter')
+  if (gutter) {
+    isResizing = true
+    document.body.classList.add('splitter-resizing')
+
+    // 检查是否是垂直分割条
+    const splitter = gutter.closest('.p-splitter')
+    if (splitter?.classList.contains('p-splitter-vertical')) {
+      document.body.classList.add('splitter-resizing-vertical')
+    }
+  }
+}
+
+const handleMouseUp = () => {
+  if (isResizing) {
+    isResizing = false
+    document.body.classList.remove('splitter-resizing')
+    document.body.classList.remove('splitter-resizing-vertical')
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('selectstart', handleSelectStart)
+  document.addEventListener('mousedown', handleMouseDown)
+  document.addEventListener('mouseup', handleMouseUp)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('selectstart', handleSelectStart)
+  document.removeEventListener('mousedown', handleMouseDown)
+  document.removeEventListener('mouseup', handleMouseUp)
+  document.body.classList.remove('splitter-resizing')
+  document.body.classList.remove('splitter-resizing-vertical')
+})
 </script>
 <template>
   <div class="editor-view">

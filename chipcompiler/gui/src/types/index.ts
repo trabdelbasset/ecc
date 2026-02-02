@@ -1,8 +1,22 @@
+// Info 消息中的单个数据项
+export interface InfoItem {
+  label: string
+  content: any
+  format: 'json' | 'csv' | 'text'
+}
+
+// Info 消息的数据结构
+export interface InfoData {
+  title: string
+  step: string
+  items: InfoItem[]
+}
+
 export interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
-  type?: 'text' | 'image'
+  type?: 'text' | 'image' | 'info'
   status?: 'loading' | 'done' | 'error'
   image?: {
     url: string
@@ -11,6 +25,7 @@ export interface Message {
     thumbnailId?: number
     description?: string
   }
+  infoData?: InfoData
 }
 
 export interface Thumbnail {

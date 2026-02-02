@@ -1,7 +1,8 @@
 <template>
-  <div class="h-full flex flex-col">
+  <div class="h-full flex flex-col min-w-0">
     <!-- 消息列表 -->
-    <div ref="scrollContainerRef" class="flex-1 min-h-0 overflow-y-auto px-4 custom-scrollbar">
+    <div ref="scrollContainerRef"
+      class="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden px-4 custom-scrollbar">
       <div v-if="messages.length === 0" class="flex flex-col items-center justify-center h-full text-center py-12">
         <div class="w-16 h-16 rounded-full bg-(--bg-secondary) flex items-center justify-center mb-4">
           <i class="ri-robot-2-line text-4xl text-(--text-secondary) opacity-50"></i>
@@ -10,8 +11,9 @@
           暂无消息，请输入指令开始与 Chat 交互
         </p>
       </div>
-      <div v-else class="py-4 space-y-4">
-        <MessageItem v-for="msg in messages" :key="msg.id" :message="msg" @img-load="onImageLoad" />
+      <div v-else class="py-4 space-y-4 min-w-0 w-full overflow-hidden">
+        <MessageItem v-for="msg in messages" :key="msg.id" :message="msg" @img-load="onImageLoad"
+          class="w-full min-w-0" />
       </div>
     </div>
 
