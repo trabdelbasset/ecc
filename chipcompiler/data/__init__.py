@@ -10,8 +10,9 @@ from .workspace import (
 
 from .parameter import (
     Parameters,
-    load_paramter,
-    save_parameter
+    load_parameter,
+    save_parameter,
+    get_parameters
 )
 
 from .step import (
@@ -40,6 +41,7 @@ __all__ = [
     'Parameters',
     'load_paramter',
     'save_parameter',
+    'get_parameters',
     'StepEnum',
     'StateEnum',
     'CheckState',
