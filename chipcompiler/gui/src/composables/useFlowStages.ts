@@ -3,7 +3,7 @@ import { readTextFile } from '@tauri-apps/plugin-fs'
 import { invoke } from '@tauri-apps/api/core'
 import { useWorkspace } from './useWorkspace'
 import { useTauri } from './useTauri'
-import { StepEnum } from '@/api/type'
+import { STEP_METADATA, getStepMetadata } from '@/api/type'
 
 // ============ 类型定义 ============
 
@@ -32,31 +32,19 @@ export interface FlowStage {
   available: boolean
 }
 
-/** 步骤映射配置 */
-interface StepMapping {
-  path: string
-  label: string
-  icon: string
-}
-
 // ============ 常量配置 ============
 
-/** 步骤名称到路由路径和图标的映射 */
-const STEP_NAME_MAPPING: Record<string, StepMapping> = {
-  'synthesis': { path: 'synthesis', label: 'Synth', icon: 'ri-node-tree' },
-  'floorplan': { path: 'floorplan', label: 'Floor', icon: 'ri-layout-4-line' },
-  'place': { path: 'place', label: 'Place', icon: 'ri-focus-2-line' },
-  'cts': { path: 'cts', label: 'CTS', icon: 'ri-git-merge-line' },
-  'route': { path: 'route', label: 'Route', icon: 'ri-route-line' },
-  'drc': { path: 'drc', label: 'DRC', icon: 'ri-checkbox-circle-line' },
-  'filler': { path: StepEnum.FILLER, label: 'Filler', icon: 'ri-grid-fill' }
-}
-
-/** 固定的设置页面步骤 */
-const FIXED_SETUP_STAGES: FlowStage[] = [
-  { label: 'Home', path: 'home', icon: 'ri-home-4-line', group: 'setup', completed: false, available: true },
-  { label: 'Config', path: 'configure', icon: 'ri-settings-3-line', group: 'setup', completed: false, available: true }
-]
+/** 固定的设置页面步骤 - 从 STEP_METADATA 动态生成 */
+const FIXED_SETUP_STAGES: FlowStage[] = Object.entries(STEP_METADATA)
+  .filter(([_, meta]) => meta.group === 'setup' && meta.showInSidebar)
+  .map(([_, meta]) => ({
+    label: meta.label,
+    path: meta.path,
+    icon: meta.icon,
+    group: 'setup' as const,
+    completed: false,
+    available: true
+  }))
 
 // ============ Composable ============
 
@@ -93,30 +81,29 @@ export function useFlowStages() {
 
   /**
    * 将 flow.json 数据转换为 FlowStage 格式
+   * 完全基于 flow.json 中的步骤动态生成，使用 STEP_METADATA 获取显示配置
    */
   function transformFlowData(flowData: FlowData): FlowStage[] {
     const stages: FlowStage[] = []
     let previousCompleted = true // 第一个步骤默认可用
 
     for (const step of flowData.steps) {
-      const stepNameLower = step.name.toLowerCase()
-      const mapping = STEP_NAME_MAPPING[stepNameLower]
+      const metadata = getStepMetadata(step.name)
+      const isCompleted = step.state.toLowerCase() === 'success'
+      const isAvailable = previousCompleted
 
-      if (mapping) {
-        const isCompleted = step.state.toLowerCase() === 'success'
-        const isAvailable = previousCompleted
+      // 如果有元数据配置则使用，否则使用默认配置
+      // 所有 flow.json 中的步骤都会显示
+      stages.push({
+        label: metadata?.label ?? step.name,
+        path: metadata?.path ?? step.name,
+        icon: metadata?.icon ?? 'ri-checkbox-blank-circle-line',
+        group: 'run',
+        completed: isCompleted,
+        available: isAvailable
+      })
 
-        stages.push({
-          label: mapping.label,
-          path: mapping.path,
-          icon: mapping.icon,
-          group: 'run',
-          completed: isCompleted,
-          available: isAvailable
-        })
-
-        previousCompleted = isCompleted
-      }
+      previousCompleted = isCompleted
     }
 
     return stages

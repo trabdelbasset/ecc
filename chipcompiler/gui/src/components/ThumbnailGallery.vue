@@ -14,7 +14,7 @@
     </div>
 
     <!-- Tab 内容区域 -->
-    <div class="flex-1 min-h-0 overflow-auto">
+    <div class="flex-1 min-h-0 min-w-0 overflow-auto">
       <!-- 加载状态 -->
       <div v-if="isLoadingTab" class="flex items-center justify-center h-full">
         <div class="text-center">
@@ -31,6 +31,8 @@
         </div>
       </div>
 
+
+
       <!-- 空数据提示 -->
       <div v-else-if="Object.keys(currentTabInfo).length === 0" class="flex items-center justify-center h-full">
         <div class="text-center px-4">
@@ -40,26 +42,28 @@
       </div>
 
       <!-- Info Keys 列表 -->
-      <div v-else class="p-3 space-y-2">
-        <button v-for="(path, key) in currentTabInfo" :key="key" @click="handleKeyClick(key as string, path as string)"
-          :disabled="loadingKey === key"
-          class="w-full flex items-center gap-3 p-3 rounded-lg border border-(--border-color) bg-(--bg-secondary) hover:border-(--accent-color) hover:bg-(--accent-color)/5 transition-all text-left disabled:opacity-50">
-          <div class="w-8 h-8 rounded-lg bg-(--accent-color)/20 flex items-center justify-center shrink-0">
-            <i v-if="loadingKey === key" class="ri-loader-4-line text-(--accent-color) animate-spin"></i>
-            <i v-else :class="getFileIcon(path as string)" class="text-(--accent-color)"></i>
-          </div>
-          <div class="flex-1 min-w-0">
-            <p class="text-xs font-medium text-(--text-primary) truncate">{{ key }}</p>
-            <p class="text-[10px] text-(--text-secondary) truncate">{{ getFileName(path as string) }}</p>
-          </div>
-          <i class="ri-arrow-right-s-line text-(--text-secondary)"></i>
-        </button>
+      <div v-else class="p-3 w-full">
+        <div class="flex flex-wrap items-center gap-x-1 gap-y-0.5 w-full">
+          <template v-if="activeTab === InfoEnum.analysis" v-for="(value, key) in currentTabInfo" :key="key">
+            <a @click="handleKeyClick(key as string, value)" :class="[
+              'text-[12px] cursor-pointer transition-colors duration-150 mr-2',
+              loadingKey === key
+                ? 'text-(--text-secondary) opacity-50 pointer-events-none'
+                : 'text-(--accent-color) hover:text-(--accent-color)/80 hover:underline'
+            ]">{{ key }}</a>
+          </template>
+
+          <template v-if="activeTab === InfoEnum.maps">
+            <pre
+              class="text-[11px] text-(--text-secondary) whitespace-pre-wrap break-all w-full overflow-hidden">{{ JSON.stringify(currentTabInfo, null, 2) }}</pre>
+          </template>
+        </div>
       </div>
 
       <!-- 错误提示 -->
-      <div v-if="errorMessage" class="p-3">
+      <div v-if="currentTabError" class="p-3">
         <div class="p-3 rounded-lg bg-red-500/10 border border-red-500/30">
-          <p class="text-[11px] text-red-500">{{ errorMessage }}</p>
+          <p class="text-[11px] text-red-500">{{ currentTabError }}</p>
         </div>
       </div>
     </div>
@@ -73,11 +77,13 @@ import { useMessageStore } from '../stores/messageStore'
 import { getInfoApi } from '../api/flow'
 import { CMDEnum, InfoEnum, StepEnum, ResponseEnum } from '../api/type'
 import { useTauri } from '../composables/useTauri'
+import { useWorkspace } from '../composables/useWorkspace'
 import { readTextFile } from '@tauri-apps/plugin-fs'
 
 const route = useRoute()
 const messageStore = useMessageStore()
 const { isInTauri } = useTauri()
+const { currentProject } = useWorkspace()
 
 // Tabs 定义
 const tabs = [
@@ -89,10 +95,26 @@ const tabs = [
 const activeTab = ref<InfoEnum>(InfoEnum.analysis)
 const isLoadingTab = ref(false)
 const loadingKey = ref<string | null>(null)
-const errorMessage = ref<string | null>(null)
 
-// 存储每个 tab 的 info 数据
-const tabInfoCache = ref<Record<string, Record<string, string>>>({})
+// 存储每个 tab 的 info 数据（值可能是字符串路径或对象）
+const tabInfoCache = ref<Record<string, Record<string, unknown>>>({})
+
+// 存储每个 tab 的错误信息
+const tabErrorCache = ref<Record<string, string | null>>({})
+
+// 获取当前 tab 的错误信息
+const currentTabError = computed(() => {
+  if (!currentStep.value) return null
+  const cacheKey = `${currentStep.value}_${activeTab.value}`
+  return tabErrorCache.value[cacheKey] || null
+})
+
+// 设置当前 tab 的错误信息
+function setTabError(error: string | null) {
+  if (!currentStep.value) return
+  const cacheKey = `${currentStep.value}_${activeTab.value}`
+  tabErrorCache.value[cacheKey] = error
+}
 
 // 获取当前 step
 const stepEnumValues = Object.values(StepEnum)
@@ -114,27 +136,93 @@ const currentTabInfo = computed(() => {
   return tabInfoCache.value[cacheKey] || {}
 })
 
-// 根据文件扩展名获取图标
-function getFileIcon(path: string): string {
-  const ext = path.split('.').pop()?.toLowerCase()
-  if (ext === 'json') return 'ri-braces-line'
-  if (ext === 'csv') return 'ri-table-line'
-  if (ext === 'png' || ext === 'jpg' || ext === 'jpeg') return 'ri-image-line'
-  if (ext === 'rpt' || ext === 'txt') return 'ri-file-text-line'
-  return 'ri-file-line'
+// 定义带有 path 和 info 的对象类型
+interface InfoWithPath {
+  path: string
+  info: string[]
 }
 
-// 获取文件名
-function getFileName(path: string): string {
-  return path.split('/').pop() || path
+// 检查是否为字符串类型
+function isString(value: unknown): value is string {
+  return typeof value === 'string'
+}
+
+// 检查是否为带有 path 和 info 的对象
+function isInfoWithPath(value: unknown): value is InfoWithPath {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'path' in value &&
+    typeof (value as InfoWithPath).path === 'string'
+  )
+}
+
+// 从值中提取路径
+function getPath(value: unknown): string | null {
+  if (isString(value)) return value
+  if (isInfoWithPath(value)) return value.path
+  return null
+}
+
+// 从值中提取 info 数组
+function getInfoArray(value: unknown): string[] | null {
+  if (isInfoWithPath(value) && Array.isArray(value.info)) {
+    return value.info
+  }
+  return null
 }
 
 // 根据文件扩展名确定格式
-function getFileFormat(path: string): 'json' | 'csv' | 'text' {
+function getFileFormat(value: unknown): 'json' | 'csv' | 'text' {
+  const path = getPath(value)
+  if (!path) return 'json' // 对象类型默认为 JSON 格式
   const ext = path.split('.').pop()?.toLowerCase()
   if (ext === 'json') return 'json'
   if (ext === 'csv') return 'csv'
   return 'text'
+}
+
+// 将远程路径转换为本地项目路径
+// 例如: /nfs/share/home/xxx/benchmark/sky130_gcd/place_ecc/feature/file
+// 转换为: /Users/ekko/projects/place_ecc/feature/file
+function convertToLocalPath(remotePath: string): string {
+  // 如果不是远程路径，直接返回
+  if (!remotePath.includes('/nfs/')) {
+    return remotePath
+  }
+
+  // 获取当前项目路径
+  const projectPath = currentProject.value?.path
+  console.log('projectPath:', currentProject.value)
+  if (!projectPath) {
+    console.warn('No current project path available')
+    return remotePath
+  }
+
+  // 从项目路径中提取项目名称（最后一个目录名）
+  const projectName = projectPath.split('/').filter(Boolean).pop()
+  console.log('projectName:', projectName)
+  if (!projectName) {
+    console.warn('Cannot extract project name from path:', projectPath)
+    return remotePath
+  }
+
+  // 在远程路径中找到项目名称的位置
+  const projectNameIndex = remotePath.indexOf(`/${projectName}/`)
+  if (projectNameIndex === -1) {
+    console.warn('Project name not found in remote path:', remotePath)
+    return remotePath
+  }
+
+  // 截取项目名称之后的相对路径部分
+  const relativePath = remotePath.slice(projectNameIndex + projectName.length + 2) // +2 for the two '/'
+
+  console.log('projectPath:', projectPath, 'relativePath:', relativePath)
+  // 拼接本地项目路径
+  const localPath = `${projectPath}/${relativePath}`
+  console.log('Path converted:', remotePath, '->', localPath)
+
+  return localPath
 }
 
 // 获取 Tab 数据
@@ -147,7 +235,7 @@ async function fetchTabInfo(tabId: InfoEnum) {
   if (tabInfoCache.value[cacheKey]) return
 
   isLoadingTab.value = true
-  errorMessage.value = null
+  setTabError(null)
 
   try {
     const response = await getInfoApi({
@@ -161,17 +249,17 @@ async function fetchTabInfo(tabId: InfoEnum) {
     console.log('getInfoApi response:', response)
 
     if (response.response !== ResponseEnum.success) {
-      errorMessage.value = response.message?.join(', ') || '获取信息失败'
+      setTabError(response.message?.join(', ') || '获取信息失败')
       return
     }
 
     const infoObj = response.data?.info
     if (infoObj && typeof infoObj === 'object') {
-      tabInfoCache.value[cacheKey] = infoObj as Record<string, string>
+      tabInfoCache.value[cacheKey] = infoObj as Record<string, unknown>
     }
   } catch (err) {
     console.error('fetchTabInfo error:', err)
-    errorMessage.value = err instanceof Error ? err.message : '未知错误'
+    setTabError(err instanceof Error ? err.message : '未知错误')
   } finally {
     isLoadingTab.value = false
   }
@@ -184,46 +272,72 @@ async function handleTabChange(tabId: InfoEnum) {
 }
 
 // 处理 Key 点击 - 读取文件并显示到 chat
-async function handleKeyClick(key: string, path: string) {
+async function handleKeyClick(key: string, value: unknown) {
   if (!currentStep.value) return
 
   loadingKey.value = key
-  errorMessage.value = null
+  setTabError(null)
 
   try {
-    let content: any
-    const format = getFileFormat(path)
+    let content: unknown
+    let path = getPath(value)
+    const infoArray = getInfoArray(value)
+    const format = getFileFormat(value)
 
-    if (!isInTauri) {
-      content = `文件路径: ${path}\n(需要在 Tauri 环境中才能读取)`
-    } else {
-      const fileContent = await readTextFile(path)
+    // 如果有 path，尝试读取文件
+    if (path) {
+      if (!isInTauri) {
+        content = `文件路径: ${path}\n(需要在 Tauri 环境中才能读取)`
+      } else {
+        // 转换远程路径为本地路径
+        const localPath = convertToLocalPath(path)
+        console.log('localPath:', localPath)
+        const fileContent = await readTextFile(localPath)
 
-      if (format === 'json') {
-        try {
-          content = JSON.parse(fileContent)
-        } catch {
+        if (format === 'json') {
+          try {
+            content = JSON.parse(fileContent)
+          } catch {
+            content = fileContent
+          }
+        } else {
           content = fileContent
         }
-      } else {
-        content = fileContent
       }
+    } else {
+      // 没有 path，直接使用整个值作为内容
+      content = value
+    }
+
+    // 构建 items 数组
+    const items: Array<{ label: string; content: unknown; format: 'json' | 'csv' | 'text' }> = []
+
+    // 添加文件内容
+    items.push({
+      label: path ? path.split('/').pop() || path : '[Data]',
+      content,
+      format
+    })
+
+    // 如果有 info 数组，添加额外的 info 信息
+    if (infoArray && infoArray.length > 0) {
+      items.push({
+        label: 'Additional Info',
+        content: infoArray.join('\n'),
+        format: 'text'
+      })
     }
 
     // 发送到 chat
     messageStore.addInfoMessage({
       title: key,
       step: currentStep.value,
-      items: [{
-        label: getFileName(path),
-        content,
-        format
-      }]
+      items
     })
 
   } catch (err) {
     console.error('handleKeyClick error:', err)
-    errorMessage.value = err instanceof Error ? err.message : '读取文件失败'
+    setTabError(err instanceof Error ? err.message : '读取文件失败')
   } finally {
     loadingKey.value = null
   }
@@ -234,6 +348,7 @@ watch(currentStep, async (newStep) => {
   if (newStep) {
     // 清除缓存
     tabInfoCache.value = {}
+    tabErrorCache.value = {}
     // 获取当前 tab 的数据
     await fetchTabInfo(activeTab.value)
   }

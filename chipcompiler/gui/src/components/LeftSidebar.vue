@@ -2,8 +2,8 @@
   <div class="flex h-full">
     <!-- 第一栏：流程步骤导航 (优化版) -->
     <div
-      class="w-[52px] shrink-0 bg-(--bg-sidebar) border-r border-(--border-color) flex flex-col justify-between py-3">
-      <div>
+      class="w-[52px] shrink-0 bg-(--bg-sidebar) border-r border-(--border-color) flex flex-col justify-between py-3 overflow-y-auto">
+      <div class="overflow-y-auto">
         <router-link v-for="stage in flowStages" :key="stage.path"
           :to="stage.available !== false ? '/workspace/' + stage.path : route.path"
           @click="stage.available === false && $event.preventDefault()"
@@ -57,7 +57,7 @@
         <div class="flex items-center justify-between mb-2">
           <span class="text-[10px] text-(--text-secondary) uppercase tracking-wider">Progress</span>
           <span class="text-[11px] font-bold text-(--accent-color)">{{ completedSteps }}/{{ totalSteps || 0
-            }}</span>
+          }}</span>
         </div>
         <div class="h-1.5 bg-(--bg-secondary) rounded-full overflow-hidden">
           <div class="h-full bg-(--accent-color) rounded-full transition-all duration-500"
@@ -172,17 +172,7 @@
           <button @click="handleRunFlow" :disabled="isRunning"
             class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-(--accent-color) text-white text-[11px] font-bold rounded hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 shadow-lg shadow-(--accent-color)/20">
             <i :class="isRunning ? 'ri-loader-4-line animate-spin' : 'ri-play-fill'"></i>
-            {{ isRunning ? 'RUNNING' : 'RUN Flow' }}
-          </button>
-          <button @click="handleStopFlow"
-            class="px-3 py-2 bg-(--bg-secondary) text-(--text-secondary) text-[11px] font-bold rounded border border-(--border-color) hover:text-(--text-primary) hover:border-(--accent-color) transition-all"
-            title="Stop">
-            <i class="ri-stop-fill"></i>
-          </button>
-          <button @click="handleResetFlow"
-            class="px-3 py-2 bg-(--bg-secondary) text-(--text-secondary) text-[11px] font-bold rounded border border-(--border-color) hover:text-(--text-primary) hover:border-(--accent-color) transition-all"
-            title="Reset">
-            <i class="ri-refresh-line"></i>
+            {{ isRunning ? 'RUNNING' : 'RUN' }}
           </button>
         </div>
       </div>
@@ -223,8 +213,6 @@ const {
 const {
   isRunning,
   runFlow,
-  stopFlow,
-  resetFlow
 } = useFlowRunner()
 
 // 当前阶段
@@ -241,20 +229,12 @@ const toggleTheme = () => {
 const handleRunFlow = async () => {
   await runFlow()
 }
-
-const handleStopFlow = async () => {
-  await stopFlow()
-}
-
-const handleResetFlow = async () => {
-  await resetFlow()
-}
 </script>
 
 <style scoped>
-/* 自定义滚动条 */
+/* 自定义滚动条 - 更细的样式 */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 3px;
 }
 
 ::-webkit-scrollbar-track {
@@ -263,7 +243,7 @@ const handleResetFlow = async () => {
 
 ::-webkit-scrollbar-thumb {
   background: var(--border-color);
-  border-radius: 3px;
+  border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {

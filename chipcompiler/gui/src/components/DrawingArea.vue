@@ -64,7 +64,6 @@ const handleStageChange = async (stage: string) => {
       return
     }
 
-    if (stepEnum === StepEnum.SYNTHESIS) return;
     const imagePath = response.data?.info?.image
     if (!imagePath) {
       console.warn('No image path in response')

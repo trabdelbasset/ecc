@@ -10,15 +10,6 @@
       ]" title="AI Chat">
         <i class="ri-chat-3-line text-lg"></i>
       </button>
-
-      <button @click="activeTab = 'inspector'" :class="[
-        'w-9 h-9 rounded flex items-center justify-center transition-all',
-        activeTab === 'inspector'
-          ? 'bg-(--accent-color) text-white shadow-sm'
-          : 'text-(--text-secondary) hover:text-(--accent-color) hover:bg-(--bg-secondary)'
-      ]" title="Inspector">
-        <i class="ri-file-list-3-line text-lg"></i>
-      </button>
     </div>
 
     <!-- 内容面板 -->
@@ -27,18 +18,12 @@
       <div v-if="activeTab === 'chat'" class="flex flex-col h-full">
         <ChatPanel :messages="messages" @send-message="handleSendMessage" />
       </div>
-
-      <!-- Inspector 面板 -->
-      <div v-else-if="activeTab === 'inspector'" class="flex flex-col h-full">
-        <InspectorPanel />
-      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import InspectorPanel from './InspectorPanel.vue'
 import type { Message } from '../types'
 
 interface Props {

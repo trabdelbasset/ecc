@@ -1,6 +1,6 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
-import { StepEnum } from '@/api/type'
+import { STEP_METADATA } from '@/api/type'
 
 // 使用 Hash 模式，因为 Tauri 应用使用本地文件系统
 const routes: RouteRecordRaw[] = [
@@ -18,16 +18,16 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../views/WorkspaceView.vue'),
     redirect: '/workspace/home',
     children: [
+      // 固定的设置页面
       { path: 'home', name: 'Home', component: () => import('../views/HomeView.vue') },
       { path: 'configure', name: 'Configure', component: () => import('../views/ConfigureView.vue') },
-      { path: StepEnum.SYNTHESIS, name: StepEnum.SYNTHESIS, component: () => import('../views/EditorView.vue') },
-      { path: StepEnum.FLOORPLAN, name: StepEnum.FLOORPLAN, component: () => import('../views/EditorView.vue') },
-      { path: StepEnum.PLACEMENT, name: StepEnum.PLACEMENT, component: () => import('../views/EditorView.vue') },
-      { path: StepEnum.CTS, name: StepEnum.CTS, component: () => import('../views/EditorView.vue') },
-      { path: StepEnum.ROUTING, name: StepEnum.ROUTING, component: () => import('../views/EditorView.vue') },
-      { path: StepEnum.SIGNOFF, name: StepEnum.SIGNOFF, component: () => import('../views/EditorView.vue') },
-      { path: StepEnum.DRC, name: StepEnum.DRC, component: () => import('../views/EditorView.vue') },
-      { path: StepEnum.FILLER, name: StepEnum.FILLER, component: () => import('../views/EditorView.vue') }
+      // 动态步骤路由：匹配所有 flow 步骤
+      // 路由验证放宽，允许任何步骤路径（由 flow.json 动态决定）
+      {
+        path: ':step',
+        name: ':step',
+        component: () => import('../views/EditorView.vue')
+      }
     ],
     meta: {
       title: '工作区',

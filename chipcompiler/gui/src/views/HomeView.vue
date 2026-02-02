@@ -1,13 +1,13 @@
 <template>
   <div class="w-full h-full flex flex-col items-center justify-center">
     <button @click="handleRunRTL2GDS" class="bg-blue-500 text-white px-4 py-2 rounded-md">Run RTL2GDS</button>
-    <button @click="handleGetInfo(StepEnum.synthesis, InfoEnum.views)"
+    <button @click="handleGetInfo(StepEnum.SYNTHESIS, InfoEnum.views)"
       class="bg-green-500 text-white px-4 py-2 rounded-md mt-2">Get Info - synthesis
       views</button>
-    <button @click="handleGetInfo(StepEnum.cts, InfoEnum.subflow)"
+    <button @click="handleGetInfo(StepEnum.CTS, InfoEnum.subflow)"
       class="bg-green-500 text-white px-4 py-2 rounded-md mt-2">Get Info - CTS
       subflow</button>
-
+    {{ cmdRes }}
   </div>
 </template>
 
@@ -17,16 +17,16 @@ import { rtl2gdsApi, getInfoApi } from '@/api/flow';
 import { CMDEnum, StepEnum, InfoEnum } from '@/api/type';
 
 const isLoading = ref(false);
-
+const cmdRes = ref<any>(null);
 const handleRunRTL2GDS = async () => {
   if (isLoading.value) return;
   isLoading.value = true;
   try {
-    const response = await rtl2gdsApi({
+    cmdRes.value = await rtl2gdsApi({
       cmd: CMDEnum.rtl2gds,
       data: { rerun: true }
     });
-    console.log(response);
+    console.log(cmdRes.value);
   } catch (error) {
     console.error(error);
   } finally {
@@ -45,8 +45,8 @@ const handleGetInfo = async (step: StepEnum, id: InfoEnum) => {
       data: { step: step, id: id }
     }
     console.log(request);
-    const response = await getInfoApi(request);
-    console.log(response);
+    cmdRes.value = await getInfoApi(request);
+    console.log(cmdRes.value);
   } catch (error) {
     console.error(error);
   } finally {

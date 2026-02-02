@@ -7,10 +7,15 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useThemeStore } from '@/stores/themeStore'
-const themeStore = useThemeStore()
+import { useWorkspace } from '@/composables/useWorkspace'
 
-onMounted(() => {
+const themeStore = useThemeStore()
+const { loadRecentProjects } = useWorkspace()
+
+onMounted(async () => {
   themeStore.initTheme()
+  // 在应用启动时加载最近项目，确保 currentProject 被初始化
+  await loadRecentProjects()
 })
 </script>
 

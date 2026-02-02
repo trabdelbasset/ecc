@@ -18,12 +18,7 @@ interface SerializedProject {
 
 // 共享的状态实例（单例模式）
 const store = new LazyStore('settings.json')
-const currentProject = ref<Project | null>({
-  id: '1',
-  name: 'ics55_00001',
-  path: '/Users/ekko/Desktop/ics55_00001',
-  lastOpened: new Date()
-})
+const currentProject = ref<Project | null>()
 const recentProjects = ref<Project[]>([])
 
 // 应用名称常量
@@ -129,6 +124,14 @@ export function useWorkspace() {
       }
 
       recentProjects.value = validProjects
+
+      // 如果 currentProject 为空且有有效项目，自动设置为第一项
+      if (!currentProject.value && validProjects.length > 0) {
+        currentProject.value = validProjects[0]
+        // 更新窗口标题
+        await updateWindowTitle(validProjects[0].name)
+        console.log('Auto-set currentProject to:', validProjects[0].path)
+      }
 
       // 如果清理后的列表和原列表不同，更新存储
       if (validProjects.length !== savedProjects.length) {

@@ -1,14 +1,6 @@
 <template>
   <div class="flex flex-col h-full bg-(--bg-primary)">
-    <!-- 标题栏（带切换按钮） -->
-    <div class="h-10 flex items-center justify-between px-4 border-b border-(--border-color)">
-      <div class="flex items-center gap-2">
-        <h2 class="text-sm font-semibold text-(--text-primary)">
-          {{ activeTab === 'chat' ? '' : 'Inspector' }}
-        </h2>
-      </div>
-
-      <!-- 切换按钮 -->
+    <!-- <div class="h-10 flex items-center justify-between px-4 border-b border-(--border-color)">
       <div class="flex items-center gap-2">
         <button @click="activeTab = 'chat'" :class="[
           'p-1.5 rounded transition-all',
@@ -27,7 +19,7 @@
           <i class="ri-file-list-3-line text-base"></i>
         </button>
       </div>
-    </div>
+    </div> -->
 
     <!-- 内容区域 -->
     <div class="flex-1 overflow-hidden">

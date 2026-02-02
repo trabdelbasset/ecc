@@ -1,5 +1,5 @@
 import { alovaInstance } from './client'
-import { RequestData, ResponseData, StepEnum, InfoEnum } from './type';
+import { RequestData, ResponseData, StepEnum, InfoEnum, StateEnum } from './type';
 
 export interface GetInfoRequest {
   step: StepEnum;
@@ -31,13 +31,13 @@ export function rtl2gdsApi(request: RequestData<RTL2GDSRequest>) {
 }
 
 export interface RunStepRequest {
-  step: string;
+  step: StepEnum;
   rerun: boolean;
 }
 
 export interface RunStepResponse {
-  step: string;
-  state: string;
+  step: StepEnum;
+  state: StateEnum;
 }
 
 export function runStepApi(request: RequestData<RunStepRequest>) {

@@ -4,71 +4,27 @@ import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import Checkbox from 'primevue/checkbox'
 import Select from 'primevue/select'
+import { useParameters } from '@/composables/useParameters'
 
-// 响应式配置参数
-const config = reactive({
-  design: "gcd",
-  topModule: "gcd",
-  die: { boundingBox: "" },
-  core: {
-    boundingBox: "",
-    utilization: 0.39,
-    margin: [10, 10],
-    aspectRatio: 1
-  },
-  maxFanout: 20,
-  targetDensity: 0.3,
-  targetOverflow: 0.1,
-  clock: "clk",
-  frequencyMax: 100,
-  bottomLayer: "MET1",
-  topLayer: "MET5",
-  floorplan: {
-    tapDistance: 58,
-    autoPlacePin: { layer: "MET3", width: 300, height: 600 },
-    tracks: [
-      { layer: "MET1", xStart: 0, xStep: 200, yStart: 0, yStep: 200 },
-      { layer: "MET2", xStart: 0, xStep: 200, yStart: 0, yStep: 200 },
-      { layer: "MET3", xStart: 0, xStep: 200, yStart: 0, yStep: 200 },
-      { layer: "MET4", xStart: 0, xStep: 200, yStart: 0, yStep: 200 },
-      { layer: "MET5", xStart: 0, xStep: 200, yStart: 0, yStep: 200 }
-    ]
-  },
-  pdn: {
-    io: [
-      { netName: "VDD", direction: "INOUT", isPower: true },
-      { netName: "VDDIO", direction: "INOUT", isPower: true },
-      { netName: "VSS", direction: "INOUT", isPower: false },
-      { netName: "VSSIO", direction: "INOUT", isPower: false }
-    ],
-    globalConnect: [
-      { netName: "VDD", instancePinName: "VDD", isPower: true },
-      { netName: "VDD", instancePinName: "VDD1", isPower: true },
-      { netName: "VDD", instancePinName: "VNW", isPower: true },
-      { netName: "VDDIO", instancePinName: "VDDIO", isPower: true },
-      { netName: "VSS", instancePinName: "VSS", isPower: false },
-      { netName: "VSS", instancePinName: "VSS1", isPower: false },
-      { netName: "VSS", instancePinName: "VPW", isPower: false },
-      { netName: "VSSIO", instancePinName: "VSSIO", isPower: false }
-    ],
-    grid: { layer: "MET1", powerNet: "VDD", groundNet: "VSS", width: 0.16, offset: 0 },
-    stripe: [
-      { layer: "MET4", powerNet: "VDD", groundNet: "VSS", width: 1, pitch: 16, offset: 0.5 },
-      { layer: "MET5", powerNet: "VDD", groundNet: "VSS", width: 1, pitch: 16, offset: 0.5 }
-    ],
-    connectLayers: [
-      { layers: ["MET1", "MET5"] },
-      { layers: ["MET4", "MET5"] }
-    ]
-  }
-})
+// 从 parameters.json 加载配置参数
+const {
+  config,
+  isLoading,
+  isSaving,
+  error,
+  hasChanges,
+  saveParameters,
+  resetParameters,
+  refreshParameters
+} = useParameters()
 
 const layerOptions = [
-  { label: 'MET1', value: 'MET1' },
-  { label: 'MET2', value: 'MET2' },
-  { label: 'MET3', value: 'MET3' },
-  { label: 'MET4', value: 'MET4' },
-  { label: 'MET5', value: 'MET5' }
+  { label: 'li1', value: 'li1' },
+  { label: 'met1', value: 'met1' },
+  { label: 'met2', value: 'met2' },
+  { label: 'met3', value: 'met3' },
+  { label: 'met4', value: 'met4' },
+  { label: 'met5', value: 'met5' }
 ]
 
 const directionOptions = [
@@ -81,7 +37,7 @@ const utilizationPercent = computed(() => Math.round(config.core.utilization * 1
 const densityPercent = computed(() => Math.round(config.targetDensity * 100))
 const overflowPercent = computed(() => Math.round(config.targetOverflow * 100))
 
-const layersList = ['MET1', 'MET2', 'MET3', 'MET4', 'MET5']
+const layersList = ['met1', 'met2', 'met3', 'met4', 'met5']
 const isLayerInRange = (layer: string): boolean => {
   const bottomIndex = layersList.indexOf(config.bottomLayer)
   const topIndex = layersList.indexOf(config.topLayer)
@@ -90,19 +46,30 @@ const isLayerInRange = (layer: string): boolean => {
 }
 
 // CRUD
-const addTrack = () => config.floorplan.tracks.push({ layer: "MET1", xStart: 0, xStep: 200, yStart: 0, yStep: 200 })
+const addTrack = () => config.floorplan.tracks.push({ layer: "met1", xStart: 0, xStep: 200, yStart: 0, yStep: 200 })
 const removeTrack = (i: number) => config.floorplan.tracks.splice(i, 1)
 const addPdnIO = () => config.pdn.io.push({ netName: "", direction: "INOUT", isPower: true })
 const removePdnIO = (i: number) => config.pdn.io.splice(i, 1)
 const addGlobalConnect = () => config.pdn.globalConnect.push({ netName: "", instancePinName: "", isPower: true })
 const removeGlobalConnect = (i: number) => config.pdn.globalConnect.splice(i, 1)
-const addStripe = () => config.pdn.stripe.push({ layer: "MET1", powerNet: "VDD", groundNet: "VSS", width: 1, pitch: 16, offset: 0.5 })
+const addStripe = () => config.pdn.stripe.push({ layer: "met1", powerNet: "VDD", groundNet: "VSS", width: 1, pitch: 16, offset: 0.5 })
 const removeStripe = (i: number) => config.pdn.stripe.splice(i, 1)
-const addConnectLayer = () => config.pdn.connectLayers.push({ layers: ["MET1", "MET2"] })
+const addConnectLayer = () => config.pdn.connectLayers.push({ layers: ["met1", "met2"] })
 const removeConnectLayer = (i: number) => config.pdn.connectLayers.splice(i, 1)
 
-const saveConfig = () => console.log('Saved:', JSON.stringify(config, null, 2))
-const resetConfig = () => console.log('Reset')
+const saveConfig = async () => {
+  const success = await saveParameters()
+  if (success) {
+    console.log('Configuration saved successfully')
+  } else {
+    console.error('Failed to save configuration')
+  }
+}
+
+const resetConfig = () => {
+  resetParameters()
+  console.log('Configuration reset to last saved state')
+}
 
 // 展开/折叠状态
 const expandedSections = reactive({
@@ -124,18 +91,30 @@ const toggleSection = (key: keyof typeof expandedSections) => {
     <header class="topbar">
       <div class="topbar-left">
         <i class="ri-cpu-line"></i>
-        <span class="title">{{ config.design }}</span>
+        <span class="title">{{ config.design || 'Untitled' }}</span>
+        <span v-if="hasChanges" class="unsaved-indicator">*</span>
         <span class="divider">/</span>
         <span class="subtitle">Configuration</span>
+        <span v-if="isLoading" class="loading-indicator">
+          <i class="ri-loader-4-line spin"></i>
+          Loading...
+        </span>
+        <span v-if="error" class="error-indicator" :title="error">
+          <i class="ri-error-warning-line"></i>
+        </span>
       </div>
       <div class="topbar-right">
-        <button class="btn-text" @click="resetConfig">
+        <button class="btn-text" @click="refreshParameters" :disabled="isLoading">
           <i class="ri-refresh-line"></i>
+          Reload
+        </button>
+        <button class="btn-text" @click="resetConfig" :disabled="!hasChanges || isLoading">
+          <i class="ri-arrow-go-back-line"></i>
           Reset
         </button>
-        <button class="btn-primary" @click="saveConfig">
-          <i class="ri-save-line"></i>
-          Save
+        <button class="btn-primary" @click="saveConfig" :disabled="!hasChanges || isSaving">
+          <i :class="isSaving ? 'ri-loader-4-line spin' : 'ri-save-line'"></i>
+          {{ isSaving ? 'Saving...' : 'Save' }}
         </button>
       </div>
     </header>
@@ -150,9 +129,15 @@ const toggleSection = (key: keyof typeof expandedSections) => {
             <span>Design</span>
           </div>
           <div class="card-body">
-            <div class="field">
-              <label>Name</label>
-              <InputText v-model="config.design" size="small" />
+            <div class="field-row">
+              <div class="field">
+                <label>Name</label>
+                <InputText v-model="config.design" size="small" />
+              </div>
+              <div class="field">
+                <label>PDK</label>
+                <InputText v-model="config.pdk" size="small" />
+              </div>
             </div>
             <div class="field">
               <label>Top Module</label>
@@ -575,6 +560,41 @@ const toggleSection = (key: keyof typeof expandedSections) => {
   color: var(--text-secondary);
 }
 
+.topbar-left .unsaved-indicator {
+  color: #f59e0b;
+  font-weight: 600;
+  margin-left: -4px;
+}
+
+.topbar-left .loading-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  margin-left: 8px;
+}
+
+.topbar-left .error-indicator {
+  color: #ef4444;
+  cursor: help;
+  margin-left: 8px;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
 .topbar-right {
   display: flex;
   gap: 8px;
@@ -594,9 +614,14 @@ const toggleSection = (key: keyof typeof expandedSections) => {
   transition: all 0.15s;
 }
 
-.btn-text:hover {
+.btn-text:hover:not(:disabled) {
   background: var(--bg-primary);
   color: var(--text-primary);
+}
+
+.btn-text:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .btn-primary {
@@ -614,8 +639,13 @@ const toggleSection = (key: keyof typeof expandedSections) => {
   transition: all 0.15s;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background: #4f46e5;
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Grid 布局容器 */

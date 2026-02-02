@@ -1,18 +1,8 @@
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useTauri } from './useTauri'
-
-// ============ 类型定义 ============
-
-/** 流程运行状态 */
-export type RunnerStatus = 'idle' | 'running' | 'completed' | 'failed'
-
-/** 运行结果 */
-export interface RunResult {
-  success: boolean
-  message?: string
-  data?: any
-}
+import { CMDEnum, StateEnum, StepEnum } from '@/api/type'
+import { runStepApi, type RunStepResponse } from '@/api/flow'
 
 // ============ Composable ============
 
@@ -26,101 +16,109 @@ export function useFlowRunner() {
 
   // 状态
   const isRunning = ref(false)
-  const status = ref<RunnerStatus>('idle')
+  const state = ref<StateEnum>(StateEnum.Invalid)
   const error = ref<string | null>(null)
-  const lastRunResult = ref<RunResult | null>(null)
+  const lastRunResult = ref<RunStepResponse | null>(null)
+
+  /**
+   * 获取当前步骤（从动态路由参数获取）
+   */
+  function getCurrentStep(): string | undefined {
+    // 动态路由参数 :step
+    const stepParam = route.params.step as string
+    if (stepParam) {
+      return stepParam
+    }
+  }
 
   /**
    * 运行当前流程
    */
-  async function runFlow(): Promise<RunResult> {
+  async function runFlow(): Promise<RunStepResponse | null> {
+    // 从动态路由参数获取当前步骤
+    const step = getCurrentStep()
+
+    if (!step) {
+      console.warn('无法获取当前步骤')
+      return null
+    }
+
     // 检查是否在 Tauri 环境中
     if (!isInTauri) {
       console.warn('当前不在 Tauri 环境中，无法执行 Python 脚本')
       ensureTauri(true) // 显示警告弹窗
-      return { success: false, message: 'Not in Tauri environment' }
+      return { step: step as StepEnum, state: StateEnum.Invalid }
     }
 
     if (isRunning.value) {
-      return { success: false, message: 'Flow is already running' }
+      return { step: step as StepEnum, state: StateEnum.Ongoing }
     }
 
     isRunning.value = true
-    status.value = 'running'
+    state.value = StateEnum.Ongoing
     error.value = null
-
-    // 获取当前路由名称
-    const routeName = route.name || route.path || 'unknown'
-
     try {
-      console.log('handleRunFlow', routeName)
+      console.log('handleRunFlow', step)
 
-      // TODO: 实现实际的流程运行逻辑
-      // 这里可以调用后端 API 或 Tauri 命令来运行流程
-
-      const result: RunResult = { success: true, data: { routeName } }
-      lastRunResult.value = result
-      status.value = 'completed'
-      return result
-
+      const result = await runStepApi({
+        cmd: CMDEnum.run_step,
+        data: {
+          step: step as StepEnum,
+          rerun: false
+        }
+      })
+      console.log('run step result', result)
+      return result.data
     } catch (err) {
-      console.error('❌ 调用 Python 失败:', err)
-      const errorMessage = err instanceof Error ? err.message : String(err)
-      error.value = errorMessage
-      status.value = 'failed'
-
-      const result: RunResult = { success: false, message: errorMessage }
-      lastRunResult.value = result
-      return result
-
+      console.error('❌ 单步运行失败:', err)
     } finally {
       isRunning.value = false
     }
+    return null
   }
 
   /**
    * 停止当前流程
    */
-  async function stopFlow(): Promise<RunResult> {
-    if (!isRunning.value) {
-      return { success: false, message: 'No flow is running' }
-    }
+  // async function stopFlow(): Promise<RunStepResponse> {
+  //   if (!isRunning.value) {
+  //     return { step: "", state: StateEnum.Invalid }
+  //   }
 
-    try {
-      // TODO: 实现停止流程的逻辑
-      console.log('Stopping flow...')
+  //   try {
+  //     // TODO: 实现停止流程的逻辑
+  //     console.log('Stopping flow...')
 
-      isRunning.value = false
-      status.value = 'idle'
+  //     isRunning.value = false
+  //     state.value = StateEnum.Invalid
 
-      return { success: true, message: 'Flow stopped' }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err)
-      error.value = errorMessage
-      return { success: false, message: errorMessage }
-    }
-  }
+  //     return { step: "", state: StateEnum.Invalid }
+  //   } catch (err) {
+  //     console.error('❌ 单步运行停止失败:', err)
+  //     return { step: "", state: StateEnum.Invalid }
+  //   }
+  // }
 
   /**
    * 重置流程状态
    */
-  async function resetFlow(): Promise<RunResult> {
-    try {
-      // TODO: 实现重置流程的逻辑
-      console.log('Resetting flow...')
+  // async function resetFlow(): Promise<RunStepResponse> {
+  //   try {
+  //     // TODO: 实现重置流程的逻辑
+  //     console.log('Resetting flow...')
 
-      isRunning.value = false
-      status.value = 'idle'
-      error.value = null
-      lastRunResult.value = null
+  //     isRunning.value = false
+  //     state.value = StateEnum.Invalid
+  //     error.value = null
+  //     lastRunResult.value = null
 
-      return { success: true, message: 'Flow reset' }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err)
-      error.value = errorMessage
-      return { success: false, message: errorMessage }
-    }
-  }
+  //     return { step: "", state: StateEnum.Invalid }
+  //   } catch (err) {
+  //     const errorMessage = err instanceof Error ? err.message : String(err)
+  //     error.value = errorMessage
+  //     return { step: "", state: StateEnum.Invalid }
+  //   }
+  // }
 
   /**
    * 清除错误状态
@@ -132,14 +130,14 @@ export function useFlowRunner() {
   return {
     // 状态
     isRunning,
-    status,
+    state,
     error,
     lastRunResult,
 
     // 方法
     runFlow,
-    stopFlow,
-    resetFlow,
+    // stopFlow,
+    // resetFlow,
     clearError
   }
 }
