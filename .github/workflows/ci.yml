@@ -22,6 +22,10 @@ jobs:
       - name: Convert SSH to HTTPS in gitmodules
         run: sed -i 's/git@github.com:/https:\/\/github.com\//' .gitmodules
 
+      - name: Configure git credentials
+        run: |
+          git config --global url."https://${{ env.GH_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
       - name: Checkout submodules
         run: git submodule update --init --recursive
 
