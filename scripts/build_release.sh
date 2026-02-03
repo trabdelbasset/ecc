@@ -17,6 +17,8 @@ ENABLE_OSS_CAD_SUITE=${ENABLE_OSS_CAD_SUITE:-true}
 ECC_TOOLS_ROOT="$PROJECT_ROOT/chipcompiler/thirdparty/ecc-tools"
 ECC_PY_GLOB="$ECC_TOOLS_ROOT/bin/ecc_py*.so"
 OSS_CAD_DIR="$PROJECT_ROOT/chipcompiler/thirdparty/oss-cad-suite"
+TAURI_RESOURCES_DIR="$TAURI_DIR/resources"
+OSS_CAD_BUNDLE_DIR="$TAURI_RESOURCES_DIR/oss-cad-suite"
 
 echo "=========================================="
 echo "ChipCompiler ECC Release Build"
@@ -76,8 +78,43 @@ else
 fi
 echo ""
 
-# Step 3: Ensure ecc_py is built (required by chipcompiler.spec)
-echo "=== Step 3: Ensuring ecc_py is built ==="
+# Step 3: Stage Yosys runtime for bundling
+echo "=== Step 3: Staging Yosys runtime ==="
+rm -rf "$OSS_CAD_BUNDLE_DIR"
+mkdir -p "$OSS_CAD_BUNDLE_DIR/bin" "$OSS_CAD_BUNDLE_DIR/share"
+
+YOSYS_BIN_SRC="$OSS_CAD_DIR/bin/yosys"
+if [[ "$TARGET" == *"windows"* ]]; then
+    YOSYS_BIN_SRC="$OSS_CAD_DIR/bin/yosys.exe"
+fi
+
+if [ ! -f "$YOSYS_BIN_SRC" ]; then
+    echo "ERROR: yosys binary not found at $YOSYS_BIN_SRC"
+    exit 1
+fi
+
+SLANG_SRC=$(ls "$OSS_CAD_DIR/share/yosys/plugins"/slang.* 2>/dev/null | head -1)
+if [ -z "$SLANG_SRC" ]; then
+    echo "ERROR: slang plugin not found under $OSS_CAD_DIR/share/yosys/plugins"
+    exit 1
+fi
+
+cp "$YOSYS_BIN_SRC" "$OSS_CAD_BUNDLE_DIR/bin/"
+if [ -f "$OSS_CAD_DIR/bin/abc" ]; then
+    cp "$OSS_CAD_DIR/bin/abc" "$OSS_CAD_BUNDLE_DIR/bin/"
+    chmod +x "$OSS_CAD_BUNDLE_DIR/bin/abc"
+fi
+cp -a "$OSS_CAD_DIR/share/yosys" "$OSS_CAD_BUNDLE_DIR/share/"
+chmod +x "$OSS_CAD_BUNDLE_DIR/bin/$(basename "$YOSYS_BIN_SRC")"
+echo "Bundled yosys: $OSS_CAD_BUNDLE_DIR/bin/$(basename "$YOSYS_BIN_SRC")"
+echo "Bundled share/yosys: $OSS_CAD_BUNDLE_DIR/share/yosys"
+if [ -f "$OSS_CAD_BUNDLE_DIR/bin/abc" ]; then
+    echo "Bundled abc: $OSS_CAD_BUNDLE_DIR/bin/abc"
+fi
+echo ""
+
+# Step 4: Ensure ecc_py is built (required by chipcompiler.spec)
+echo "=== Step 4: Ensuring ecc_py is built ==="
 if ls $ECC_PY_GLOB >/dev/null 2>&1; then
     echo "ecc_py already exists in $ECC_TOOLS_ROOT/bin."
 else
@@ -117,8 +154,8 @@ else
 fi
 echo ""
 
-# Step 4: Build API Server with PyInstaller
-echo "=== Step 4: Building API Server ==="
+# Step 5: Build API Server with PyInstaller
+echo "=== Step 5: Building API Server ==="
 cd "$PROJECT_ROOT"
 
 # Clean previous builds
@@ -140,8 +177,8 @@ fi
 echo "API Server built successfully."
 echo ""
 
-# Step 5: Copy binary to Tauri binaries directory
-echo "=== Step 5: Installing API Server binary ==="
+# Step 6: Copy binary to Tauri binaries directory
+echo "=== Step 6: Installing API Server binary ==="
 mkdir -p "$BINARIES_DIR"
 
 # Determine binary name based on platform
@@ -155,8 +192,8 @@ chmod +x "$BINARIES_DIR/$BINARY_NAME"
 echo "Installed: $BINARIES_DIR/$BINARY_NAME"
 echo ""
 
-# Step 6: Install frontend dependencies
-echo "=== Step 6: Installing frontend dependencies ==="
+# Step 7: Install frontend dependencies
+echo "=== Step 7: Installing frontend dependencies ==="
 cd "$GUI_DIR"
 if command -v pnpm &> /dev/null; then
     pnpm install
@@ -168,12 +205,12 @@ fi
 echo "Frontend dependencies installed."
 echo ""
 
-# Step 7: Build Tauri application
-echo "=== Step 7: Building Tauri application ==="
+# Step 8: Build Tauri application
+echo "=== Step 8: Building Tauri application ==="
 pnpm run tauri build
 
-# Step 8: Copy API Server binary to release directory (for direct execution)
-echo "=== Step 8: Copying API Server to release directory ==="
+# Step 9: Copy API Server binary to release directory (for direct execution)
+echo "=== Step 9: Copying API Server to release directory ==="
 RELEASE_DIR="$TAURI_DIR/target/release"
 if [ -d "$RELEASE_DIR" ]; then
     cp "$BINARIES_DIR/$BINARY_NAME" "$RELEASE_DIR/$BINARY_NAME"
