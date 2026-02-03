@@ -8,17 +8,19 @@ set -e  # Exit on error
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Source common functions
+source "${SCRIPT_DIR}/common.sh"
+
+# GUI paths
 GUI_DIR="$PROJECT_ROOT/chipcompiler/gui"
 TAURI_DIR="$GUI_DIR/src-tauri"
 BINARIES_DIR="$TAURI_DIR/binaries"
-VENV_DIR="$PROJECT_ROOT/.venv"
-PYTHON_VERSION="3.10"
-ENABLE_OSS_CAD_SUITE=${ENABLE_OSS_CAD_SUITE:-true}
-ECC_TOOLS_ROOT="$PROJECT_ROOT/chipcompiler/thirdparty/ecc-tools"
-ECC_PY_GLOB="$ECC_TOOLS_ROOT/bin/ecc_py*.so"
-OSS_CAD_DIR="$PROJECT_ROOT/chipcompiler/thirdparty/oss-cad-suite"
 TAURI_RESOURCES_DIR="$TAURI_DIR/resources"
 OSS_CAD_BUNDLE_DIR="$TAURI_RESOURCES_DIR/oss-cad-suite"
+
+# Initialize project variables
+setup_project_vars
 
 echo "=========================================="
 echo "ChipCompiler ECC Release Build"
@@ -27,55 +29,18 @@ echo "Project root: $PROJECT_ROOT"
 echo ""
 
 # Get target platform
-TARGET=$(rustc -vV | grep host | cut -d' ' -f2)
+TARGET=$(get_target_platform)
 echo "Target platform: $TARGET"
 echo ""
 
-# Step 1: Setup Python environment with uv (aligned with build.sh)
+# Step 1: Setup Python environment
 echo "=== Step 1: Setting up Python environment ==="
-if ! command -v uv &> /dev/null; then
-    echo "ERROR: uv is not installed or not in PATH"
-    echo "Install it with: curl -LsSf https://astral.sh/uv/install.sh | sh"
-    exit 1
-fi
-echo "Syncing Python ${PYTHON_VERSION} environment with uv..."
-uv sync --frozen --all-groups --python ${PYTHON_VERSION}
-echo "Activating virtual environment..."
-source "$VENV_DIR/bin/activate"
-echo "Python environment ready."
+setup_uv_env || exit 1
 echo ""
 
-# Step 2: Ensure yosys is available (required by runtime)
+# Step 2: Ensure yosys is available
 echo "=== Step 2: Ensuring yosys is available ==="
-if command -v yosys &> /dev/null; then
-    echo "yosys found: $(command -v yosys)"
-else
-    if [ "$ENABLE_OSS_CAD_SUITE" == "true" ]; then
-        echo "yosys not found, installing OSS CAD Suite..."
-        if [ -d "${OSS_CAD_DIR}" ] && [ -f "${OSS_CAD_DIR}/bin/yosys" ]; then
-            echo "OSS CAD Suite already exists at ${OSS_CAD_DIR}, skipping download..."
-        else
-            LATEST_TAG=$(curl -s "https://api.github.com/repos/YosysHQ/oss-cad-suite-build/releases/latest" | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)
-            OSS_CAD_URL="https://github.com/YosysHQ/oss-cad-suite-build/releases/download/${LATEST_TAG}/oss-cad-suite-linux-x64-${LATEST_TAG//-/}.tgz"
-            mkdir -p "${OSS_CAD_DIR}"
-            TMP_DIR=$(mktemp -d)
-            echo "Downloading OSS CAD Suite from ${OSS_CAD_URL}..."
-            curl -fL "${OSS_CAD_URL}" -o "${TMP_DIR}/oss-cad-suite.tgz"
-            tar -xzf "${TMP_DIR}/oss-cad-suite.tgz" -C "${OSS_CAD_DIR}" --strip-components=1
-            rm -rf "${TMP_DIR}/oss-cad-suite.tgz"
-        fi
-        export PATH="${OSS_CAD_DIR}/bin:$PATH"
-        if command -v yosys &> /dev/null; then
-            echo "yosys installed: $(command -v yosys)"
-        else
-            echo "ERROR: yosys still not found after OSS CAD Suite setup."
-            exit 1
-        fi
-    else
-        echo "ERROR: yosys not found and ENABLE_OSS_CAD_SUITE=false"
-        exit 1
-    fi
-fi
+ensure_yosys || exit 1
 echo ""
 
 # Step 3: Stage Yosys runtime for bundling
@@ -113,45 +78,10 @@ if [ -f "$OSS_CAD_BUNDLE_DIR/bin/abc" ]; then
 fi
 echo ""
 
-# Step 4: Ensure ecc_py is built (required by chipcompiler.spec)
+# Step 4: Ensure ecc_py is built
 echo "=== Step 4: Ensuring ecc_py is built ==="
-if ls $ECC_PY_GLOB >/dev/null 2>&1; then
-    echo "ecc_py already exists in $ECC_TOOLS_ROOT/bin."
-else
-    echo "ecc_py not found, building..."
-    if [ ! -d "$ECC_TOOLS_ROOT" ]; then
-        echo "ERROR: ecc-tools submodule not found. Run: git submodule update --init --recursive"
-        exit 1
-    fi
-    git submodule update --init --recursive
-
-    BUILD_DIR="$ECC_TOOLS_ROOT/build"
-    mkdir -p "$BUILD_DIR"
-    rm -rf "$BUILD_DIR/CMakeCache.txt" "$BUILD_DIR/CMakeFiles" "$BUILD_DIR/build.ninja" "$BUILD_DIR/Makefile"
-
-    cd "$BUILD_DIR"
-    if ! command -v cmake &> /dev/null; then
-        echo "ERROR: cmake not found. Please install cmake."
-        exit 1
-    fi
-
-    if command -v ninja &> /dev/null; then
-        echo "Configuring with Ninja..."
-        cmake -G Ninja -DBUILD_AIEDA=ON ..
-        echo "Building ecc_py with Ninja..."
-        ninja ecc_py
-    else
-        echo "Configuring with default generator..."
-        cmake -DBUILD_AIEDA=ON ..
-        echo "Building ecc_py with make..."
-        make -j$(nproc) ecc_py
-    fi
-
-    if ! ls $ECC_PY_GLOB >/dev/null 2>&1; then
-        echo "ERROR: ecc_py build failed (ecc_py*.so not found)."
-        exit 1
-    fi
-fi
+setup_submodules
+build_ecc_py || exit 1
 echo ""
 
 # Step 5: Build API Server with PyInstaller
