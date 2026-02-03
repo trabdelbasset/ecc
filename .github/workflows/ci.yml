@@ -55,11 +55,11 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build build-essential unzip pkg-config yosys \
+          sudo apt-get install -y cmake ninja-build build-essential unzip pkg-config \
             libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libsoup-3.0-dev
           sudo apt-get install -y libwebkit2gtk-4.1-dev || sudo apt-get install -y libwebkit2gtk-4.0-dev
 
       - name: Build release (packaging test)
         env:
-          ENABLE_OSS_CAD_SUITE: "false"
+          ENABLE_OSS_CAD_SUITE: "true"
         run: ./scripts/build_release.sh

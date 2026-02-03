@@ -45,38 +45,46 @@ echo ""
 
 # Step 3: Stage Yosys runtime for bundling
 echo "=== Step 3: Staging Yosys runtime ==="
-rm -rf "$OSS_CAD_BUNDLE_DIR"
-mkdir -p "$OSS_CAD_BUNDLE_DIR/bin" "$OSS_CAD_BUNDLE_DIR/share"
+if [[ "$ENABLE_OSS_CAD_SUITE" != "true" ]]; then
+    echo "Skipping yosys bundling (ENABLE_OSS_CAD_SUITE=$ENABLE_OSS_CAD_SUITE)"
+    echo ""
+else
+    # Ensure OSS CAD Suite is downloaded (even if system yosys exists)
+    setup_oss_cad_suite
 
-YOSYS_BIN_SRC="$OSS_CAD_DIR/bin/yosys"
-if [[ "$TARGET" == *"windows"* ]]; then
-    YOSYS_BIN_SRC="$OSS_CAD_DIR/bin/yosys.exe"
-fi
+    rm -rf "$OSS_CAD_BUNDLE_DIR"
+    mkdir -p "$OSS_CAD_BUNDLE_DIR/bin" "$OSS_CAD_BUNDLE_DIR/share"
 
-if [ ! -f "$YOSYS_BIN_SRC" ]; then
-    echo "ERROR: yosys binary not found at $YOSYS_BIN_SRC"
-    exit 1
-fi
+    YOSYS_BIN_SRC="$OSS_CAD_DIR/bin/yosys"
+    if [[ "$TARGET" == *"windows"* ]]; then
+        YOSYS_BIN_SRC="$OSS_CAD_DIR/bin/yosys.exe"
+    fi
 
-SLANG_SRC=$(ls "$OSS_CAD_DIR/share/yosys/plugins"/slang.* 2>/dev/null | head -1)
-if [ -z "$SLANG_SRC" ]; then
-    echo "ERROR: slang plugin not found under $OSS_CAD_DIR/share/yosys/plugins"
-    exit 1
-fi
+    if [ ! -f "$YOSYS_BIN_SRC" ]; then
+        echo "ERROR: yosys binary not found at $YOSYS_BIN_SRC"
+        exit 1
+    fi
 
-cp "$YOSYS_BIN_SRC" "$OSS_CAD_BUNDLE_DIR/bin/"
-if [ -f "$OSS_CAD_DIR/bin/abc" ]; then
-    cp "$OSS_CAD_DIR/bin/abc" "$OSS_CAD_BUNDLE_DIR/bin/"
-    chmod +x "$OSS_CAD_BUNDLE_DIR/bin/abc"
+    SLANG_SRC=$(ls "$OSS_CAD_DIR/share/yosys/plugins"/slang.* 2>/dev/null | head -1)
+    if [ -z "$SLANG_SRC" ]; then
+        echo "ERROR: slang plugin not found under $OSS_CAD_DIR/share/yosys/plugins"
+        exit 1
+    fi
+
+    cp "$YOSYS_BIN_SRC" "$OSS_CAD_BUNDLE_DIR/bin/"
+    if [ -f "$OSS_CAD_DIR/bin/abc" ]; then
+        cp "$OSS_CAD_DIR/bin/abc" "$OSS_CAD_BUNDLE_DIR/bin/"
+        chmod +x "$OSS_CAD_BUNDLE_DIR/bin/abc"
+    fi
+    cp -a "$OSS_CAD_DIR/share/yosys" "$OSS_CAD_BUNDLE_DIR/share/"
+    chmod +x "$OSS_CAD_BUNDLE_DIR/bin/$(basename "$YOSYS_BIN_SRC")"
+    echo "Bundled yosys: $OSS_CAD_BUNDLE_DIR/bin/$(basename "$YOSYS_BIN_SRC")"
+    echo "Bundled share/yosys: $OSS_CAD_BUNDLE_DIR/share/yosys"
+    if [ -f "$OSS_CAD_BUNDLE_DIR/bin/abc" ]; then
+        echo "Bundled abc: $OSS_CAD_BUNDLE_DIR/bin/abc"
+    fi
+    echo ""
 fi
-cp -a "$OSS_CAD_DIR/share/yosys" "$OSS_CAD_BUNDLE_DIR/share/"
-chmod +x "$OSS_CAD_BUNDLE_DIR/bin/$(basename "$YOSYS_BIN_SRC")"
-echo "Bundled yosys: $OSS_CAD_BUNDLE_DIR/bin/$(basename "$YOSYS_BIN_SRC")"
-echo "Bundled share/yosys: $OSS_CAD_BUNDLE_DIR/share/yosys"
-if [ -f "$OSS_CAD_BUNDLE_DIR/bin/abc" ]; then
-    echo "Bundled abc: $OSS_CAD_BUNDLE_DIR/bin/abc"
-fi
-echo ""
 
 # Step 4: Ensure ecc_py is built
 echo "=== Step 4: Ensuring ecc_py is built ==="
