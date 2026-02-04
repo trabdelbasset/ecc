@@ -1,21 +1,23 @@
 <template>
   <div class="app-wrapper">
     <!-- 窗口调整大小的边缘区域 -->
-    <div class="resize-edge resize-top" @mousedown="startResize('Top')"></div>
-    <div class="resize-edge resize-bottom" @mousedown="startResize('Bottom')"></div>
-    <div class="resize-edge resize-left" @mousedown="startResize('Left')"></div>
-    <div class="resize-edge resize-right" @mousedown="startResize('Right')"></div>
-    <div class="resize-corner resize-top-left" @mousedown="startResize('TopLeft')"></div>
-    <div class="resize-corner resize-top-right" @mousedown="startResize('TopRight')"></div>
-    <div class="resize-corner resize-bottom-left" @mousedown="startResize('BottomLeft')"></div>
-    <div class="resize-corner resize-bottom-right" @mousedown="startResize('BottomRight')"></div>
+    <div class="resize-edge resize-top" @mousedown="startResize('North')"></div>
+    <div class="resize-edge resize-bottom" @mousedown="startResize('South')"></div>
+    <div class="resize-edge resize-left" @mousedown="startResize('West')"></div>
+    <div class="resize-edge resize-right" @mousedown="startResize('East')"></div>
+    <div class="resize-corner resize-top-left" @mousedown="startResize('NorthWest')"></div>
+    <div class="resize-corner resize-top-right" @mousedown="startResize('NorthEast')"></div>
+    <div class="resize-corner resize-bottom-left" @mousedown="startResize('SouthWest')"></div>
+    <div class="resize-corner resize-bottom-right" @mousedown="startResize('SouthEast')"></div>
 
     <!-- 主应用容器 -->
     <div class="app-container">
       <!-- 全局顶部菜单栏 -->
       <TopBar :project-name="currentProject?.name" />
       <!-- 页面内容 -->
-      <router-view class="app-content" />
+      <div class="app-content">
+        <router-view />
+      </div>
     </div>
   </div>
 </template>
@@ -25,15 +27,15 @@ import { onMounted, onUnmounted } from 'vue'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { useThemeStore } from '@/stores/themeStore'
 import { useWorkspace } from '@/composables/useWorkspace'
+
 import TopBar from '@/components/TopBar.vue'
 
 const themeStore = useThemeStore()
 const { loadRecentProjects, currentProject } = useWorkspace()
 
 // 窗口调整大小
-type ResizeDirection = 'Top' | 'Bottom' | 'Left' | 'Right' | 'TopLeft' | 'TopRight' | 'BottomLeft' | 'BottomRight'
-
 let isResizing = false
+type ResizeDirection = 'East' | 'North' | 'NorthEast' | 'NorthWest' | 'South' | 'SouthEast' | 'SouthWest' | 'West';
 
 const startResize = async (direction: ResizeDirection) => {
   isResizing = true
