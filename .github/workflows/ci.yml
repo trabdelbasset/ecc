@@ -109,9 +109,6 @@ jobs:
           name: build-artifacts
           if-no-files-found: ignore
           path: |
-            chipcompiler/gui/src-tauri/target/release/*.AppImage
-            chipcompiler/gui/src-tauri/target/release/*.deb
-            chipcompiler/gui/src-tauri/target/release/*.rpm
-            chipcompiler/gui/src-tauri/target/release/*.dmg
-            chipcompiler/gui/src-tauri/target/release/*.msi
-            chipcompiler/gui/src-tauri/target/release/*.exe
+            chipcompiler/gui/src-tauri/target/release/ecc-client
+            chipcompiler/gui/src-tauri/target/release/bundle/**/*.AppImage
+            chipcompiler/gui/src-tauri/target/release/bundle/**/*.deb
