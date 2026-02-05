@@ -321,9 +321,9 @@ export function useWorkspace() {
     }
   }
 
-  const importProject = () => {
+  const importProject = async () => {
     // 导入可以复用 openProject 的逻辑，或者针对不同格式做特殊处理
-    openProject()
+    return await openProject()
   }
 
   const closeProject = async () => {

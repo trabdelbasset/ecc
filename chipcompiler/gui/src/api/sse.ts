@@ -14,7 +14,7 @@ export type NotifyType =
   | 'step_start'      // step 开始执行
   | 'step_complete'   // step 执行完成
   | 'task_complete'   // 整个任务完成
-  | 'error'           // 发生错误
+  | 'flow_error'      // 发生错误 (避免与 SSE 内置 error 事件冲突)
   | 'heartbeat'       // 心跳保活
   | 'message'         // 通用消息
 
@@ -126,7 +126,7 @@ export function createSSEClient(taskId: string, config: SSEClientConfig = {}) {
       'step_start',
       'step_complete',
       'task_complete',
-      'error',
+      'flow_error',
       'heartbeat',
       'message'
     ]
@@ -305,7 +305,7 @@ export function createSSEClient(taskId: string, config: SSEClientConfig = {}) {
      * 监听错误事件
      */
     onError(callback: (step: string | undefined, message: string) => void) {
-      on('error', (n) => {
+      on('flow_error', (n) => {
         callback(n.step, n.message || 'Unknown error')
       })
     },

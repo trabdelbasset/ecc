@@ -188,9 +188,9 @@ export function useFlowRunner() {
       })
 
       client.onError((step, message) => {
-        console.error(`❌ Error in ${step}: ${message}`)
+        console.error(`❌ FlowError: ${step}: ${message}`)
         sseMessages.value.push({
-          type: 'error',
+          type: 'flow_error',
           step,
           message,
           timestamp: Date.now()

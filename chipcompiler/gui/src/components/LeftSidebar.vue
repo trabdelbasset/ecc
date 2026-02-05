@@ -94,7 +94,7 @@
             <div class="flex items-center justify-between mb-1.5">
               <span class="text-[10px] text-(--text-secondary) uppercase tracking-wider">Total Progress</span>
               <span class="text-[11px] font-bold text-(--accent-color)">{{ flowStats.success }}/{{ flowStats.total
-              }}</span>
+                }}</span>
             </div>
             <div class="h-1.5 bg-(--bg-secondary) rounded-full overflow-hidden">
               <div class="h-full bg-(--accent-color) rounded-full transition-all duration-500"
@@ -182,7 +182,7 @@
               'text-blue-400': msg.type === 'step_start',
               'text-green-500': msg.type === 'step_complete' || msg.type === 'task_complete',
               'text-amber-500': msg.type === 'data_ready',
-              'text-red-500': msg.type === 'error',
+              'text-red-500': msg.type === 'flow_error',
               'text-(--text-secondary)': msg.type === 'message'
             }">
               <i :class="{
@@ -190,7 +190,7 @@
                 'ri-checkbox-circle-line': msg.type === 'step_complete',
                 'ri-trophy-line': msg.type === 'task_complete',
                 'ri-database-2-line': msg.type === 'data_ready',
-                'ri-error-warning-line': msg.type === 'error',
+                'ri-error-warning-line': msg.type === 'flow_error',
                 'ri-chat-1-line': msg.type === 'message'
               }" class="text-xs"></i>
               <span class="truncate">
@@ -229,7 +229,7 @@
           <div class="flex items-center justify-between mb-2">
             <span class="text-[10px] text-(--text-secondary) uppercase tracking-wider">Progress</span>
             <span class="text-[11px] font-bold text-(--accent-color)">{{ completedSteps }}/{{ totalSteps || 0
-            }}</span>
+              }}</span>
           </div>
           <div class="h-1.5 bg-(--bg-secondary) rounded-full overflow-hidden">
             <div class="h-full bg-(--accent-color) rounded-full transition-all duration-500"

@@ -16,7 +16,7 @@ class NotifyType(str, Enum):
     STEP_START = "step_start"       # step 开始执行
     STEP_COMPLETE = "step_complete" # step 执行完成
     TASK_COMPLETE = "task_complete" # 整个任务完成
-    ERROR = "error"                 # 发生错误
+    ERROR = "flow_error"            # 发生错误 (避免与 SSE 内置 error 事件冲突)
     HEARTBEAT = "heartbeat"         # 心跳保活
     MESSAGE = "message"             # 通用消息
 
