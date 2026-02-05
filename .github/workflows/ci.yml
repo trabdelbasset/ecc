@@ -86,7 +86,7 @@ jobs:
             libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libsoup-3.0-dev libfuse2
           sudo apt-get install -y libwebkit2gtk-4.1-dev || sudo apt-get install -y libwebkit2gtk-4.0-dev
 
-          sudo apt-get install -y g++-10 cmake ninja-build \
+          sudo apt-get install -y g++-10 \
             tcl-dev libgflags-dev libgoogle-glog-dev libboost-all-dev libgtest-dev \
             flex libeigen3-dev libunwind-dev libmetis-dev libgmp-dev bison rustc \
             cargo libhwloc-dev libcairo2-dev libcurl4-openssl-dev libtbb-dev git
