@@ -4,11 +4,121 @@ use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
+use std::net::TcpListener;
 use tauri::Manager;
 use tauri_plugin_fs::FsExt;
 
 // Global reference to the FastAPI server process
 type ApiServerProcess = Arc<Mutex<Option<Child>>>;
+
+/// API server port
+const API_PORT: u16 = 8765;
+
+/// Check if a port is available
+fn is_port_available(port: u16) -> bool {
+    TcpListener::bind(format!("127.0.0.1:{}", port)).is_ok()
+}
+
+/// Kill process using a specific port (platform-specific)
+fn kill_process_on_port(port: u16) -> bool {
+    #[cfg(target_os = "windows")]
+    {
+        // Windows: use netstat + taskkill
+        let output = Command::new("cmd")
+            .args(["/C", &format!(
+                "for /f \"tokens=5\" %a in ('netstat -ano ^| findstr :{} ^| findstr LISTENING') do taskkill /F /PID %a",
+                port
+            )])
+            .output();
+        
+        match output {
+            Ok(out) => {
+                if out.status.success() {
+                    println!("✅ Killed process on port {}", port);
+                    true
+                } else {
+                    eprintln!("⚠️ Could not kill process on port {}", port);
+                    false
+                }
+            }
+            Err(e) => {
+                eprintln!("❌ Failed to execute kill command: {}", e);
+                false
+            }
+        }
+    }
+    
+    #[cfg(unix)]
+    {
+        // Unix (macOS/Linux): use lsof + kill
+        let lsof_output = Command::new("lsof")
+            .args(["-ti", &format!(":{}", port)])
+            .output();
+        
+        match lsof_output {
+            Ok(out) => {
+                let pid_str = String::from_utf8_lossy(&out.stdout);
+                let pids: Vec<&str> = pid_str.trim().split('\n').filter(|s| !s.is_empty()).collect();
+                
+                if pids.is_empty() {
+                    println!("No process found on port {}", port);
+                    return true;
+                }
+                
+                let mut all_killed = true;
+                for pid in pids {
+                    println!("Found process {} on port {}, killing...", pid, port);
+                    let kill_result = Command::new("kill")
+                        .args(["-9", pid])
+                        .output();
+                    
+                    match kill_result {
+                        Ok(kill_out) => {
+                            if kill_out.status.success() {
+                                println!("✅ Killed process {} on port {}", pid, port);
+                            } else {
+                                eprintln!("⚠️ Failed to kill process {}", pid);
+                                all_killed = false;
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("❌ Failed to execute kill command: {}", e);
+                            all_killed = false;
+                        }
+                    }
+                }
+                all_killed
+            }
+            Err(e) => {
+                eprintln!("❌ Failed to execute lsof: {}", e);
+                false
+            }
+        }
+    }
+}
+
+/// Ensure the API port is available, killing any existing process if necessary
+fn ensure_port_available(port: u16) -> bool {
+    if is_port_available(port) {
+        println!("✅ Port {} is available", port);
+        return true;
+    }
+    
+    println!("⚠️ Port {} is in use, attempting to free it...", port);
+    
+    if kill_process_on_port(port) {
+        // Wait a moment for the port to be released
+        thread::sleep(Duration::from_millis(500));
+        
+        if is_port_available(port) {
+            println!("✅ Port {} is now available", port);
+            return true;
+        }
+    }
+    
+    eprintln!("❌ Could not free port {}", port);
+    false
+}
 
 /// Get the binary name for api-server based on the current platform
 /// Tauri's externalBin requires the target triple suffix
@@ -31,6 +141,12 @@ fn get_api_server_binary_name() -> String {
 /// In release mode: runs the bundled executable
 fn start_api_server(app_handle: &tauri::AppHandle) -> Option<Child> {
     use std::path::PathBuf;
+    
+    // First, ensure the port is available
+    if !ensure_port_available(API_PORT) {
+        eprintln!("❌ Cannot start API server: port {} is not available", API_PORT);
+        return None;
+    }
     
     #[cfg(debug_assertions)]
     {
@@ -70,14 +186,14 @@ fn start_api_server(app_handle: &tauri::AppHandle) -> Option<Child> {
             .arg("--host")
             .arg("127.0.0.1")
             .arg("--port")
-            .arg("8765")
+            .arg(API_PORT.to_string())
             .arg("--reload")
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
         {
             Ok(child) => {
-                println!("✅ FastAPI server started with PID: {}", child.id());
+                println!("✅ FastAPI server started with PID: {} on port {}", child.id(), API_PORT);
                 return Some(child);
             }
             Err(e) => {
@@ -119,22 +235,24 @@ fn start_api_server(app_handle: &tauri::AppHandle) -> Option<Child> {
         
         println!("Starting FastAPI server (prod mode) from: {:?}", server_binary);
         
+        // Note: Don't use --reload in production mode
         match Command::new(&server_binary)
             .arg("--host")
             .arg("127.0.0.1")
             .arg("--port")
-            .arg("8765")
-            .arg("--reload")
+            .arg(API_PORT.to_string())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
         {
             Ok(child) => {
-                println!("✅ FastAPI server started with PID: {}", child.id());
+                println!("✅ FastAPI server started with PID: {} on port {}", child.id(), API_PORT);
                 Some(child)
             }
             Err(e) => {
                 eprintln!("❌ Failed to start FastAPI server: {}", e);
+                eprintln!("   Binary path: {:?}", server_binary);
+                eprintln!("   Error details: {:?}", e.kind());
                 None
             }
         }
@@ -241,6 +359,134 @@ fn window_close(window: tauri::Window) {
     let _ = window.close();
 }
 
+/// 获取 API 服务器状态
+#[tauri::command]
+fn get_api_server_status() -> serde_json::Value {
+    let port_available = is_port_available(API_PORT);
+    let server_running = !port_available; // If port is not available, server might be running
+    
+    // Try to check health endpoint
+    let health_ok = if server_running {
+        let health_url = format!("http://127.0.0.1:{}/health", API_PORT);
+        ureq::get(&health_url)
+            .timeout(Duration::from_secs(2))
+            .call()
+            .map(|r| r.status() == 200)
+            .unwrap_or(false)
+    } else {
+        false
+    };
+    
+    serde_json::json!({
+        "port": API_PORT,
+        "port_available": port_available,
+        "server_running": server_running,
+        "health_ok": health_ok
+    })
+}
+
+/// 重启 API 服务器
+#[tauri::command]
+fn restart_api_server(app: tauri::AppHandle, state: tauri::State<'_, ApiServerProcess>) -> Result<String, String> {
+    // First, kill any existing process
+    {
+        let mut server = state.lock().map_err(|e| format!("Lock error: {}", e))?;
+        if server.is_some() {
+            stop_api_server(&mut server);
+        }
+    }
+    
+    // Ensure port is available
+    if !ensure_port_available(API_PORT) {
+        return Err(format!("Port {} is still in use after cleanup", API_PORT));
+    }
+    
+    // Start new server
+    {
+        let mut server = state.lock().map_err(|e| format!("Lock error: {}", e))?;
+        *server = start_api_server(&app);
+        
+        if server.is_none() {
+            return Err("Failed to start API server".to_string());
+        }
+    }
+    
+    Ok(format!("API server restarted on port {}", API_PORT))
+}
+
+/// 强制清理端口上的进程
+#[tauri::command]
+fn kill_port_process() -> Result<String, String> {
+    if is_port_available(API_PORT) {
+        return Ok(format!("Port {} is already available", API_PORT));
+    }
+    
+    if kill_process_on_port(API_PORT) {
+        thread::sleep(Duration::from_millis(300));
+        if is_port_available(API_PORT) {
+            return Ok(format!("Successfully killed process on port {}", API_PORT));
+        }
+    }
+    
+    Err(format!("Could not free port {}", API_PORT))
+}
+
+/// 获取调试信息（用于诊断生产环境问题）
+#[tauri::command]
+fn get_debug_info(app: tauri::AppHandle) -> serde_json::Value {
+    use std::path::PathBuf;
+    
+    let mut info = serde_json::json!({
+        "api_port": API_PORT,
+        "port_available": is_port_available(API_PORT),
+        "is_debug_build": cfg!(debug_assertions),
+    });
+    
+    // Get executable path
+    if let Ok(exe_path) = std::env::current_exe() {
+        info["exe_path"] = serde_json::json!(exe_path.to_string_lossy());
+        if let Some(exe_dir) = exe_path.parent() {
+            info["exe_dir"] = serde_json::json!(exe_dir.to_string_lossy());
+        }
+    }
+    
+    // Get resource directory
+    if let Ok(resource_dir) = app.path().resource_dir() {
+        info["resource_dir"] = serde_json::json!(resource_dir.to_string_lossy());
+    }
+    
+    // Check for API server binary in production mode
+    #[cfg(not(debug_assertions))]
+    {
+        let binary_name = get_api_server_binary_name();
+        info["api_binary_name"] = serde_json::json!(binary_name);
+        
+        let possible_paths = get_possible_binary_paths(&app, &binary_name);
+        let path_status: Vec<serde_json::Value> = possible_paths
+            .iter()
+            .map(|p| {
+                serde_json::json!({
+                    "path": p.to_string_lossy(),
+                    "exists": p.exists(),
+                    "is_file": p.is_file(),
+                })
+            })
+            .collect();
+        info["api_binary_paths"] = serde_json::json!(path_status);
+    }
+    
+    // Check health endpoint
+    let health_url = format!("http://127.0.0.1:{}/health", API_PORT);
+    let health_ok = ureq::get(&health_url)
+        .timeout(Duration::from_secs(2))
+        .call()
+        .map(|r| r.status() == 200)
+        .unwrap_or(false);
+    info["health_ok"] = serde_json::json!(health_ok);
+    
+    info
+}
+
 /// 动态授予文件系统访问权限
 /// 
 /// 此命令允许前端在运行时请求访问特定目录的权限，
@@ -269,8 +515,10 @@ fn main() {
     // Create a shared reference for the API server process
     let api_server: ApiServerProcess = Arc::new(Mutex::new(None));
     let api_server_clone = api_server.clone();
+    let api_server_state = api_server.clone();
     
     tauri::Builder::default()
+        .manage(api_server_state)  // Make API server process accessible to commands
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
@@ -284,8 +532,46 @@ fn main() {
                 *server = start_api_server(&app.handle());
             }
 
-            // Wait a moment for the server to start
-            thread::sleep(Duration::from_millis(500));
+            // Wait for the server to be ready with health check
+            println!("Waiting for FastAPI server to be ready...");
+            let max_retries = 30; // Max 15 seconds (30 * 500ms)
+            let mut server_ready = false;
+            
+            for attempt in 1..=max_retries {
+                thread::sleep(Duration::from_millis(500));
+                
+                // Try to connect to health endpoint
+                let addr = format!("127.0.0.1:{}", API_PORT);
+                match std::net::TcpStream::connect_timeout(
+                    &addr.parse().unwrap(),
+                    Duration::from_millis(200)
+                ) {
+                    Ok(_) => {
+                        // Port is open, try HTTP health check
+                        let health_url = format!("http://127.0.0.1:{}/health", API_PORT);
+                        if let Ok(response) = ureq::get(&health_url)
+                            .timeout(Duration::from_secs(2))
+                            .call()
+                        {
+                            if response.status() == 200 {
+                                println!("✅ FastAPI server ready after {} attempts ({:.1}s)", 
+                                    attempt, attempt as f32 * 0.5);
+                                server_ready = true;
+                                break;
+                            }
+                        }
+                    }
+                    Err(_) => {
+                        if attempt % 4 == 0 {
+                            println!("⏳ Still waiting for server... (attempt {}/{})", attempt, max_retries);
+                        }
+                    }
+                }
+            }
+            
+            if !server_ready {
+                eprintln!("⚠️ FastAPI server may not be fully ready after {}s", max_retries as f32 * 0.5);
+            }
 
             // 自动授予内置 data 目录的访问权限，以便加载演示数据
             let mut data_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -339,7 +625,11 @@ fn main() {
             request_project_permission,
             window_minimize,
             window_maximize,
-            window_close
+            window_close,
+            get_api_server_status,
+            restart_api_server,
+            kill_port_process,
+            get_debug_info
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -80,6 +80,7 @@
                 </label>
                 <div class="flex gap-3">
                   <input v-model="config.directory" type="text" readonly placeholder="点击选择文件夹..."
+                    @click="selectLocation()"
                     class="flex-1 px-4 py-3 bg-(--bg-secondary) border border-(--border-color) rounded-lg text-(--text-primary) placeholder:text-(--text-secondary) cursor-pointer" />
                   <button @click="selectLocation"
                     class="px-6 py-3 bg-(--accent-color) text-white rounded-lg hover:opacity-90 transition-opacity font-medium cursor-pointer flex items-center gap-2">

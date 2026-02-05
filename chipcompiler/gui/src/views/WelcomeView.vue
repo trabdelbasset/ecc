@@ -27,8 +27,8 @@ const handleNewProject = async (config?: WorkspaceConfig) => {
 }
 
 const handleImportProject = async () => {
-  await importProject()
-  router.push('/workspace')
+  const success = await importProject()
+  if (success) router.push('/workspace')
 }
 
 const handleOpenRecent = async (project: Project) => {
