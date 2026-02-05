@@ -81,17 +81,28 @@ else
 
     echo "Syncing OSS CAD Suite into Tauri resources..."
     cp -a "$OSS_CAD_DIR/." "$OSS_CAD_BUNDLE_DIR/"
-    chmod +x "$OSS_CAD_BUNDLE_DIR/bin/$(basename "$YOSYS_BIN_SRC")"
-    if [ -f "$OSS_CAD_BUNDLE_DIR/bin/abc" ]; then
-        chmod +x "$OSS_CAD_BUNDLE_DIR/bin/abc"
+    echo "Pruning OSS CAD Suite resources (keep yosys + abc)..."
+    # Keep only yosys, yosys* and abc executables in bin/
+    if [ -d "$OSS_CAD_BUNDLE_DIR/bin" ]; then
+        find "$OSS_CAD_BUNDLE_DIR/bin" -maxdepth 1 -type f ! -name 'yosys' ! -name 'yosys*' ! -name 'abc' -print0 | xargs -0 -r rm -f
     fi
+    # Keep only yosys-related content in share/
+    if [ -d "$OSS_CAD_BUNDLE_DIR/share" ]; then
+        # Remove all top-level share entries except yosys
+        find "$OSS_CAD_BUNDLE_DIR/share" -mindepth 1 -maxdepth 1 -print0 | \
+            xargs -0 -r -I {} bash -c 'if [ "$(basename "{}")" != "yosys" ]; then rm -rf "{}"; fi'
+    fi
+    if [ -d "$OSS_CAD_BUNDLE_DIR/share/yosys" ]; then
+        # Inside share/yosys, keep only yosys-related files/directories
+        find "$OSS_CAD_BUNDLE_DIR/share/yosys" -mindepth 1 -maxdepth 1 -print0 | \
+            xargs -0 -r -I {} bash -c 'name=$(basename "{}"); case "$name" in yosys*|plugins|techlibs|scripts) ;; *) rm -rf "{}" ;; esac'
+    fi
+    chmod +x "$OSS_CAD_BUNDLE_DIR/bin/$(basename "$YOSYS_BIN_SRC")"
     echo "Bundled yosys: $OSS_CAD_BUNDLE_DIR/bin/$(basename "$YOSYS_BIN_SRC")"
     if [ -d "$OSS_CAD_BUNDLE_DIR/share/yosys" ]; then
         echo "Bundled share/yosys: $OSS_CAD_BUNDLE_DIR/share/yosys"
     fi
-    if [ -f "$OSS_CAD_BUNDLE_DIR/bin/abc" ]; then
-        echo "Bundled abc: $OSS_CAD_BUNDLE_DIR/bin/abc"
-    fi
+
     echo ""
 fi
 
