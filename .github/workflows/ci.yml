@@ -56,6 +56,12 @@ jobs:
         with:
           version: latest
 
+      - name: Install LinuxDeploy # For AppImage packaging
+        id: install-linuxdeploy
+        uses: miurahr/install-linuxdeploy-action@v1.8.0
+        with:
+          plugins: appimage
+
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -71,4 +77,5 @@ jobs:
       - name: Build release (packaging test)
         env:
           ENABLE_OSS_CAD_SUITE: "true"
+          CARGO_PROFILE_RELEASE_STRIP: "false"
         run: CMAKE_EXTRA_OPTIONS='-DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache' ./scripts/build_release.sh
