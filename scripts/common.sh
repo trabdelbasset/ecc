@@ -193,3 +193,52 @@ install_ecc_py() {
 get_target_platform() {
     rustc -vV | grep host | cut -d' ' -f2
 }
+
+# Build Tauri bundles and copy the API server binary into release dir
+build_tauri_bundle() {
+    local gui_dir="$1"
+    local tauri_dir="$2"
+    local oss_cad_bundle_dir="$3"
+    local binaries_dir="$4"
+    local binary_name="$5"
+
+    echo "=== Step 8: Building Tauri application ==="
+    if [ ! -d "$oss_cad_bundle_dir" ]; then
+        echo "ERROR: Tauri resources missing: $oss_cad_bundle_dir"
+        return 1
+    fi
+
+    export APPIMAGE_EXTRACT_AND_RUN=1
+    if [ -z "${LINUXDEPLOY:-}" ] && command -v linuxdeploy &> /dev/null; then
+        export LINUXDEPLOY="$(command -v linuxdeploy)"
+    fi
+    if [ -z "${LINUXDEPLOY_PLUGIN_APPIMAGE:-}" ] && command -v linuxdeploy-plugin-appimage &> /dev/null; then
+        export LINUXDEPLOY_PLUGIN_APPIMAGE="$(command -v linuxdeploy-plugin-appimage)"
+    fi
+    if [ -z "${LINUXDEPLOY:-}" ]; then
+        echo "Warning: linuxdeploy not found in PATH. Set LINUXDEPLOY to its absolute path if AppImage bundling fails."
+    fi
+    if [ -z "${LINUXDEPLOY_PLUGIN_APPIMAGE:-}" ]; then
+        echo "Warning: linuxdeploy-plugin-appimage not found in PATH. Set LINUXDEPLOY_PLUGIN_APPIMAGE to its absolute path if AppImage bundling fails."
+    fi
+
+    (cd "$gui_dir" && pnpm run tauri build)
+
+    echo "=== Step 9: Copying API Server to release directory ==="
+    local release_dir="$tauri_dir/target/release"
+    if [ -d "$release_dir" ]; then
+        cp "$binaries_dir/$binary_name" "$release_dir/$binary_name"
+        chmod +x "$release_dir/$binary_name"
+        echo "Copied: $release_dir/$binary_name"
+    else
+        echo "Warning: Release directory not found, skipping copy"
+    fi
+    echo ""
+
+    if [ -d "$tauri_dir/target/release/bundle" ]; then
+        echo "Generated packages:"
+        find "$tauri_dir/target/release/bundle" -type f \( -name "*.dmg" -o -name "*.app" -o -name "*.deb" -o -name "*.rpm" -o -name "*.AppImage" -o -name "*.msi" -o -name "*.exe" \) 2>/dev/null | while read f; do
+            echo "  - $f"
+        done
+    fi
+}

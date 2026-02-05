@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Complete release build script for ChipCompiler ECC
 # This script builds both the Python API server and the Tauri application
@@ -163,25 +163,7 @@ fi
 echo "Frontend dependencies installed."
 echo ""
 
-# Step 8: Build Tauri application
-echo "=== Step 8: Building Tauri application ==="
-if [ ! -d "$OSS_CAD_BUNDLE_DIR" ]; then
-    echo "ERROR: Tauri resources missing: $OSS_CAD_BUNDLE_DIR"
-    exit 1
-fi
-pnpm run tauri build
-
-# Step 9: Copy API Server binary to release directory (for direct execution)
-echo "=== Step 9: Copying API Server to release directory ==="
-RELEASE_DIR="$TAURI_DIR/target/release"
-if [ -d "$RELEASE_DIR" ]; then
-    cp "$BINARIES_DIR/$BINARY_NAME" "$RELEASE_DIR/$BINARY_NAME"
-    chmod +x "$RELEASE_DIR/$BINARY_NAME"
-    echo "Copied: $RELEASE_DIR/$BINARY_NAME"
-else
-    echo "Warning: Release directory not found, skipping copy"
-fi
-echo ""
+build_tauri_bundle "$GUI_DIR" "$TAURI_DIR" "$OSS_CAD_BUNDLE_DIR" "$BINARIES_DIR" "$BINARY_NAME" || exit 1
 
 echo ""
 echo "=========================================="
@@ -192,11 +174,3 @@ echo "Output locations:"
 echo "  - Executable: $TAURI_DIR/target/release/ecc-client"
 echo "  - Bundles:    $TAURI_DIR/target/release/bundle/"
 echo ""
-
-# List generated bundles
-if [ -d "$TAURI_DIR/target/release/bundle" ]; then
-    echo "Generated packages:"
-    find "$TAURI_DIR/target/release/bundle" -type f \( -name "*.dmg" -o -name "*.app" -o -name "*.deb" -o -name "*.rpm" -o -name "*.AppImage" -o -name "*.msi" -o -name "*.exe" \) 2>/dev/null | while read f; do
-        echo "  - $f"
-    done
-fi

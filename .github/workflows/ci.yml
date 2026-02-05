@@ -21,7 +21,7 @@ jobs:
         with:
           # this might remove tools that are actually needed,
           # if set to "true" but frees about 6 GB
-          tool-cache: false
+          tool-cache: true
 
           # feel free to set to "false" if necessary for your workflow
           android: true
@@ -73,6 +73,13 @@ jobs:
           version: latest
           enable-cache: "true"
 
+      - name: Install Python dependencies (uv)
+        run: uv sync --frozen --all-groups --python 3.10
+
+      - name: Install frontend dependencies
+        working-directory: chipcompiler/gui
+        run: pnpm install
+
       - name: Install LinuxDeploy # For AppImage packaging
         id: install-linuxdeploy
         uses: miurahr/install-linuxdeploy-action@v1.8.0
@@ -83,20 +90,31 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y cmake ninja-build build-essential unzip pkg-config \
-            libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libsoup-3.0-dev libfuse2
+            libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libsoup-3.0-dev libfuse2 \
+            patchelf squashfs-tools desktop-file-utils
           sudo apt-get install -y libwebkit2gtk-4.1-dev || sudo apt-get install -y libwebkit2gtk-4.0-dev
 
           sudo apt-get install -y g++-10 \
             tcl-dev libgflags-dev libgoogle-glog-dev libboost-all-dev libgtest-dev \
-            flex libeigen3-dev libunwind-dev libmetis-dev libgmp-dev bison rustc \
-            cargo libhwloc-dev libcairo2-dev libcurl4-openssl-dev libtbb-dev git
+            flex libeigen3-dev libunwind-dev libmetis-dev libgmp-dev bison \
+            libhwloc-dev libcairo2-dev libcurl4-openssl-dev libtbb-dev git
+
+      - name: Download OSS CAD Suite
+        env:
+          ENABLE_OSS_CAD_SUITE: "true"
+        run: |
+          source ./scripts/common.sh
+          setup_project_vars
+          setup_oss_cad_suite
 
       - name: Build release (packaging test)
         env:
           ENABLE_OSS_CAD_SUITE: "true"
           CARGO_PROFILE_RELEASE_STRIP: "false"
           APPIMAGE_EXTRACT_AND_RUN: "1"
-        run: CMAKE_EXTRA_OPTIONS='-DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache' ./scripts/build_release.sh
+        run: |
+          CMAKE_EXTRA_OPTIONS='-DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache' \
+            bash ./.github/pack.sh
 
       - name: Upload build artifacts
         if: always()
@@ -105,9 +123,6 @@ jobs:
           name: build-artifacts
           if-no-files-found: ignore
           path: |
-            dist/**
-            build/**
-            chipcompiler/gui/src-tauri/target/release/bundle/**
             chipcompiler/gui/src-tauri/target/release/*.AppImage
             chipcompiler/gui/src-tauri/target/release/*.deb
             chipcompiler/gui/src-tauri/target/release/*.rpm
