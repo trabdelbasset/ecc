@@ -10,6 +10,7 @@ env:
   GH_TOKEN: ${{ secrets.GH_TOKEN }}
   SCCACHE_GHA_ENABLED: "true"
   RUSTC_WRAPPER: "sccache"
+  UV_PYTHON_PREFERENCE: only-managed
 
 jobs:
   build-package:
