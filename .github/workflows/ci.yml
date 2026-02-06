@@ -1,0 +1,135 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+  SCCACHE_GHA_ENABLED: "true"
+  RUSTC_WRAPPER: "sccache"
+  UV_PYTHON_PREFERENCE: only-managed
+
+jobs:
+  build-package:
+    name: Build Package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: true
+
+          # feel free to set to "false" if necessary for your workflow
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: false
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ env.GH_TOKEN }}
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.9
+
+      - name: Convert SSH to HTTPS in gitmodules
+        run: sed -i 's/git@github.com:/https:\/\/github.com\//' .gitmodules
+
+      - name: Configure git credentials
+        run: |
+          git config --global url."https://${{ env.GH_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
+      - name: Checkout submodules
+        run: git submodule update --init --recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: chipcompiler/gui/pnpm-lock.yaml
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: latest
+          enable-cache: "true"
+
+      - name: Install Python dependencies (uv)
+        run: uv sync --frozen --all-groups --python 3.10
+
+      - name: Install frontend dependencies
+        working-directory: chipcompiler/gui
+        run: pnpm install
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build build-essential unzip pkg-config \
+            libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libsoup-3.0-dev libfuse2 \
+            patchelf squashfs-tools desktop-file-utils libwebkit2gtk-4.1-dev
+
+          sudo apt-get install -y g++-10 \
+            tcl-dev libgflags-dev libgoogle-glog-dev libboost-all-dev libgtest-dev \
+            flex libeigen3-dev libunwind-dev libmetis-dev libgmp-dev bison \
+            libhwloc-dev libcairo2-dev libcurl4-openssl-dev libtbb-dev git \
+            libftdi1-2 libhidapi-hidraw0 librsvg2-dev
+
+      - name: Build release (packaging test)
+        env:
+          ENABLE_OSS_CAD_SUITE: "true"
+          CARGO_PROFILE_RELEASE_STRIP: "false"
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+        run: |
+          CMAKE_EXTRA_OPTIONS='-DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache' \
+            bash ./.github/pack.sh
+
+      - name: Upload ecc-client artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ecc-client
+          if-no-files-found: ignore
+          path: |
+            chipcompiler/gui/src-tauri/target/release/ecc-client
+
+      - name: Upload AppImage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: appimage
+          if-no-files-found: ignore
+          path: |
+            chipcompiler/gui/src-tauri/target/release/bundle/**/*.AppImage
+
+      - name: Upload deb artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deb
+          if-no-files-found: ignore
+          path: |
+            chipcompiler/gui/src-tauri/target/release/bundle/**/*.deb

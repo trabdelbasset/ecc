@@ -234,9 +234,17 @@ fn start_api_server(app_handle: &tauri::AppHandle) -> Option<Child> {
         };
         
         println!("Starting FastAPI server (prod mode) from: {:?}", server_binary);
-        
-        // Note: Don't use --reload in production mode
-        match Command::new(&server_binary)
+
+        let mut cmd = Command::new(&server_binary);
+        if let Ok(resource_dir) = app_handle.path().resource_dir() {
+            let oss_dir = resource_dir.join("oss-cad-suite");
+            if oss_dir.exists() {
+                println!("Setting CHIPCOMPILER_OSS_CAD_DIR to {:?}", oss_dir);
+                cmd.env("CHIPCOMPILER_OSS_CAD_DIR", &oss_dir);
+            }
+        }
+
+        match cmd
             .arg("--host")
             .arg("127.0.0.1")
             .arg("--port")

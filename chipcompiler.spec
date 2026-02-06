@@ -97,7 +97,6 @@ hiddenimports = [
     'chipcompiler.tools.yosys.runner',
     'chipcompiler.tools.yosys.utility',
     'benchmark',
-    'benchmark.pdk',
     'benchmark.get_parameters',
     'benchmark.benchmark',
     # Multiprocessing support
