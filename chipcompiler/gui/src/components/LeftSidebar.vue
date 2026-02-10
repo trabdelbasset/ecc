@@ -115,7 +115,7 @@
 
           <div v-else class="p-3 space-y-1">
             <router-link v-for="(stage, index) in runStages" :key="stage.path" :to="'/workspace/' + stage.path"
-              class="group relative flex items-start gap-3 p-2 rounded-lg transition-all hover:bg-(--bg-secondary)/50 cursor-pointer"
+              class="group relative flex items-center gap-3 p-2 rounded-lg transition-all hover:bg-(--bg-secondary)/50 cursor-pointer"
               :class="{ 'bg-(--bg-secondary)/30': stage.state === 'Ongoing' }">
               <!-- 连接线 -->
               <div v-if="index < runStages.length - 1" class="absolute left-[22px] top-[42px] w-0.5 h-[calc(100%-34px)]"
@@ -126,7 +126,7 @@
                 ]"></div>
 
               <!-- 状态图标 -->
-              <div class="relative shrink-0 mt-0.5">
+              <div class="relative shrink-0">
                 <!-- 成功 -->
                 <div v-if="stage.state === 'Success'"
                   class="w-[30px] h-[30px] rounded-full bg-green-500/20 border-2 border-green-500 flex items-center justify-center">
@@ -150,8 +150,8 @@
               </div>
 
               <!-- 步骤信息 -->
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2">
+              <div class="flex-1 min-w-0 h-full flex items-center">
+                <div class="flex items-center  gap-2">
                   <span class="text-[12px] font-semibold truncate" :class="[
                     stage.state === 'Success' ? 'text-green-500' :
                       stage.state === 'Ongoing' ? 'text-blue-400' :
@@ -202,17 +202,39 @@
 
           <!-- RTL2GDS 控制区 -->
           <div class="rtl2gds-control">
-            <button @click="handleRunFlow" :disabled="isRunning" class="rerun-btn" :class="{ running: isRunning }">
-              <i :class="isRunning ? 'ri-loader-4-line animate-spin' : 'ri-refresh-line'"></i>
-              RTL2GDS
-            </button>
-            <!-- 状态指示灯：绿=成功 红=失败 -->
+            <!-- 状态指示灯 -->
             <div class="rtl2gds-status-dots">
               <span class="status-dot"
                 :class="flowResult === 'success' ? 'dot-success-active' : 'dot-success-dim'"></span>
               <span class="status-dot" :class="flowResult === 'failed' ? 'dot-failed-active' : 'dot-failed-dim'"></span>
             </div>
-            <button class="rerun-btn">return</button>
+
+            <!-- 模式选择器（Cursor 风格下拉） -->
+            <div class="mode-selector" @click.stop>
+              <!-- 当前模式显示 + 触发器 -->
+              <button class="mode-trigger" @click="showModeMenu = !showModeMenu" :disabled="isRunning">
+                <i :class="runModes[runMode].icon" class="mode-trigger-icon"></i>
+                <span>{{ runModes[runMode].label }}</span>
+                <i class="ri-arrow-down-s-line mode-chevron" :class="{ open: showModeMenu }"></i>
+              </button>
+
+              <!-- 下拉菜单 -->
+              <Transition name="mode-menu">
+                <div v-if="showModeMenu" class="mode-menu">
+                  <button v-for="(mode, key) in runModes" :key="key" class="mode-menu-item"
+                    :class="{ active: runMode === key }" @click="runMode = key as string; showModeMenu = false">
+                    <i :class="mode.icon" class="mode-item-icon"></i>
+                    <span class="mode-item-label">{{ mode.label }}</span>
+                    <span v-if="mode.shortcut" class="mode-item-shortcut">{{ mode.shortcut }}</span>
+                  </button>
+                </div>
+              </Transition>
+            </div>
+
+            <!-- 执行按钮 -->
+            <button @click="handleRunFlow" :disabled="isRunning" class="run-go-btn" :class="{ running: isRunning }">
+              <i :class="isRunning ? 'ri-loader-4-line animate-spin' : 'ri-play-fill'"></i>
+            </button>
           </div>
         </div>
       </template>
@@ -362,7 +384,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useThemeStore } from '@/stores/themeStore'
 import { useFlowStages } from '@/composables/useFlowStages'
 import { useSubflow } from '@/composables/useSubflow'
@@ -439,13 +461,27 @@ const toggleTheme = () => {
   themeStore.toggleTheme()
 }
 
+// ============ 运行模式 ============
+const runMode = ref('run')
+const showModeMenu = ref(false)
+
+const runModes: Record<string, { label: string; icon: string; shortcut?: string }> = {
+  run: { label: 'Run RTL2GDS', icon: 'ri-play-fill' },
+  rerun: { label: 'ReRun', icon: 'ri-restart-line' },
+}
+
+// 点击外部关闭菜单
+const closeMenu = () => { showModeMenu.value = false }
+onMounted(() => document.addEventListener('click', closeMenu))
+onUnmounted(() => document.removeEventListener('click', closeMenu))
+
 // ============ 事件处理 ============
 const handleRunFlow = async () => {
-  // 如果当前在 Home 页面，运行所有步骤
+  closeMenu()
+  // TODO: 根据 runMode 区分 run / rerun 行为
   if (currentStage.value === 'home') {
     await runAllFlow()
   } else {
-    // 否则运行当前步骤
     await runFlow()
   }
 }
@@ -474,33 +510,21 @@ const handleRunFlow = async () => {
 .rtl2gds-control {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-}
-
-.rtl2gds-label {
-  font-size: 11px;
-  font-weight: 800;
-  color: var(--accent-color);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
+  gap: 6px;
+  padding: 6px 8px;
 }
 
 /* 状态指示灯 */
 .rtl2gds-status-dots {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   flex-shrink: 0;
 }
 
 .status-dot {
-  width: 12px;
-  height: 12px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   transition: all 0.2s ease;
 }
@@ -512,7 +536,7 @@ const handleRunFlow = async () => {
 
 .dot-success-dim {
   background: transparent;
-  border: 2px solid #10b981;
+  border: 1.5px solid #10b981;
   opacity: 0.35;
 }
 
@@ -523,45 +547,169 @@ const handleRunFlow = async () => {
 
 .dot-failed-dim {
   background: transparent;
-  border: 2px solid #ef4444;
+  border: 1.5px solid #ef4444;
   opacity: 0.35;
 }
 
-/* Rerun Button */
-.rerun-btn {
+/* ====== 模式选择器（Cursor 风格） ====== */
+.mode-selector {
+  position: relative;
   flex: 1;
+  min-width: 0;
+}
+
+.mode-trigger {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 5px 10px;
-  background: var(--accent-color);
-  color: var(--accent-text, #fff);
-  border: none;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 700;
+  gap: 6px;
+  width: 100%;
+  padding: 5px 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
 }
 
-.rerun-btn:hover:not(:disabled) {
-  opacity: 0.85;
+.mode-trigger:hover:not(:disabled) {
+  border-color: var(--text-secondary);
 }
 
-.rerun-btn:active:not(:disabled) {
-  transform: scale(0.98);
-}
-
-.rerun-btn:disabled {
+.mode-trigger:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.rerun-btn.running {
+.mode-trigger-icon {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.mode-chevron {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-secondary);
+  transition: transform 0.2s ease;
+}
+
+.mode-chevron.open {
+  transform: rotate(180deg);
+}
+
+/* 下拉菜单 */
+.mode-menu {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 4px;
+  z-index: 50;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.mode-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.mode-menu-item:hover {
+  background: var(--bg-primary);
+}
+
+.mode-menu-item.active {
+  background: var(--accent-color);
+  color: #fff;
+}
+
+.mode-item-icon {
+  font-size: 14px;
+  width: 18px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.mode-item-label {
+  flex: 1;
+  text-align: left;
+}
+
+.mode-item-shortcut {
+  font-size: 10px;
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
+.mode-menu-item.active .mode-item-shortcut {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* 菜单动画 */
+.mode-menu-enter-active {
+  transition: all 0.15s ease-out;
+}
+
+.mode-menu-leave-active {
+  transition: all 0.1s ease-in;
+}
+
+.mode-menu-enter-from {
+  opacity: 0;
+  transform: translateY(4px) scale(0.97);
+}
+
+.mode-menu-leave-to {
+  opacity: 0;
+  transform: translateY(4px) scale(0.97);
+}
+
+/* ====== 执行按钮 ====== */
+.run-go-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: var(--accent-color);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.run-go-btn:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.run-go-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.run-go-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.run-go-btn.running {
   animation: pulse-btn 1.5s ease infinite;
 }
 
