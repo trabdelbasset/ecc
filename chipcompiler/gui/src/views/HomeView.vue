@@ -79,28 +79,41 @@
       </section>
 
       <!-- ========== Row 2 Left+Center: Layout Preview ========== -->
-      <section class="section-card layout-area">
+      <section ref="layoutSectionRef" class="section-card layout-area">
         <div class="section-header">
           <div class="header-icon layout"><i class="ri-layout-masonry-line"></i></div>
           <h2>Layout</h2>
           <span class="header-hint">显示跑通过的最后 step 版图</span>
           <div class="header-actions">
-            <button class="action-btn"><i class="ri-zoom-in-line"></i></button>
-            <button class="action-btn"><i class="ri-zoom-out-line"></i></button>
-            <button class="action-btn"><i class="ri-fullscreen-line"></i></button>
+            <button class="action-btn" @click="toggleLayoutFullscreen" :title="isLayoutFullscreen ? '退出全屏' : '全屏'">
+              <i :class="isLayoutFullscreen ? 'ri-fullscreen-exit-line' : 'ri-fullscreen-line'"></i>
+            </button>
           </div>
         </div>
-        <div class="layout-content">
+        <div
+          ref="layoutContentRef"
+          class="layout-content"
+          @wheel.prevent="onLayoutWheel"
+          @mousedown="onLayoutMouseDown"
+          @mousemove="onLayoutMouseMove"
+          @mouseup="onLayoutMouseUp"
+          @mouseleave="onLayoutMouseUp"
+        >
           <img
             v-if="layoutBlobUrl"
             :src="layoutBlobUrl"
             alt="Layout Preview"
             class="layout-image"
+            :style="layoutImageTransform"
+            draggable="false"
           />
           <div v-else class="layout-placeholder">
             <i class="ri-image-2-line"></i>
             <p>Layout Preview</p>
             <span>等待版图数据...</span>
+          </div>
+          <div v-if="isLayoutFullscreen && layoutBlobUrl" class="zoom-indicator">
+            {{ Math.round(layoutScale * 100) }}%
           </div>
         </div>
       </section>
@@ -205,7 +218,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch, nextTick, type Ref } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import * as echarts from 'echarts/core'
 import { LineChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent } from 'echarts/components'
@@ -223,6 +236,94 @@ const { monitorData, checklistItems, layoutBlobUrl } = useHomeData()
 const checklistCompletedCount = computed(() =>
   checklistItems.value.filter(c => c.state === 'Success').length
 )
+
+// ============ Layout 全屏 & 缩放平移 ============
+const layoutSectionRef = ref<HTMLElement>()
+const layoutContentRef = ref<HTMLElement>()
+const isLayoutFullscreen = ref(false)
+
+// 缩放 & 平移状态
+const layoutScale = ref(1)
+const layoutTranslateX = ref(0)
+const layoutTranslateY = ref(0)
+let isDragging = false
+let dragStartX = 0
+let dragStartY = 0
+let dragStartTX = 0
+let dragStartTY = 0
+
+const layoutImageTransform = computed(() => {
+  if (!isLayoutFullscreen.value) return {}
+  return {
+    transform: `translate(${layoutTranslateX.value}px, ${layoutTranslateY.value}px) scale(${layoutScale.value})`,
+    transformOrigin: 'center center',
+    cursor: isDragging ? 'grabbing' : (layoutScale.value > 1 ? 'grab' : 'default'),
+  }
+})
+
+function resetLayoutTransform() {
+  layoutScale.value = 1
+  layoutTranslateX.value = 0
+  layoutTranslateY.value = 0
+}
+
+function toggleLayoutFullscreen() {
+  const el = layoutSectionRef.value
+  if (!el) return
+
+  if (!document.fullscreenElement) {
+    el.requestFullscreen().catch(() => {})
+  } else {
+    document.exitFullscreen().catch(() => {})
+  }
+}
+
+function onFullscreenChange() {
+  isLayoutFullscreen.value = !!document.fullscreenElement
+  if (!isLayoutFullscreen.value) {
+    resetLayoutTransform()
+  }
+}
+
+function onLayoutWheel(e: WheelEvent) {
+  if (!isLayoutFullscreen.value) return
+
+  const delta = e.deltaY > 0 ? -0.1 : 0.1
+  const newScale = Math.min(Math.max(layoutScale.value + delta, 0.1), 20)
+
+  // 以鼠标位置为中心缩放
+  const container = layoutContentRef.value
+  if (container) {
+    const rect = container.getBoundingClientRect()
+    const mouseX = e.clientX - rect.left - rect.width / 2
+    const mouseY = e.clientY - rect.top - rect.height / 2
+
+    const scaleFactor = newScale / layoutScale.value
+    layoutTranslateX.value = mouseX - scaleFactor * (mouseX - layoutTranslateX.value)
+    layoutTranslateY.value = mouseY - scaleFactor * (mouseY - layoutTranslateY.value)
+  }
+
+  layoutScale.value = newScale
+}
+
+function onLayoutMouseDown(e: MouseEvent) {
+  if (!isLayoutFullscreen.value || layoutScale.value <= 1) return
+  isDragging = true
+  dragStartX = e.clientX
+  dragStartY = e.clientY
+  dragStartTX = layoutTranslateX.value
+  dragStartTY = layoutTranslateY.value
+}
+
+function onLayoutMouseMove(e: MouseEvent) {
+  if (!isDragging) return
+  layoutTranslateX.value = dragStartTX + (e.clientX - dragStartX)
+  layoutTranslateY.value = dragStartTY + (e.clientY - dragStartY)
+}
+
+function onLayoutMouseUp() {
+  isDragging = false
+}
 
 // ============ ECharts 折线图 ============
 
@@ -284,7 +385,54 @@ function getMetricMax(key: string): string {
   return `${max}`
 }
 
-/** 构建单个迷你折线图的 option */
+/** 获取某个维度的原始显示值（带单位） */
+function getMetricDisplay(key: string, idx: number): string {
+  if (!monitorData.value) return '--'
+  if (key === 'memory') {
+    const raw = monitorData.value.memory
+    return raw?.[idx] != null ? `${Number(raw[idx]).toFixed(1)} MB` : '--'
+  }
+  if (key === 'runtime') {
+    const raw = monitorData.value.runtime
+    return raw?.[idx] ?? '--'
+  }
+  if (key === 'instance') {
+    const raw = monitorData.value.instance
+    return raw?.[idx] != null ? `${raw[idx]}` : '--'
+  }
+  if (key === 'frequency') {
+    const raw = monitorData.value.frequency
+    return raw?.[idx] != null ? `${raw[idx].toFixed(1)} MHz` : '--'
+  }
+  return '--'
+}
+
+/** 构建所有图表共享的 tooltip formatter */
+function buildSharedTooltipFormatter(params: any): string {
+  const idx = params[0]?.dataIndex ?? 0
+  const steps = monitorData.value?.step || []
+  const stepName = steps[idx] || `Step #${idx}`
+
+  const metrics = [
+    { label: 'Memory', value: getMetricDisplay('memory', idx), color: '#ef4444' },
+    { label: 'Runtime', value: getMetricDisplay('runtime', idx), color: '#3b82f6' },
+    { label: 'Instance', value: getMetricDisplay('instance', idx), color: '#10b981' },
+    { label: 'Frequency', value: getMetricDisplay('frequency', idx), color: '#a855f7' },
+  ]
+
+  const rows = metrics.map(m =>
+    `<div style="display:flex;align-items:center;gap:6px;margin-top:3px">
+       <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${m.color}"></span>
+       <span style="flex:1;color:#aaa">${m.label}</span>
+       <span style="font-weight:600;color:#e5e5e5;font-family:'JetBrains Mono',monospace">${m.value}</span>
+     </div>`
+  ).join('')
+
+  return `<div style="font-size:11px;font-weight:700;margin-bottom:4px;color:#fff;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:4px">${stepName}</div>
+          <div style="font-size:10px">${rows}</div>`
+}
+
+/** 构建单个折线图的 option */
 function buildChartOption(key: string, color: string): echarts.EChartsCoreOption {
   const values = getMetricValues(key)
   const steps = monitorData.value?.step || []
@@ -293,36 +441,39 @@ function buildChartOption(key: string, color: string): echarts.EChartsCoreOption
     grid: {
       left: 4,
       right: 4,
-      top: 4,
-      bottom: 4,
+      top: 6,
+      bottom: 6,
       containLabel: false,
     },
     tooltip: {
       trigger: 'axis',
-      backgroundColor: 'rgba(30, 30, 30, 0.9)',
-      borderColor: color,
+      appendToBody: true,
+      backgroundColor: 'rgba(20, 20, 24, 0.95)',
+      borderColor: 'rgba(255,255,255,0.08)',
       borderWidth: 1,
+      borderRadius: 6,
+      padding: [8, 10],
       textStyle: {
         color: '#e5e5e5',
         fontSize: 10,
       },
-      formatter: (params: any) => {
-        const idx = params[0]?.dataIndex ?? 0
-        const stepName = steps[idx] || `#${idx}`
-        const val = params[0]?.value ?? 0
-        let unit = ''
-        if (key === 'memory') unit = ' MB'
-        else if (key === 'runtime') unit = 's'
-        else if (key === 'frequency') unit = ' MHz'
-        return `<div style="font-size:10px;font-weight:600;margin-bottom:2px">${stepName}</div>
-                <span style="color:${color}">${val}${unit}</span>`
+      axisPointer: {
+        type: 'line',
+        lineStyle: {
+          color: 'rgba(255,255,255,0.15)',
+          type: 'dashed',
+        },
       },
+      formatter: buildSharedTooltipFormatter,
     },
     xAxis: {
       type: 'category',
       show: false,
-      data: values.map((_, i) => i),
+      data: steps,
       boundaryGap: false,
+      axisPointer: {
+        show: true,
+      },
     },
     yAxis: {
       type: 'value',
@@ -333,14 +484,31 @@ function buildChartOption(key: string, color: string): echarts.EChartsCoreOption
         type: 'line',
         data: values,
         smooth: 0.3,
-        symbol: 'none',
+        symbol: 'circle',
+        symbolSize: 6,
+        showSymbol: true,
+        itemStyle: {
+          color,
+          borderColor: '#fff',
+          borderWidth: 1.5,
+        },
+        emphasis: {
+          itemStyle: {
+            color,
+            borderColor: '#fff',
+            borderWidth: 2,
+            shadowColor: color + '80',
+            shadowBlur: 8,
+          },
+          scale: 1.8,
+        },
         lineStyle: {
           color,
-          width: 1.5,
+          width: 2,
         },
         areaStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: color + '40' },
+            { offset: 0, color: color + '30' },
             { offset: 1, color: color + '05' },
           ]),
         },
@@ -351,28 +519,71 @@ function buildChartOption(key: string, color: string): echarts.EChartsCoreOption
   }
 }
 
+/** 图表配对信息 */
+function getChartPairs() {
+  return [
+    { ref: memoryChartRef, getInstance: () => memoryChart, setInstance: (c: echarts.ECharts) => memoryChart = c, key: 'memory', color: '#ef4444' },
+    { ref: runtimeChartRef, getInstance: () => runtimeChart, setInstance: (c: echarts.ECharts) => runtimeChart = c, key: 'runtime', color: '#3b82f6' },
+    { ref: instanceChartRef, getInstance: () => instanceChart, setInstance: (c: echarts.ECharts) => instanceChart = c, key: 'instance', color: '#10b981' },
+    { ref: frequencyChartRef, getInstance: () => frequencyChart, setInstance: (c: echarts.ECharts) => frequencyChart = c, key: 'frequency', color: '#a855f7' },
+  ]
+}
+
+/** 获取所有已初始化的图表实例 */
+function getAllChartInstances(): echarts.ECharts[] {
+  return [memoryChart, runtimeChart, instanceChart, frequencyChart].filter(Boolean) as echarts.ECharts[]
+}
+
+/** 上一次高亮的 dataIndex，用于避免重复 dispatch */
+let lastLinkedDataIndex = -1
+
+/** 清除所有图表的 tooltip 和高亮状态 */
+function clearAllChartsState() {
+  lastLinkedDataIndex = -1
+  for (const chart of getAllChartInstances()) {
+    chart.dispatchAction({ type: 'hideTip' })
+    chart.dispatchAction({ type: 'downplay', seriesIndex: 0 })
+  }
+}
+
+/** 为图表绑定联动事件（手动联动，避免多 tooltip） */
+function bindChartLinkEvents(instance: echarts.ECharts) {
+  // 鼠标在某个图表上移动时，其他图表只高亮对应节点（不显示 tooltip）
+  instance.on('updateAxisPointer', (event: any) => {
+    const dataIndex = event.dataIndex
+    if (dataIndex == null || dataIndex === lastLinkedDataIndex) return
+    lastLinkedDataIndex = dataIndex
+
+    for (const other of getAllChartInstances()) {
+      if (other !== instance) {
+        // 先隐藏其他图表的 tooltip，再高亮节点
+        other.dispatchAction({ type: 'hideTip' })
+        other.dispatchAction({ type: 'downplay', seriesIndex: 0 })
+        other.dispatchAction({ type: 'highlight', seriesIndex: 0, dataIndex })
+      }
+    }
+  })
+
+  // 鼠标移出时，清除所有图表状态
+  instance.getZr().on('globalout', () => {
+    clearAllChartsState()
+  })
+}
+
 /** 初始化或更新所有图表 */
 function initOrUpdateCharts() {
-  const chartPairs: Array<{
-    ref: Ref<HTMLDivElement | undefined>
-    getInstance: () => echarts.ECharts | null
-    setInstance: (c: echarts.ECharts) => void
-    key: string
-    color: string
-  }> = [
-    { ref: memoryChartRef, getInstance: () => memoryChart, setInstance: (c) => memoryChart = c, key: 'memory', color: '#ef4444' },
-    { ref: runtimeChartRef, getInstance: () => runtimeChart, setInstance: (c) => runtimeChart = c, key: 'runtime', color: '#3b82f6' },
-    { ref: instanceChartRef, getInstance: () => instanceChart, setInstance: (c) => instanceChart = c, key: 'instance', color: '#10b981' },
-    { ref: frequencyChartRef, getInstance: () => frequencyChart, setInstance: (c) => frequencyChart = c, key: 'frequency', color: '#a855f7' },
-  ]
+  for (const { ref: chartRef, getInstance, setInstance, key, color } of getChartPairs()) {
+    const el = chartRef.value
+    if (!el) continue
 
-  for (const { ref: chartRef, getInstance, setInstance, key, color } of chartPairs) {
-    if (!chartRef.value) continue
+    // 跳过尺寸为 0 的元素，等待 ResizeObserver 回调再初始化
+    if (!el.clientWidth || !el.clientHeight) continue
 
     let instance = getInstance()
     if (!instance) {
-      instance = echarts.init(chartRef.value, undefined, { renderer: 'canvas' })
+      instance = echarts.init(el, undefined, { renderer: 'canvas' })
       setInstance(instance)
+      bindChartLinkEvents(instance)
     }
 
     instance.setOption(buildChartOption(key, color), true)
@@ -395,11 +606,33 @@ function resizeAllCharts() {
   frequencyChart?.resize()
 }
 
+/** 监听图表容器尺寸变化，处理初始化和 resize */
+function setupResizeObserver() {
+  resizeObserver?.disconnect()
+  resizeObserver = new ResizeObserver(() => {
+    // 尝试初始化尚未创建的图表（首次获得有效尺寸时）
+    if (monitorData.value) {
+      initOrUpdateCharts()
+    }
+    // 已有图表 resize
+    resizeAllCharts()
+  })
+
+  // 观察所有图表容器
+  for (const { ref: chartRef } of getChartPairs()) {
+    if (chartRef.value) {
+      resizeObserver.observe(chartRef.value)
+    }
+  }
+}
+
 // 监听 monitorData 变化，更新图表
 watch(
   () => monitorData.value,
   async () => {
     await nextTick()
+    // 数据变化后可能 v-if 刚渲染出新的 DOM，重新绑定 observer
+    setupResizeObserver()
     initOrUpdateCharts()
   },
   { deep: true }
@@ -407,23 +640,18 @@ watch(
 
 onMounted(async () => {
   await nextTick()
+  setupResizeObserver()
   if (monitorData.value) {
     initOrUpdateCharts()
   }
-
-  // ResizeObserver 响应容器变化
-  resizeObserver = new ResizeObserver(() => {
-    resizeAllCharts()
-  })
-  if (memoryChartRef.value?.parentElement) {
-    resizeObserver.observe(memoryChartRef.value.parentElement)
-  }
+  document.addEventListener('fullscreenchange', onFullscreenChange)
 })
 
 onUnmounted(() => {
   disposeCharts()
   resizeObserver?.disconnect()
   resizeObserver = null
+  document.removeEventListener('fullscreenchange', onFullscreenChange)
 })
 
 // ============ 指标分析图表占位 ============
@@ -543,6 +771,36 @@ function formatBBox(bbox: string | undefined): string {
 .chip-info-area   { grid-area: info; }
 .monitor-area     { grid-area: monitor; }
 .layout-area      { grid-area: layout; }
+.layout-area:fullscreen {
+  background: var(--bg-primary);
+}
+.layout-area:fullscreen .layout-content {
+  margin: 0;
+  border-radius: 0;
+  overflow: hidden;
+  position: relative;
+}
+.layout-area:fullscreen .layout-image {
+  object-fit: contain;
+  transition: transform 0.05s ease-out;
+  user-select: none;
+}
+
+/* 缩放百分比指示器 */
+.zoom-indicator {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  padding: 4px 10px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #e5e5e5;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 10;
+}
 .analysis-area    { grid-area: analysis; }
 .gds-area         { grid-area: gds; }
 .checklist-area   { grid-area: checklist; }

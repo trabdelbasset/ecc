@@ -259,7 +259,7 @@ fn start_api_server(
         let mut server_script = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         server_script.push("..");
         server_script.push("..");
-        server_script.push("services");
+        server_script.push("server");
         server_script.push("run_server.py");
 
         // Use venv Python interpreter if available, otherwise fall back to system Python

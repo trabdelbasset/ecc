@@ -2,7 +2,7 @@
   <div class="flex h-full">
     <!-- 第一栏：流程步骤导航 (优化版) -->
     <div
-      class="w-[52px] shrink-0 bg-(--bg-sidebar) border-r border-(--border-color) flex flex-col justify-between py-3 overflow-y-auto">
+      class="w-[64px] shrink-0 bg-(--bg-sidebar) border-r border-(--border-color) flex flex-col justify-between py-3 overflow-y-auto">
       <div class="overflow-y-auto">
         <router-link v-for="stage in flowStages" :key="stage.path" :to="'/workspace/' + stage.path"
           class="flex flex-col items-center justify-center py-4 transition-all group relative mb-1" :class="[
@@ -397,7 +397,7 @@ import { useWorkspace } from '@/composables/useWorkspace'
 const themeStore = useThemeStore()
 
 // 流程阶段管理
-const { flowStages } = useFlowStages()
+const { flowStages, refreshFlowStages, updateStepState } = useFlowStages()
 
 // 子流程管理
 const {
@@ -484,6 +484,10 @@ const handleRunFlow = async () => {
   } else {
     await runFlow()
   }
+  // 流程执行完成后（无论成功或失败），从 flow.json 刷新步骤状态
+  // 处理 SSE 未通知失败的场景：后端在步骤失败时会更新 flow.json 中的状态，
+  // 但不会通过 SSE 发送失败通知，因此需要在 API 返回后主动刷新
+  await refreshFlowStages()
 }
 </script>
 
