@@ -26,7 +26,7 @@
               class="ri-time-line absolute -top-1 -right-1 text-[10px] text-(--text-secondary) bg-(--bg-sidebar) rounded-full"></i>
             <i v-else-if="stage.state === 'Invalid'"
               class="ri-error-warning-fill absolute -top-1 -right-1 text-[10px] text-red-500 bg-(--bg-sidebar) rounded-full"></i>
-            <i v-else-if="stage.state === 'Imcomplete'"
+            <i v-else-if="stage.state === 'Incomplete'"
               class="ri-indeterminate-circle-fill absolute -top-1 -right-1 text-[10px] text-amber-500 bg-(--bg-sidebar) rounded-full"></i>
           </div>
 
@@ -138,9 +138,14 @@
                   <i class="ri-loader-4-line text-blue-400 text-sm animate-spin"></i>
                 </div>
                 <!-- 失败/无效 -->
-                <div v-else-if="stage.state === 'Invalid' || stage.state === 'Imcomplete'"
+                <div v-else-if="stage.state === 'Invalid'"
                   class="w-[30px] h-[30px] rounded-full bg-red-500/20 border-2 border-red-500 flex items-center justify-center">
                   <i class="ri-close-line text-red-500 text-sm"></i>
+                </div>
+                <!-- 未完成 -->
+                <div v-else-if="stage.state === 'Incomplete'"
+                  class="w-[30px] h-[30px] rounded-full bg-amber-500/20 border-2 border-amber-500 flex items-center justify-center">
+                  <i class="ri-indeterminate-circle-fill text-amber-500 text-sm"></i>
                 </div>
                 <!-- 待处理 -->
                 <div v-else
@@ -155,7 +160,8 @@
                   <span class="text-[12px] font-semibold truncate" :class="[
                     stage.state === 'Success' ? 'text-green-500' :
                       stage.state === 'Ongoing' ? 'text-blue-400' :
-                        stage.state === 'Invalid' || stage.state === 'Imcomplete' ? 'text-red-500' :
+                        stage.state === 'Invalid' ? 'text-red-500' :
+                          stage.state === 'Incomplete' ? 'text-amber-500' :
                           'text-(--text-primary)'
                   ]">
                     {{ stage.label }}
@@ -435,7 +441,7 @@ const flowStats = computed(() => {
     total: stages.length,
     success: stages.filter(s => s.state === 'Success').length,
     ongoing: stages.filter(s => s.state === 'Ongoing').length,
-    failed: stages.filter(s => s.state === 'Invalid' || s.state === 'Imcomplete').length,
+    failed: stages.filter(s => s.state === 'Invalid' || s.state === 'Incomplete').length,
     pending: stages.filter(s => s.state === 'Pending' || s.state === 'Unstart' || !s.state).length
   }
 })

@@ -11,7 +11,7 @@ setup_project_vars() {
     export ICS55_PDK_ROOT="${CHIPCOMPILER_ROOT}/thirdparty/icsprout55-pdk"
     export OSS_CAD_DIR="${CHIPCOMPILER_ROOT}/thirdparty/oss-cad-suite"
     export VENV_DIR="${PROJECT_ROOT}/.venv"
-    export PYTHON_VERSION="${PYTHON_VERSION:-3.10}"
+    export PYTHON_VERSION="${PYTHON_VERSION:-3.11}"
     export ENABLE_OSS_CAD_SUITE="${ENABLE_OSS_CAD_SUITE:-true}"
     export ECC_PY_GLOB="${ECC_TOOLS_ROOT}/bin/ecc_py*.so"
     export CMAKE_EXTRA_OPTIONS="${CMAKE_EXTRA_OPTIONS:-}"
@@ -41,7 +41,7 @@ setup_oss_cad_suite() {
         echo "OSS CAD Suite already exists at ${OSS_CAD_DIR}, skipping download..."
     else
         local latest_tag
-        latest_tag=$(curl -s "https://api.github.com/repos/YosysHQ/oss-cad-suite-build/releases/latest" | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)
+        latest_tag=$(curl -sf "https://api.github.com/repos/YosysHQ/oss-cad-suite-build/releases/latest" | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4)
         local oss_cad_url="https://github.com/YosysHQ/oss-cad-suite-build/releases/download/${latest_tag}/oss-cad-suite-linux-x64-${latest_tag//-/}.tgz"
 
         mkdir -p "${OSS_CAD_DIR}"
