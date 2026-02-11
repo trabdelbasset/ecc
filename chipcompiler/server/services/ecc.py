@@ -420,7 +420,8 @@ class ECCService:
                     break
                 else: 
                     notify_service.notify_step(step=workspace_step.name,
-                                               step_path=self.workspace.flow.path)
+                                               step_path=self.workspace.flow.path,
+                                               home_page=self.workspace.home.path)
             # self.engine_flow.run_steps()
         except Exception as e:
             return ECCResponse(
