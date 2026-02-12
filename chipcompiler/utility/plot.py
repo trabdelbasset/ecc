@@ -108,6 +108,61 @@ def plot_csv_table(input_path: str, output_path: str=None) -> bool:
         plt.close('all')
         return False
     
+def plot_csv_bar_chart(input_path: str, output_path: str=None, title: str = "Bar Chart", xlabel: str = "Category", ylabel: str = "Value", integer_yaxis: bool = False) -> bool:
+    """
+    Plot bar chart from CSV data and save to output path.
+    
+    Args:
+        input_path (str): Path to the input CSV file.
+        output_path (str, optional): Path to save the output PNG file. Defaults to None.
+        title (str): Title of the bar chart.
+        xlabel (str): Label for the x-axis.
+        ylabel (str): Label for the y-axis.
+        integer_yaxis (bool): Whether to use integer ticks on the y-axis. Defaults to False.
+    
+    Returns:
+        bool: True if the plot is successful, False otherwise.
+    """
+    if not os.path.exists(input_path) or not input_path.lower().endswith(".csv"):
+        return False
+    
+    if not output_path:
+        output_path = input_path.replace(".csv", ".png")
+    
+    try:
+        # Read CSV data with first column as index
+        df = pd.read_csv(input_path, index_col=0)
+        
+        # Create figure and axis
+        fig, ax = plt.subplots(figsize=(12, 8))
+        
+        # Plot bar chart
+        df.plot(kind='bar', ax=ax)
+        
+        # Set labels and title
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.set_title(title)
+        ax.legend()
+        ax.grid(axis='y', alpha=0.75)
+        
+        # Set y-axis ticks to integers if requested
+        if integer_yaxis:
+            import matplotlib.ticker as ticker
+            ax.yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+        
+        # Adjust layout
+        plt.tight_layout()
+        
+        # Save the plot
+        fig.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close(fig)
+        
+        return True
+    except Exception as e:
+        plt.close('all')
+        return False
+    
 def plot_metrics(metrics: dict, output_path: str=None, col=4) -> bool:
     """
     Plot metrics as a table and save to output path.
@@ -179,3 +234,85 @@ def plot_metrics(metrics: dict, output_path: str=None, col=4) -> bool:
         print(f"Error plotting metrics: {e}")
         plt.close('all')
         return False
+
+def plot_bar_chart(data: dict, output_path: str, title: str = "Bar Chart", xlabel: str = "Category", ylabel: str = "Value", integer_yaxis: bool = False) -> bool:
+    """
+    Plot bar chart from data and save to output path.
+    
+    Args:
+        data (dict): Dictionary where keys are categories and values are dictionaries
+                     of metrics (e.g., {"category1": {"metric1": value, "metric2": value}, ...})
+        output_path (str): Path to save the output PNG file.
+        title (str): Title of the bar chart.
+        xlabel (str): Label for the x-axis.
+        ylabel (str): Label for the y-axis.
+        integer_yaxis (bool): Whether to use integer ticks on the y-axis. Defaults to False.
+    
+    Returns:
+        bool: True if the plot is successful, False otherwise.
+    """
+    try:
+        import numpy as np
+        
+        # Extract categories and metrics
+        categories = list(data.keys())
+        if not categories:
+            return False
+        
+        metrics = list(data[categories[0]].keys())
+        if not metrics:
+            return False
+        
+        # Set bar width and positions
+        bar_width = 0.25
+        x = np.arange(len(categories))
+        colors = ['skyblue', 'lightgreen', 'salmon', 'gold', 'purple']
+        
+        # Create figure and axis
+        fig, ax = plt.subplots(figsize=(12, 8))
+        fig.suptitle(title, fontsize=16)
+        
+        # Plot each metric as grouped bars
+        for i, metric in enumerate(metrics):
+            values = [data[cat][metric] for cat in categories]
+            positions = x + i * bar_width
+            bars = ax.bar(positions, values, bar_width, color=colors[i % len(colors)], label=metric)
+            
+            # Add value labels on top of bars
+            for bar in bars:
+                height = bar.get_height()
+                # Format the label based on whether it's an integer or float
+                if integer_yaxis or isinstance(height, int) or height.is_integer():
+                    label = f'{int(height)}'
+                else:
+                    label = f'{height:.2f}'
+                ax.text(bar.get_x() + bar.get_width()/2., height, label,
+                        ha='center', va='bottom')
+        
+        # Set labels and title
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.set_title(title)
+        ax.set_xticks(x + bar_width * (len(metrics) - 1) / 2)
+        ax.set_xticklabels(categories, rotation=45, ha='right')
+        ax.legend()
+        ax.grid(axis='y', alpha=0.75)
+        
+        # Set y-axis ticks to integers if requested
+        if integer_yaxis:
+            import matplotlib.ticker as ticker
+            ax.yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+        
+        # Adjust layout
+        plt.tight_layout(rect=[0, 0, 1, 0.95])
+        
+        # Save the plot
+        fig.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close(fig)
+        
+        return True
+    except Exception as e:
+        print(f"Error plotting bar chart: {e}")
+        plt.close('all')
+        return False
+        

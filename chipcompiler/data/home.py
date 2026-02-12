@@ -18,10 +18,10 @@ from .checklist import Checklist
 #     },
 #     "metrics":{
 #         "instance dist." : "",
-#         "layer dist." : "",
-#         "net pin dist." : "",
-#         "drc type dist." : "",
-#         "drc layer dist." : "",
+#         "layer via dist." : "",
+#         "layer wire dist." : "",
+#         "pin dist." : "",
+#         "drc dist." : "",
 #         "CTS skew map" : ""
 #     },
 #     "checklist" : ""
@@ -95,24 +95,24 @@ class HomeData:
         self.data["metrics"]["instances dist."] = image_path
         self.save()
         
-    def set_metrics_layer_dist(self, image_path : str):
+    def set_metrics_layer_via_dist(self, image_path : str):
         self.reload()
-        self.data["metrics"]["layer dist."] = image_path
+        self.data["metrics"]["layer via dist."] = image_path
         self.save()
         
-    def set_metrics_net_pin_dist(self, image_path : str):
+    def set_metrics_layer_wire_dist(self, image_path : str):
         self.reload()
-        self.data["metrics"]["net pin dist."] = image_path
+        self.data["metrics"]["layer wire dist."] = image_path
         self.save()
         
-    def set_metrics_drc_type_dist(self, image_path : str):
+    def set_metrics_pin_dist(self, image_path : str):
         self.reload()
-        self.data["metrics"]["drc type dist."] = image_path
+        self.data["metrics"]["pin dist."] = image_path
         self.save()
         
-    def set_metrics_drc_layer_dist(self, image_path : str):
+    def set_metrics_drc_dist(self, image_path : str):
         self.reload()
-        self.data["metrics"]["drc layer dist."] = image_path
+        self.data["metrics"]["drc dist."] = image_path
         self.save()
         
     def set_metrics_cts_skew_map(self, image_path : str):

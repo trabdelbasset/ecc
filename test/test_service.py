@@ -9,24 +9,13 @@ root = current_dir.rsplit('/', 1)[0]
 sys.path.append(root)
 
 from chipcompiler.data import (
-    create_workspace,
-    log_workspace,
-    StepEnum,
-    StateEnum,
-    get_pdk,
     get_design_parameters
 )
 
-from chipcompiler.engine import (
-    EngineDB,
-    EngineFlow
-)
 
 from chipcompiler.server import (
-    ECCService,
     ecc_service,
-    ECCRequest,
-    ECCResponse
+    ECCRequest
 )
 
 def test_ics55_gcd():
@@ -52,7 +41,6 @@ def test_ics55_gcd():
         }
     )
     ecc_response = ecc_serv.set_pdk_root(ecc_req)
-    print(ecc_response)
     if ecc_response.response != "success":
         raise RuntimeError(f"set_pdk_root failed: {ecc_response.message}")
     
@@ -74,14 +62,13 @@ def test_ics55_gcd():
     
     # load workspace
     #####################################################
-    ecc_req = ECCRequest(
-        cmd = "load_workspace",
-        data = {
-            "directory" : workspace_dir
-        }
-    )
-    ecc_response = ecc_serv.load_workspace(ecc_req)
-    print(ecc_response)
+    # ecc_req = ECCRequest(
+    #     cmd = "load_workspace",
+    #     data = {
+    #         "directory" : workspace_dir
+    #     }
+    # )
+    # ecc_response = ecc_serv.load_workspace(ecc_req)
     
     # delete workspace
     #####################################################
@@ -103,7 +90,6 @@ def test_ics55_gcd():
     )
     ecc_response = ecc_serv.rtl2gds(ecc_req)
     
-    
     # test run single step
     #####################################################    
     # from chipcompiler.rtl2gds import build_rtl2gds_flow
@@ -117,7 +103,6 @@ def test_ics55_gcd():
     #         }
     #     )
     #     ecc_response = ecc_serv.run_step(ecc_req)
-    #     print(ecc_response)
         
     # test get step infomation
     #####################################################
@@ -132,7 +117,6 @@ def test_ics55_gcd():
     #             }
     #         )
     #         ecc_response = ecc_serv.get_info(ecc_req)
-    #         print(ecc_response)
 
 
 if __name__ == "__main__":

@@ -9,8 +9,12 @@ from chipcompiler.utility import (
     json_read, 
     plot_csv_map, 
     plot_csv_table, 
+    plot_csv_bar_chart,
     plot_metrics
 )
+
+import matplotlib.pyplot as plt
+import numpy as np
 
 class ECCToolsPlot:
     def __init__(self, workspace: Workspace, step: WorkspaceStep):
@@ -35,11 +39,11 @@ class ECCToolsPlot:
             case StepEnum.LEGALIZATION.value:
                 state = state & self.default_plot()
             case StepEnum.ROUTING.value:
-                state = state & self.default_plot() & self.plot_routing_heatmap()
+                state = state & self.default_plot() & self.plot_routing_heatmap() & self.plot_layer_via_distribution() & self.plot_layer_wire_distribution()
             case StepEnum.DRC.value:
-                state = state & self.default_plot() & self.plot_drc_statis()
+                state = state & self.default_plot() & self.plot_drc_statis() & self.plot_layer_via_distribution() & self.plot_layer_wire_distribution()
             case StepEnum.FILLER.value:
-                state = state & self.default_plot()
+                state = state & self.default_plot() & self.plot_layer_via_distribution() & self.plot_layer_wire_distribution()
                 
             case default:
                 self.workspace.logger.warning(f"Step {self.step.name} not supported for plotting.")
@@ -48,7 +52,7 @@ class ECCToolsPlot:
         return state
     
     def default_plot(self) -> bool:
-        return self.plot_step_metrics() & self.plot_instance_distribution()
+        return self.plot_step_metrics() & self.plot_instance_distribution() & self.plot_pin_distribution()
     
     def plot_step_metrics(self) -> bool:
         # generate report image and dscription
@@ -218,14 +222,15 @@ class ECCToolsPlot:
         self.workspace.logger.info(f"DRC statistics saved to {statis_csv}")
         
         # Plot the CSV table
-        plot_csv_table(input_path=statis_csv)
+        # plot_csv_table(input_path=statis_csv)
+        output_path=statis_csv.replace(".csv", ".png")
+        plot_csv_bar_chart(input_path=statis_csv, output_path=output_path, title="DRC Violation Distribution by Layer", xlabel="DRC Type", ylabel="Violation Count", integer_yaxis=True)
+
+        self.workspace.home.set_metrics_drc_dist(image_path=output_path)
         
         return True
     
     def plot_instance_distribution(self) -> bool:
-        import matplotlib.pyplot as plt
-        import numpy as np
-        
         data = json_read(self.step.feature.get("db", ""))
         if not data or "Instances" not in data:
             self.workspace.logger.warning("No Instances data found for plotting.")
@@ -239,55 +244,189 @@ class ECCToolsPlot:
             return False
         
         # Prepare data for plotting
-        metrics = ["num", "area", "pin_num"]
-        metric_labels = {"num": "Number", "area": "Area", "pin_num": "Pin Number"}
-        colors = ['skyblue', 'lightgreen', 'salmon']
-        
-        # Create single figure
-        fig, ax = plt.subplots(figsize=(12, 8))
-        fig.suptitle("Instance Distribution", fontsize=16)
-        
-        # Set bar width and positions
-        bar_width = 0.25
-        x = np.arange(len(instance_types))
-        
-        # Plot each metric as grouped bars
-        for i, metric in enumerate(metrics):
-            values = [instances_data[inst][metric] for inst in instance_types]
-            positions = x + i * bar_width
-            bars = ax.bar(positions, values, bar_width, color=colors[i], label=metric_labels[metric])
-            
-            # Add value labels on top of bars
-            for bar in bars:
-                height = bar.get_height()
-                ax.text(bar.get_x() + bar.get_width()/2., height, f'{height:.2f}',
-                        ha='center', va='bottom')
-        
-        # Set labels and title
-        ax.set_xlabel('Instance Type')
-        ax.set_ylabel('Value')
-        ax.set_title('Instance Distribution by Number, Area and Pin Count')
-        ax.set_xticks(x + bar_width)
-        ax.set_xticklabels(instance_types, rotation=45, ha='right')
-        ax.legend()
-        ax.grid(axis='y', alpha=0.75)
-        
-        # Adjust layout
-        plt.tight_layout(rect=[0, 0, 1, 0.95])
+        plot_data = {}
+        for inst_type in instance_types:
+            plot_data[inst_type] = {
+                "num": instances_data[inst_type].get("num", 0),
+                "area": instances_data[inst_type].get("area", 0),
+                "pin_num": instances_data[inst_type].get("pin_num", 0)
+            }
         
         # Save the plot
         db_path = self.step.feature.get("db", "")
         if db_path:
             image_path = db_path.replace(".json", ".inst_dist.png")
-            plt.savefig(image_path, dpi=300, bbox_inches='tight')
-            self.workspace.logger.info(f"Instance distribution plot saved to {image_path}")
+            from chipcompiler.utility import plot_bar_chart
             
-            # update home page metrics
-            self.workspace.home.set_metrics_inst_dist(image_path=image_path)
+            success = plot_bar_chart(
+                data=plot_data,
+                output_path=image_path,
+                title="Instance Distribution by Number, Area and Pin Count",
+                xlabel="Instance Type",
+                ylabel="Value",
+                integer_yaxis=False
+            )
+            
+            if success:
+                self.workspace.logger.info(f"Instance distribution plot saved to {image_path}")
+                
+                # update home page metrics
+                if hasattr(self.workspace, 'home') and hasattr(self.workspace.home, 'set_metrics_inst_dist'):
+                    self.workspace.home.set_metrics_inst_dist(image_path=image_path)
+            else:
+                self.workspace.logger.warning("Failed to generate instance distribution plot")
+                return False
         else:
             self.workspace.logger.warning("Cannot save plot: no db path provided")
             return False
         
-        plt.close()
+        return True
+    
+    def plot_pin_distribution(self) -> bool:
+        data = json_read(self.step.feature.get("db", ""))
+        if not data or "Pins" not in data:
+            self.workspace.logger.warning("No Pins data found for plotting.")
+            return False
+        
+        pins_data = data["Pins"]
+        pin_distribution = pins_data.get("pin_distribution", [])
+        
+        if not pin_distribution:
+            self.workspace.logger.warning("No pin distribution data found for plotting.")
+            return False
+        
+        # Prepare data for plotting
+        plot_data = {}
+        for item in pin_distribution:
+            pin_num = item.get("pin_num", "unknown")
+            plot_data[f"{pin_num}"] = {
+                "inst_num": item.get("inst_num", 0),
+                "net_num": item.get("net_num", 0)
+            }
+        
+        # Save the plot
+        db_path = self.step.feature.get("db", "")
+        if db_path:
+            image_path = db_path.replace(".json", ".pin_dist.png")
+            from chipcompiler.utility import plot_bar_chart
+            
+            success = plot_bar_chart(
+                data=plot_data,
+                output_path=image_path,
+                title="Pin Distribution by Instance and Net Count",
+                xlabel="pin number",
+                ylabel="distribution",
+                integer_yaxis=True
+            )
+            
+            if success:
+                self.workspace.logger.info(f"Pin distribution plot saved to {image_path}")
+                self.workspace.home.set_metrics_pin_dist(image_path=image_path)
+            else:
+                self.workspace.logger.warning("Failed to generate pin distribution plot")
+                return False
+        else:
+            self.workspace.logger.warning("Cannot save plot: no db path provided")
+            return False
+        
+        return True
+    
+    def plot_layer_via_distribution(self) -> bool:
+        data = json_read(self.step.feature.get("db", ""))
+        if not data or "Layers" not in data:
+            self.workspace.logger.warning("No Layers data found for plotting.")
+            return False
+        
+        layers_data = data["Layers"]
+        layer_via_distribution = layers_data.get("cut_layers", [])
+        
+        if not layer_via_distribution:
+            self.workspace.logger.warning("No layer via distribution data found for plotting.")
+            return False
+        
+        # Prepare data for plotting
+        plot_data = {}
+        for item in layer_via_distribution:
+            layer_name = item.get("layer_name", "unknown")
+            plot_data[f"{layer_name}"] = {
+                "via_num": item.get("via_num", 0)
+            }
+        
+        # Save the plot
+        db_path = self.step.feature.get("db", "")
+        if db_path:
+            image_path = db_path.replace(".json", ".layer_via_dist.png")
+            from chipcompiler.utility import plot_bar_chart
+            
+            success = plot_bar_chart(
+                data=plot_data,
+                output_path=image_path,
+                title="Layer Via Distribution",
+                xlabel="Layer Name",
+                ylabel="Via Number",
+                integer_yaxis=True
+            )
+            
+            if success:
+                self.workspace.logger.info(f"Layer via distribution plot saved to {image_path}")
+                # update home page metrics
+                if hasattr(self.workspace, 'home') and hasattr(self.workspace.home, 'set_metrics_layer_via_dist'):
+                    self.workspace.home.set_metrics_layer_via_dist(image_path=image_path)
+            else:
+                self.workspace.logger.warning("Failed to generate layer via distribution plot")
+                return False
+        else:
+            self.workspace.logger.warning("Cannot save plot: no db path provided")
+            return False
+        
+        return True
+    
+    def plot_layer_wire_distribution(self) -> bool:
+        data = json_read(self.step.feature.get("db", ""))
+        if not data or "Layers" not in data:
+            self.workspace.logger.warning("No Layers data found for plotting.")
+            return False
+        
+        layers_data = data["Layers"]
+        layer_wire_distribution = layers_data.get("routing_layers", [])
+        
+        if not layer_wire_distribution:
+            self.workspace.logger.warning("No layer wire distribution data found for plotting.")
+            return False
+        
+        # Prepare data for plotting
+        plot_data = {}
+        for item in layer_wire_distribution:
+            layer_name = item.get("layer_name", "unknown")
+            plot_data[f"{layer_name}"] = {
+                "wire_len": item.get("wire_len", 0)
+            }
+        
+        # Save the plot
+        db_path = self.step.feature.get("db", "")
+        if db_path:
+            image_path = db_path.replace(".json", ".layer_wire_dist.png")
+            from chipcompiler.utility import plot_bar_chart
+            
+            success = plot_bar_chart(
+                data=plot_data,
+                output_path=image_path,
+                title="Layer Wire Distribution",
+                xlabel="Layer Name",
+                ylabel="Wire Length",
+                integer_yaxis=False
+            )
+            
+            if success:
+                self.workspace.logger.info(f"Layer wire distribution plot saved to {image_path}")
+                # update home page metrics
+                if hasattr(self.workspace, 'home') and hasattr(self.workspace.home, 'set_metrics_layer_wire_dist'):
+                    self.workspace.home.set_metrics_layer_wire_dist(image_path=image_path)
+            else:
+                self.workspace.logger.warning("Failed to generate layer wire distribution plot")
+                return False
+        else:
+            self.workspace.logger.warning("Cannot save plot: no db path provided")
+            return False
         
         return True

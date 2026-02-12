@@ -27,7 +27,9 @@ from .util import (
 from .plot import (
     plot_csv_map,
     plot_metrics,
-    plot_csv_table
+    plot_csv_table,
+    plot_bar_chart,
+    plot_csv_bar_chart
 )
 
 from .filelist import (
@@ -59,6 +61,8 @@ __all__ = [
     'plot_csv_map',
     'plot_metrics',
     'plot_csv_table',
+    'plot_csv_bar_chart',
+    'plot_bar_chart',
     'parse_filelist',
     'resolve_path',
     'validate_filelist',

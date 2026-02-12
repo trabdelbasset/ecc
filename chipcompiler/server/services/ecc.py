@@ -108,9 +108,6 @@ class ECCService:
         return filelist_path
         
     def check_cmd(self, request: ECCRequest, cmd : CMDEnum):
-        # print cmd
-        # print(request)
-        
         # check cmd
         if request.cmd != cmd.value:
             response = ECCResponse(

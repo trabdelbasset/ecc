@@ -128,10 +128,6 @@ class NotifyService:
         )
         
         self.notify(response=response)
-        
-        print("##############################################################")
-        print(response)
-        print("##############################################################")
             
     def notify_subflow(self, 
                        step : str,
@@ -166,7 +162,3 @@ class NotifyService:
         )
         
         self.notify(response=response)
-        
-        print("##############################################################")
-        print(response)
-        print("##############################################################")
