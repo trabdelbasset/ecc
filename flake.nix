@@ -22,6 +22,10 @@
       infra,
       ...
     }:
+    let
+      overlay = import ./nix/overlay.nix;
+      infraOverlay = inputs.infra.overlays.default;
+    in
     parts.lib.mkFlake { inherit inputs; } {
       imports = [
         treefmt-nix.flakeModule
@@ -30,13 +34,7 @@
         "x86_64-linux"
         "aarch64-linux"
       ];
-      flake.hydraJobs = {
-        x86_64-linux = {
-          iedaUnstable = inputs.self.packages.x86_64-linux.iedaUnstable;
-          magic-vlsi = inputs.nixpkgs.legacyPackages.x86_64-linux.magic-vlsi;
-          yosysWithSlang = inputs.self.packages.x86_64-linux.yosysWithSlang;
-        };
-      };
+      flake.overlays.default = overlay;
       perSystem =
         {
           inputs',
@@ -47,33 +45,22 @@
           ...
         }:
         {
+          imports = [
+            ./nix
+          ];
           _module.args.pkgs = import inputs.nixpkgs {
             inherit system;
-          };
-          # Use `nix develop -c python3 test/test_tools_yosys.py` to run tests in dev shell
-          devShells = {
-            default = pkgs.mkShell {
-              inputsFrom = [ inputs'.infra.packages.iedaUnstable ];
-              nativeBuildInputs =
-                with pkgs;
-                [
-                  git
-                  black
-                  isort
-                  uv
-                  cargo
-                ] ++ [
-                  inputs'.infra.packages.yosysWithSlang
-                ];
-              shellHook = ''
-                ENABLE_OSS_CAD_SUITE=false ./build.sh
-                source .venv/bin/activate
-              '';
-            };
+            overlays = [
+              overlay
+              infraOverlay
+            ];
           };
           packages = {
-            yosysWithSlang = inputs'.infra.packages.yosysWithSlang;
-            ieda = inputs'.infra.packages.iedaUnstable;
+            inherit (pkgs)
+              ecc-tools
+              chipcompiler
+              ecos-studio
+              ;
           };
         };
     };
