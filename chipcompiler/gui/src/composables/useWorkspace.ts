@@ -31,7 +31,7 @@ const sseMessages = ref<ECCResponse[]>([])
 let _toast: ReturnType<typeof useToast> | null = null
 
 // 应用名称常量
-const APP_NAME = 'ECC'
+const APP_NAME = 'ECOS Studio'
 
 /**
  * 更新窗口标题
@@ -153,7 +153,7 @@ export function useWorkspace() {
         } else {
           // 调试：看看为什么判定无效
           console.warn(`检测到无效路径: ${project.path}，暂时保留以防误删`);
-          validProjects.push(project) // 开发阶段建议先保留
+          // validProjects.push(project) // 开发阶段建议先保留
         }
       }
 
@@ -224,7 +224,7 @@ export function useWorkspace() {
         const result = await open({
           directory: true,
           multiple: false,
-          title: '选择 ECC 项目目录'
+          title: '选择 ECOS Studio 项目目录'
         })
         if (!result) return
         selectedPath = result as string
@@ -263,10 +263,12 @@ export function useWorkspace() {
         return true
       } else {
         console.error('加载项目失败:', response.message)
+        showToast({ severity: 'error', summary: '打开项目失败', detail: response.message?.join('; ') || '未知错误' })
         return false
       }
     } catch (error) {
       console.error('Open project error:', error)
+      showToast({ severity: 'error', summary: '打开项目失败', detail: String(error) })
       return false
     }
   }
@@ -330,7 +332,7 @@ export function useWorkspace() {
         parameters: backendParameters,
         origin_def: config?.origin_def,
         origin_verilog: config?.origin_verilog,
-        rtl_list: config?.rtl_list || ''
+        rtl_list: config?.rtl_list || []
       })
       console.log(response)
       if (response.response === 'success') {
@@ -356,10 +358,12 @@ export function useWorkspace() {
         return true
       } else {
         console.error('创建项目失败:', response.message)
+        showToast({ severity: 'error', summary: '创建项目失败', detail: response.message?.join('; ') || '未知错误' })
         return false
       }
     } catch (error) {
       console.error('New project error:', error)
+      showToast({ severity: 'error', summary: '创建项目失败', detail: String(error) })
       return false
     }
   }
