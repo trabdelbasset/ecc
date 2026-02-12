@@ -25,10 +25,7 @@
   //   "UV_PYTHON_INSTALL_MIRROR": "https://ghfast.top/https://github.com/astral-sh/python-build-standalone/releases/download"
   // },
   "containerEnv": {
-    "GITHUB_PROXY_PREFIX": "https://ghfast.top/",
-    "GIT_PROXY_PREFIX": "https://ghfast.top/",
-    "PROJECT_ROOT": "/workspaces/chip-compiler",
-    "UV_PYTHON_INSTALL_MIRROR": "https://ghfast.top/https://github.com/astral-sh/python-build-standalone/releases/download"
+    "PROJECT_ROOT": "/workspaces/chip-compiler"
   },
   "postCreateCommand": "bash -c 'rm -rf .venv && source scripts/common.sh && setup_project_vars && uv sync --frozen --all-groups --python 3.11 && build_ecc_py && setup_oss_cad_suite'",
   "remoteUser": "root"
