@@ -197,7 +197,9 @@ class EccSubFlow(SubFlowBase):
                 self.workspace.home.update_monitor(step = self.workspace_step.name,
                                                    sub_step = step_name,
                                                    memory = str(peak_memory),
-                                                   runtime = runtime)
+                                                   runtime = runtime,
+                                                   instance=info.get("instance", 0),
+                                                   frequency=info.get("frequency", 0))
                 
                 self.notify_subflow(step = self.workspace_step.name,
                                     subflow_path=self.workspace_step.subflow.get("path", ""),
