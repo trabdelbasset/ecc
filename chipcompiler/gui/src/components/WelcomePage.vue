@@ -61,10 +61,16 @@
             <i class="ri-time-line text-(--text-secondary)"></i>
             最近的工程
           </h2>
-          <button v-if="recentProjects.length > 5"
+          <button v-if="recentProjects.length > 3" @click="showAllProjects = !showAllProjects"
             class="text-sm text-(--accent-color) hover:opacity-80 transition-opacity cursor-pointer flex items-center gap-1">
-            查看全部 ({{ recentProjects.length }})
-            <i class="ri-arrow-right-s-line"></i>
+            <template v-if="showAllProjects">
+              收起
+              <i class="ri-arrow-up-s-line"></i>
+            </template>
+            <template v-else>
+              查看全部 ({{ recentProjects.length }})
+              <i class="ri-arrow-right-s-line"></i>
+            </template>
           </button>
         </div>
 
@@ -75,8 +81,8 @@
           <p class="text-xs mt-2 opacity-60">点击上方"新建工程"开始您的芯片设计之旅</p>
         </div>
 
-        <div v-else class="space-y-2">
-          <button v-for="project in recentProjects.slice(0, 3)" :key="project.id" @click="$emit('open-recent', project)"
+        <div v-else class="space-y-2 max-h-[280px] overflow-y-auto scrollbar-thin">
+          <button v-for="project in displayedProjects" :key="project.id" @click="$emit('open-recent', project)"
             class="w-full flex items-center justify-between px-5 py-4 bg-(--bg-secondary) hover:bg-(--bg-sidebar) rounded-xl transition-all duration-200 border border-(--border-color) hover:border-(--accent-color) text-left group cursor-pointer hover:shadow-md">
             <div class="flex items-center gap-4 flex-1 min-w-0">
               <div
@@ -108,9 +114,9 @@
             已导入的 PDK
           </h2>
         </div>
-        <div class="flex flex-wrap gap-3">
+        <div class="flex flex-wrap gap-3 max-h-[120px] overflow-y-auto scrollbar-thin">
           <div v-for="pdk in importedPdks" :key="pdk.id"
-            class="flex items-center gap-3 px-4 py-3 bg-(--bg-secondary) rounded-xl border border-(--border-color) group">
+            class="flex items-center gap-3 px-4 py-3 bg-(--bg-secondary) rounded-xl border border-(--border-color) group shrink-0">
             <div class="w-8 h-8 rounded-lg bg-(--accent-color)/10 flex items-center justify-center shrink-0">
               <i class="ri-cpu-line text-(--accent-color)"></i>
             </div>
@@ -141,7 +147,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import type { Project, WorkspaceConfig } from '../types'
 import NewProjectWizard from './NewProjectWizard.vue'
 import { usePdkManager } from '../composables/usePdkManager'
@@ -157,13 +163,18 @@ interface Emits {
   (e: 'open-recent', project: Project): void
 }
 
-withDefaults(defineProps<Props>(), {
-  recentProjects: () => []
-})
-
 const emit = defineEmits<Emits>()
 
 const showWizard = ref(false)
+const showAllProjects = ref(false)
+
+const props = withDefaults(defineProps<Props>(), {
+  recentProjects: () => []
+})
+
+const displayedProjects = computed(() => {
+  return showAllProjects.value ? props.recentProjects : props.recentProjects.slice(0, 3)
+})
 
 // PDK 管理
 const { importedPdks, loadPdks, importPdk, removePdk } = usePdkManager()

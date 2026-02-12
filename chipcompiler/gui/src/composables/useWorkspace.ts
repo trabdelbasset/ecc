@@ -1,5 +1,6 @@
 import { ref, getCurrentInstance } from 'vue'
 import type { Project, WorkspaceConfig } from '../types'
+import { useRouter } from 'vue-router'
 import { open } from '@tauri-apps/plugin-dialog'
 import { invoke } from '@tauri-apps/api/core'
 import { LazyStore } from '@tauri-apps/plugin-store'
@@ -50,7 +51,7 @@ async function updateWindowTitle(projectName?: string) {
 }
 
 export function useWorkspace() {
-
+  const router = useRouter()
   // 在组件 setup 上下文中初始化 Toast（仅初始化一次）
   if (!_toast && getCurrentInstance()) {
     _toast = useToast()
@@ -161,10 +162,10 @@ export function useWorkspace() {
 
       // 如果 currentProject 为空且有有效项目，自动设置为第一项
       if (!currentProject.value && validProjects.length > 0) {
-        currentProject.value = validProjects[0]
-        // 更新窗口标题
-        await updateWindowTitle(validProjects[0].name)
-        console.log('Auto-set currentProject to:', validProjects[0].path)
+        if (router.currentRoute.value.path.startsWith('/workspace')) {
+          currentProject.value = validProjects[0]
+          await updateWindowTitle(validProjects[0].name)
+        }
       }
 
       // 如果清理后的列表和原列表不同，更新存储

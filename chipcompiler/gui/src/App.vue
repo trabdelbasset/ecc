@@ -24,8 +24,7 @@
     <Toast position="top-right" />
 
     <!-- 全局新建工程向导 -->
-    <NewProjectWizard v-if="showNewProjectWizard" @close="showNewProjectWizard = false"
-      @create="handleWizardCreate" />
+    <NewProjectWizard v-if="showNewProjectWizard" @close="showNewProjectWizard = false" @create="handleWizardCreate" />
   </div>
 </template>
 
@@ -45,7 +44,7 @@ import type { WorkspaceConfig } from '@/types'
 const router = useRouter()
 const themeStore = useThemeStore()
 const { loadRecentProjects, currentProject, openProject, newProject } = useWorkspace()
-const { loadPdks, importPdk } = usePdkManager()
+const { loadPdks } = usePdkManager()
 
 // ---- 新建工程向导 ----
 const showNewProjectWizard = ref(false)
@@ -67,11 +66,8 @@ const handleMenuAction = async (action: string) => {
       if (success) router.push('/workspace')
       break
     }
-    case 'import-pdk':
-      await importPdk()
-      break
     case 'documentation':
-      window.open('https://github.com/openecos-projects/ecc-tools', '_blank')
+      window.open('https://github.com/openecos-projects/ecc', '_blank')
       break
     case 'about':
       // TODO: 打开关于对话框

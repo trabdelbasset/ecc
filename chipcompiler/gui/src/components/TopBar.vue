@@ -10,8 +10,8 @@
       <!-- 菜单项（带下拉菜单） -->
       <div class="menu-items" ref="menuBarRef">
         <div v-for="menu in menus" :key="menu.label" class="menu-wrapper">
-          <button @click="toggleMenu(menu.action)" @mouseenter="handleMenuHover(menu.action)"
-            class="menu-btn" :class="{ 'menu-btn-active': activeMenu === menu.action }">
+          <button @click="toggleMenu(menu.action)" @mouseenter="handleMenuHover(menu.action)" class="menu-btn"
+            :class="{ 'menu-btn-active': activeMenu === menu.action }">
             {{ menu.label }}
           </button>
           <!-- 下拉菜单 -->
@@ -19,8 +19,7 @@
             <div v-if="activeMenu === menu.action && menu.children" class="dropdown-menu">
               <template v-for="(item, idx) in menu.children" :key="idx">
                 <div v-if="item.separator" class="dropdown-separator" />
-                <button v-else @click="handleItemClick(item.event)" class="dropdown-item"
-                  :disabled="item.disabled">
+                <button v-else @click="handleItemClick(item.event)" class="dropdown-item" :disabled="item.disabled">
                   <i v-if="item.icon" :class="item.icon" class="item-icon" />
                   <span class="item-label">{{ item.label }}</span>
                   <span v-if="item.shortcut" class="item-shortcut">{{ item.shortcut }}</span>
@@ -98,8 +97,7 @@ const menus: Menu[] = [
     children: [
       { label: '新建工程', icon: 'ri-add-line', shortcut: '⌘N', event: 'new-project' },
       { label: '打开工程', icon: 'ri-folder-open-line', shortcut: '⌘O', event: 'open-project' },
-      { separator: true },
-      { label: '导入 PDK', icon: 'ri-database-2-line', event: 'import-pdk' },
+      // { separator: true },
     ]
   },
   {
@@ -107,8 +105,6 @@ const menus: Menu[] = [
     action: 'help',
     children: [
       { label: '文档', icon: 'ri-book-open-line', event: 'documentation' },
-      { separator: true },
-      { label: '关于', icon: 'ri-information-line', event: 'about' },
     ]
   }
 ]

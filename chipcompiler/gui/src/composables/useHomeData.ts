@@ -20,13 +20,10 @@ export interface HomeData {
   monitor: MonitorData
 }
 
-/** monitor 数据结构 */
+/** monitor 数据结构（step 为固定字段，其余为动态指标） */
 export interface MonitorData {
   step: string[]
-  memory: string[]
-  runtime: string[]
-  instance: number[]
-  frequency: number[]
+  [key: string]: (string | number)[]
 }
 
 /** checklist.json 中的单个检查项 */
