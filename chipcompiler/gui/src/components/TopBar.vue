@@ -38,19 +38,19 @@
     <!-- 右侧：窗口控制按钮 -->
     <div class="topbar-right" @mousedown.stop>
       <!-- 最小化 -->
-      <button @click="handleMinimize" class="window-btn" title="最小化">
+      <button @click="handleMinimize" class="window-btn" title="Minimize">
         <svg width="16" height="16" viewBox="0 0 16 16">
           <rect x="2" y="5.5" width="8" height="1" fill="currentColor" />
         </svg>
       </button>
       <!-- 最大化/还原 -->
-      <button @click="handleMaximize" class="window-btn" title="最大化">
+      <button @click="handleMaximize" class="window-btn" title="Maximize">
         <svg width="16" height="16" viewBox="0 0 16 16">
           <rect x="2" y="2" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1" />
         </svg>
       </button>
       <!-- 关闭 -->
-      <button @click="handleClose" class="window-btn window-btn-close" title="关闭">
+      <button @click="handleClose" class="window-btn window-btn-close" title="Close">
         <svg width="16" height="16" viewBox="0 0 16 16">
           <path d="M3 3L9 9M9 3L3 9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
         </svg>
@@ -95,8 +95,8 @@ const menus: Menu[] = [
     label: 'File',
     action: 'file',
     children: [
-      { label: '新建工程', icon: 'ri-add-line', shortcut: '⌘N', event: 'new-project' },
-      { label: '打开工程', icon: 'ri-folder-open-line', shortcut: '⌘O', event: 'open-project' },
+      { label: 'New Workspace', icon: 'ri-add-line', shortcut: '⌘N', event: 'new-project' },
+      { label: 'Open Workspace', icon: 'ri-folder-open-line', shortcut: '⌘O', event: 'open-project' },
       // { separator: true },
     ]
   },
@@ -104,7 +104,7 @@ const menus: Menu[] = [
     label: 'Help',
     action: 'help',
     children: [
-      { label: '文档', icon: 'ri-book-open-line', event: 'documentation' },
+      { label: 'Documentation', icon: 'ri-book-open-line', event: 'documentation' },
     ]
   }
 ]

@@ -32,6 +32,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getCurrentWindow } from '@tauri-apps/api/window'
+import { open as shellOpen } from '@tauri-apps/plugin-shell'
 import { useThemeStore } from '@/stores/themeStore'
 import { useWorkspace } from '@/composables/useWorkspace'
 import { usePdkManager } from '@/composables/usePdkManager'
@@ -67,7 +68,7 @@ const handleMenuAction = async (action: string) => {
       break
     }
     case 'documentation':
-      window.open('https://github.com/openecos-projects/ecc', '_blank')
+      shellOpen('https://github.com/openecos-projects/ecc')
       break
     case 'about':
       // TODO: 打开关于对话框

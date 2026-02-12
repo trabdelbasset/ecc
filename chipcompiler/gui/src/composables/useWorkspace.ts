@@ -158,12 +158,42 @@ export function useWorkspace() {
       // 3. 触发响应式更新
       recentProjects.value = [...projects]
 
-      // 4. 自动设置 currentProject（只选择路径有效的项目）
+      // 4. 恢复 currentProject：优先从持久化的 current_project_path 精确匹配
       if (!currentProject.value) {
-        const firstValid = projects.find(p => p.pathExists !== false)
-        if (firstValid && router.currentRoute.value.path.startsWith('/workspace')) {
-          currentProject.value = firstValid
-          await updateWindowTitle(firstValid.name)
+        const savedCurrentPath = await store.get<string>('current_project_path')
+        let restored: Project | undefined
+
+        if (savedCurrentPath) {
+          // 精确匹配上次打开的项目
+          restored = projects.find(
+            p => normalizePath(p.path) === savedCurrentPath && p.pathExists !== false
+          )
+        }
+
+        // 如果精确匹配失败，回退到第一个有效项目
+        if (!restored) {
+          restored = projects.find(p => p.pathExists !== false)
+        }
+
+        if (restored) {
+          // 等待 router 初始化完成，避免 reload 时路由尚未解析的竞态问题
+          await router.isReady()
+
+          if (router.currentRoute.value.path.startsWith('/workspace')) {
+            currentProject.value = restored
+            await updateWindowTitle(restored.name)
+
+            // reload 后需要重新通过 API 加载 workspace 状态并建立 SSE 连接
+            try {
+              const response = await loadWorkspaceApi(restored.path)
+              if (response.response === 'success') {
+                const workspaceId = response.data.workspace_id || response.data.directory
+                connectSSE(workspaceId)
+              }
+            } catch (error) {
+              console.error('Failed to reload workspace after restore:', error)
+            }
+          }
         }
       }
     } catch (error) {
@@ -252,6 +282,10 @@ export function useWorkspace() {
         }
 
         currentProject.value = loadedProject
+
+        // 持久化当前项目路径，以便 reload 后恢复
+        await store.set('current_project_path', normalizePath(loadedProject.path))
+        await store.save()
 
         // 建立 SSE 连接
         const workspaceId = response.data.workspace_id || response.data.directory
@@ -348,6 +382,10 @@ export function useWorkspace() {
 
         currentProject.value = createdProject
 
+        // 持久化当前项目路径，以便 reload 后恢复
+        await store.set('current_project_path', normalizePath(createdProject.path))
+        await store.save()
+
         // 建立 SSE 连接
         const workspaceId = response.data.workspace_id || response.data.directory
         connectSSE(workspaceId)
@@ -379,6 +417,9 @@ export function useWorkspace() {
   const closeProject = async () => {
     currentProject.value = null
     disconnectSSE()
+    // 清除持久化的当前项目
+    await store.delete('current_project_path')
+    await store.save()
     // 重置窗口标题为默认
     await updateWindowTitle()
   }

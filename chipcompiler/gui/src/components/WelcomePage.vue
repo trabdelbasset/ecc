@@ -30,7 +30,7 @@
             <i
               class="ri-book-open-line text-2xl text-(--text-secondary) group-hover:text-(--accent-color) transition-colors"></i>
           </div>
-          <span class="text-sm font-medium text-(--text-primary)">打开工程</span>
+          <span class="text-sm font-medium text-(--text-primary)">Open Workspace</span>
         </button>
 
         <button @click="showWizard = true"
@@ -40,7 +40,7 @@
             <i
               class="ri-folder-open-line text-2xl text-(--text-secondary) group-hover:text-(--accent-color) transition-colors"></i>
           </div>
-          <span class="text-sm font-medium text-(--text-primary)">新建工程</span>
+          <span class="text-sm font-medium text-(--text-primary)">New Workspace</span>
         </button>
 
         <button @click="handleImportPdk"
@@ -50,7 +50,7 @@
             <i
               class="ri-database-2-line text-2xl text-(--text-secondary) group-hover:text-(--accent-color) transition-colors"></i>
           </div>
-          <span class="text-sm font-medium text-(--text-primary)">导入 PDK</span>
+          <span class="text-sm font-medium text-(--text-primary)">Import PDK</span>
         </button>
       </div>
 
@@ -59,16 +59,16 @@
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-lg font-semibold text-(--text-primary) flex items-center gap-2">
             <i class="ri-time-line text-(--text-secondary)"></i>
-            最近的工程
+            Recent Workspaces
           </h2>
           <button v-if="recentProjects.length > 3" @click="showAllProjects = !showAllProjects"
             class="text-sm text-(--accent-color) hover:opacity-80 transition-opacity cursor-pointer flex items-center gap-1">
             <template v-if="showAllProjects">
-              收起
+              Collapse
               <i class="ri-arrow-up-s-line"></i>
             </template>
             <template v-else>
-              查看全部 ({{ recentProjects.length }})
+              View All ({{ recentProjects.length }})
               <i class="ri-arrow-right-s-line"></i>
             </template>
           </button>
@@ -77,8 +77,8 @@
         <div v-if="recentProjects.length === 0"
           class="text-center py-16 text-(--text-secondary) bg-(--bg-secondary)/50 rounded-xl border border-dashed border-(--border-color)">
           <i class="ri-folder-2-line text-5xl mb-4 opacity-30 block"></i>
-          <p class="text-sm">暂无最近打开的工程</p>
-          <p class="text-xs mt-2 opacity-60">点击上方"新建工程"开始您的芯片设计之旅</p>
+          <p class="text-sm">No recent workspaces</p>
+          <p class="text-xs mt-2 opacity-60">Click "New Workspace" to start your chip design journey</p>
         </div>
 
         <div v-else class="space-y-2 max-h-[280px] overflow-y-auto scrollbar-thin">
@@ -89,10 +89,9 @@
               : 'border-(--border-color) hover:border-(--accent-color) hover:bg-(--bg-sidebar) cursor-pointer hover:shadow-md'"
             @click="project.pathExists !== false && $emit('open-recent', project)">
             <div class="flex items-center gap-4 flex-1 min-w-0">
-              <div class="w-10 h-10 rounded-lg flex items-center justify-center transition-colors"
-                :class="project.pathExists === false
-                  ? 'bg-red-500/10'
-                  : 'bg-(--accent-color)/10 group-hover:bg-(--accent-color)/20'">
+              <div class="w-10 h-10 rounded-lg flex items-center justify-center transition-colors" :class="project.pathExists === false
+                ? 'bg-red-500/10'
+                : 'bg-(--accent-color)/10 group-hover:bg-(--accent-color)/20'">
                 <i :class="project.pathExists === false
                   ? 'ri-folder-warning-line text-lg text-red-400'
                   : 'ri-folder-line text-lg text-(--accent-color)'"></i>
@@ -106,7 +105,7 @@
                   <p class="text-xs text-(--text-secondary) truncate">{{ project.path }}</p>
                   <span v-if="project.pathExists === false"
                     class="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 font-medium">
-                    路径不可达
+                    Path not reachable
                   </span>
                 </div>
               </div>
@@ -119,7 +118,7 @@
               <!-- 删除按钮 -->
               <button @click.stop="$emit('remove-recent', project.id)"
                 class="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-500/10 transition-all cursor-pointer"
-                title="从列表中移除">
+                title="Remove from list">
                 <i class="ri-close-line text-sm text-(--text-secondary) hover:text-red-500"></i>
               </button>
               <i v-if="project.pathExists !== false"
@@ -134,7 +133,7 @@
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-lg font-semibold text-(--text-primary) flex items-center gap-2">
             <i class="ri-database-2-line text-(--text-secondary)"></i>
-            已导入的 PDK
+            Imported PDKS
           </h2>
         </div>
         <div class="flex flex-wrap gap-3 max-h-[120px] overflow-y-auto scrollbar-thin">
@@ -156,7 +155,7 @@
             </div>
             <button @click.stop="handleRemovePdk(pdk.id)"
               class="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-500/10 transition-all cursor-pointer ml-2"
-              title="移除此 PDK">
+              title="Remove this PDK">
               <i class="ri-close-line text-sm text-(--text-secondary) hover:text-red-500"></i>
             </button>
           </div>
@@ -225,11 +224,11 @@ const formatDate = (date: Date) => {
   const diff = now.getTime() - new Date(date).getTime()
   const days = Math.floor(diff / (1000 * 60 * 60 * 24))
 
-  if (days === 0) return '今天'
-  if (days === 1) return '昨天'
-  if (days < 7) return `${days} 天前`
-  if (days < 30) return `${Math.floor(days / 7)} 周前`
-  return new Date(date).toLocaleDateString('zh-CN')
+  if (days === 0) return 'Today'
+  if (days === 1) return 'Yesterday'
+  if (days < 7) return `${days} days ago`
+  if (days < 30) return `${Math.floor(days / 7)} weeks ago`
+  return new Date(date).toLocaleDateString('en-US')
 }
 </script>
 
