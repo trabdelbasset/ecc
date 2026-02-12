@@ -160,3 +160,4 @@ chipcompiler/gui/src-tauri/resources/oss-cad-suite/
 
 *.AppImage
 *.tgz
+.DS_Store
