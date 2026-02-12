@@ -24,8 +24,8 @@ ECOS Chip Compiler is a Python-based **Chip design automation solution** that in
 Please refer the **[Quick Start Guide](#-quick-start)** section to get started quickly.
 
 **Two ways to use**:
-- **Python API** - Programmatic flow control (You can refer [examples](#usage-examples) here)
-- **Desktop GUI** - Visual design tool (**Still under development, coming soon**)
+- **Desktop GUI (ecc-client)** - Visual design tool
+- **Python API** - Programmatic flow control for automation (see [examples](#usage-examples))
 
 For detailed architecture, see **[Architecture Documentation](docs/architecture.md)**.
 
@@ -40,15 +40,10 @@ Support platforms: x86_64 Linux (**Ubuntu 24.04+**, or other distros with **Nix*
 Install Nix package manager if you haven't (Nix is not NixOS!): https://nixos.org/download
 
 ```bash
-# Build and install ChipCompiler
-nix build .#chipcompiler
+# Run directly from GitHub
+nix shell github:openecos-projects/ecc#ecos-studio
 
-# Run directly
-./result/bin/chipcompiler
-
-# Or install to your profile
-nix profile install .#chipcompiler
-chipcompiler
+ecc-client # This will open gui client
 ```
 
 The Nix build includes all dependencies and creates a standalone executable. Binary cache available for faster builds.

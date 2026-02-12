@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ChipCompiler is an ECOS chip design automation solution that orchestrates EDA tools (Yosys, ECC-Tools, OpenROAD, Magic, KLayout) to perform RTL-to-GDS synthesis and place-and-route flows. The project includes:
 
-1. **Core Engine** - Python-based flow orchestration and EDA tool integration
-2. **REST API** - FastAPI backend for programmatic access
-3. **Desktop GUI** - Tauri + Vue 3 application for visual design and layout editing
+1. **Desktop GUI (ecc-client)** - Tauri + Vue 3 application for visual design and layout editing with AI-assisted interface
+2. **Core Engine** - Python-based flow orchestration and EDA tool integration
+3. **REST API** - FastAPI backend for programmatic access
 
 The architecture follows a modular, plugin-based design with clear separation between data structures, flow orchestration, tool integration, and user interfaces.
 
@@ -21,14 +21,11 @@ The architecture follows a modular, plugin-based design with clear separation be
 Build and install ChipCompiler as a Nix package:
 
 ```bash
-# Build the package
-nix build .#chipcompiler
-
-# Run directly
-./result/bin/chipcompiler
+# Run directly from GitHub
+nix shell github:openecos-projects/ecc#chipcompiler
 
 # Or install to your profile
-nix profile install .#chipcompiler
+nix profile install github:openecos-projects/ecc#chipcompiler
 chipcompiler
 ```
 

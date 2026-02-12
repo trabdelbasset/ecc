@@ -9,14 +9,11 @@ This document covers the development environment setup and common workflows for 
 Build and install ChipCompiler as a Nix package:
 
 ```bash
-# Build the package
-nix build .#chipcompiler
-
-# Run directly
-./result/bin/chipcompiler
+# Run directly from GitHub
+nix shell github:openecos-projects/ecc#chipcompiler
 
 # Or install to your profile
-nix profile install .#chipcompiler
+nix profile install github:openecos-projects/ecc#chipcompiler
 chipcompiler
 ```
 
