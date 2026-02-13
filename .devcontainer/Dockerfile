@@ -62,8 +62,8 @@ ENV PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr
 FROM base AS devcontainer
 
 FROM base AS runtime
-# ENV GITHUB_PROXY_PREFIX="https://gh-proxy.org/"
-# ENV GIT_PROXY_PREFIX="https://gh-proxy.org/"
+# ENV GITHUB_PROXY_PREFIX="https://ghfast.top/"
+# ENV GIT_PROXY_PREFIX="https://ghfast.top/"
 # ENV UV_PYTHON_INSTALL_MIRROR="https://ghfast.top/https://github.com/astral-sh/python-build-standalone/releases/download"
 
 WORKDIR /workspace
@@ -88,5 +88,5 @@ RUN echo 'if [ -f /workspace/.venv/bin/activate ]; then source /workspace/.venv/
 
 
 # Build commands:
-# docker build --target runtime -t ecc:latest .
-# docker build --target devcontainer -t chipcompiler-dev .
+# docker build --target runtime -f .devcontainer/Dockerfile -t ecc:latest .
+# docker build --target devcontainer -f .devcontainer/Dockerfile -t chipcompiler-dev .
