@@ -79,11 +79,22 @@ Nix 构建包含所有依赖。提供二进制缓存以加速构建。
 
 ### CLI 流程运行
 
-可以使用 `cli` 命令直接创建 workspace 并执行完整 RTL2GDS 流程。
+可以使用 `nix run .#cli -- ...` 直接创建 workspace 并执行完整 RTL2GDS 流程。
 
 ```bash
-cli --workspace ./ws --rtl ./rtl/top.v --design top --top top --clock clk --pdk-root /path/to/ics55
-cli --workspace ./ws --rtl ./rtl/filelist.f --design top --top top --clock clk --pdk-root /path/to/ics55 --freq 200
+nix run .#cli -- --workspace ./ws \
+                --rtl ./rtl/top.v \
+                --design top \
+                --top top \
+                --clock clk \
+                --pdk-root /path/to/ics55
+nix run .#cli -- --workspace ./ws \
+                --rtl ./rtl/filelist.f \
+                --design top \
+                --top top \
+                --clock clk \
+                --pdk-root /path/to/ics55 \
+                --freq 200
 ```
 
 ## 功能特性

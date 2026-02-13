@@ -30,26 +30,28 @@ Skip OSS CAD Suite if yosys installed: `ENABLE_OSS_CAD_SUITE=false ./build.sh`
 
 ## CLI Usage
 
-For command-line automation and scripting, install ChipCompiler:
+For command-line automation and scripting, run CLI via Nix:
 
 ```bash
-# For end users: Install via Nix
-nix shell github:openecos-projects/ecc#chipcompiler
+# Run directly from project root
+nix run .#cli -- --workspace ./ws \
+                --rtl ./rtl/top.v \
+                --design top \
+                --top top \
+                --clock clk \
+                --pdk-root /path/to/ics55
 
-# For developers: Use development shell
-nix develop
-
-# Or manual installation
-curl -LsSf https://astral.sh/uv/install.sh | sh
-./build.sh
-source .venv/bin/activate
+# Filelist mode
+nix run .#cli -- --workspace ./ws \
+                --rtl ./rtl/filelist.f \
+                --design top \
+                --top top \
+                --clock clk \
+                --pdk-root /path/to/ics55 \
+                --freq 200
 ```
 
-**Example usage:**
-```bash
-cli --workspace ./ws --rtl ./rtl/top.v --design top --top top --clock clk --pdk-root /path/to/ics55
-cli --workspace ./ws --rtl ./rtl/filelist.f --design top --top top --clock clk --pdk-root /path/to/ics55 --freq 200
-```
+If you need an interactive environment for development, use `nix develop`.
 
 REST API reference: **[API Guide](api-guide.md)** | Examples: **[examples/gcd](examples/gcd/README.md)**
 

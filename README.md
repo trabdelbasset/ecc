@@ -79,11 +79,22 @@ For active development, see **[Development Guide](docs/development.md)**.
 
 ### CLI Flow Runner
 
-Use `cli` to create a workspace and run the full RTL2GDS flow directly.
+Use `nix run .#cli -- ...` to create a workspace and run the full RTL2GDS flow directly.
 
 ```bash
-cli --workspace ./ws --rtl ./rtl/top.v --design top --top top --clock clk --pdk-root /path/to/ics55
-cli --workspace ./ws --rtl ./rtl/filelist.f --design top --top top --clock clk --pdk-root /path/to/ics55 --freq 200
+nix run .#cli -- --workspace ./ws \
+                --rtl ./rtl/top.v \
+                --design top \
+                --top top \
+                --clock clk \
+                --pdk-root /path/to/ics55
+nix run .#cli -- --workspace ./ws \
+                --rtl ./rtl/filelist.f \
+                --design top \
+                --top top \
+                --clock clk \
+                --pdk-root /path/to/ics55 \
+                --freq 200
 ```
 
 ## Features
