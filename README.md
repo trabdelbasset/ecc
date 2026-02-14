@@ -67,7 +67,7 @@ ecc-client
 
 Nix build includes all dependencies. Binary cache available for faster builds.
 
-**Supported Platforms:** x86_64 Linux (Ubuntu 24.04+, or other distros)
+**Supported Platforms:** x86_64 Linux (Distros with Nix installed)
 
 ### Usage
 
@@ -113,7 +113,6 @@ nix run .#cli -- --workspace ./ws \
 | [Yosys](https://github.com/YosysHQ/yosys) | RTL Synthesis | ✅ |
 | [ECC-Tools](https://github.com/openecos-projects/ecc-tools) | Physical Design (P&R) | ✅ |
 | [KLayout](https://www.klayout.de/) | Layout Viewer | 🚧 |
-| [OpenROAD](https://github.com/The-OpenROAD-Project/OpenROAD) | Alternative Backend | 🚧 |
 
 ## Documentation
 
