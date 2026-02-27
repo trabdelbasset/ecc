@@ -79,7 +79,7 @@ stdenv.mkDerivation {
     (lib.cmakeBool "BUILD_STATIC_LIB" false)
     (lib.cmakeBool "USE_PROFILER" false)
     (lib.cmakeBool "BUILD_PYTHON" true)
-    (lib.cmakeBool "BUILD_AIEDA" true)
+    (lib.cmakeBool "BUILD_ECOS" true)
   ];
 
   # Only build the Python bindings target

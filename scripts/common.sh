@@ -648,7 +648,7 @@ build_ecc_py() {
     fi
 
     echo "Configuring project with CMake..."
-    local cmake_opts=("-DBUILD_AIEDA=ON")
+    local cmake_opts=("-DBUILD_ECOS=ON" "-DBUILD_PYTHON=ON" "-DBUILD_STATIC_LIB=OFF")
     local cmake_gen=""
     if command -v ninja &> /dev/null; then
         echo "Using Ninja generator..."

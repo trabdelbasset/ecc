@@ -450,14 +450,15 @@ class ECCToolsModule:
     ########################################################################
     def init_sta(self,
                  output_dir : str,
-                 design : str,
+                 top_module : str,
                  lib_paths : list[str],
                  sdc_path: str):
-        self.ecc.set_design_workspace(output_dir)
+        self.ecc.init_sta(output=output_dir)
+        # self.ecc.set_design_workspace(output_dir)
 
-        self.ecc.read_liberty(lib_paths)
-        self.ecc.link_design(design)
-        self.ecc.read_sdc(sdc_path)
+        # self.ecc.read_liberty(lib_paths)
+        # self.ecc.link_design(top_module)
+        # self.ecc.read_sdc(sdc_path)
         
     def read_liberty(self, lib_paths : list[str]):
         self.ecc.read_liberty(lib_paths)
@@ -478,6 +479,38 @@ class ECCToolsModule:
         libs = self.ecc.get_used_libs()
 
         return libs
+    
+    def report_timing(self,
+                      digits: int = 3,
+                      delay_type: str = "max_min",
+                      exclude_cell_names: list[str] = [],
+                      derate: bool = False,
+                      is_clock_cap: bool = False,
+                      is_not_bak_rpt: bool = True,
+                      max_path: int = 3,
+                      nworst: int = 1,
+                      from_list: list[str] = [],
+                      through: list[list[str]] = [],
+                      to_list: list[str] = [],
+                      is_json: bool = True):
+        """
+        report timing
+        """       
+        self.ecc.report_timing(
+            digits=digits,
+            delay_type=delay_type,
+            exclude_cell_names=exclude_cell_names,
+            derate=derate,
+            is_clock_cap=is_clock_cap,
+            is_not_bak_rpt=is_not_bak_rpt,
+            max_path=max_path,
+            nworst=nworst,
+            from_list=from_list,
+            through=through,
+            to_list=to_list,
+            is_json=is_json,
+        )
+        
     ########################################################################
     # timing opt api
     ########################################################################

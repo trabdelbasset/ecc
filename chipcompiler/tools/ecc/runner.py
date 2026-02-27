@@ -80,6 +80,13 @@ def save_data(workspace: Workspace,
     
     module.report_summary(path=step.report["db"])
     
+    # report timing
+    module.init_sta(output_dir=step.data["sta"],
+                    top_module=workspace.design.top_module,
+                    lib_paths=workspace.pdk.libs,
+                    sdc_path=workspace.pdk.sdc)
+    module.report_timing()
+    
     # update parameters
     db_json = json_read(step.feature["db"])
     if len(db_json) > 0: 
@@ -410,7 +417,7 @@ def run_routing(workspace: Workspace,
         
         if eda_inst.is_rt_timing_enable(config=step.config[f"{StepEnum.ROUTING.value}"]):
             eda_inst.init_sta(output_dir=step.data["sta"],
-                              design=workspace.design.name,
+                              top_module=workspace.design.top_module,
                               lib_paths=workspace.pdk.libs,
                               sdc_path=workspace.pdk.sdc)
             

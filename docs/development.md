@@ -82,7 +82,7 @@ Example: `CHIPCOMPILER_ICS55_PDK_ROOT=/path/to/pdk chipcompiler`
 
 ```bash
 mkdir -p build && cd build
-cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBUILD_AIEDA=ON ..
+cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBUILD_ECOS=ON ..
 ninja ieda_py
 ```
 
