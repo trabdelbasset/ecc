@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1.7
-
 FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04 AS base
 SHELL ["/bin/bash", "-lc"]
 
@@ -95,7 +93,7 @@ RUN cd scripts \
 ENV VIRTUAL_ENV="/workspace/.venv"
 ENV PATH="/workspace/.venv/bin:${PATH}"
 ENV CHIPCOMPILER_OSS_CAD_DIR="/workspace/chipcompiler/thirdparty/oss-cad-suite"
-ENV CHIPCOMPILER_ICS55_PDK_ROOT="/workspace/chip-compiler/chipcompiler/thirdparty/icsprout55-pdk"
+ENV CHIPCOMPILER_ICS55_PDK_ROOT="/workspace/chipcompiler/thirdparty/icsprout55-pdk"
 RUN echo 'if [ -f /workspace/.venv/bin/activate ]; then source /workspace/.venv/bin/activate; fi' >> /root/.bashrc
 
 
