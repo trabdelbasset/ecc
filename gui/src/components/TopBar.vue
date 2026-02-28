@@ -37,7 +37,7 @@
 
     <!-- 右侧：窗口控制按钮 -->
     <div class="topbar-right" @mousedown.stop>
-      <button @click="toggleTheme" class="window-btn theme-btn"
+      <button v-if="isWelcome" @click="toggleTheme" class="window-btn theme-btn"
         :title="isDark ? 'Switch to light theme' : 'Switch to dark theme'">
         <i :class="isDark ? 'ri-sun-line' : 'ri-moon-line'" class="text-base"></i>
       </button>
@@ -68,6 +68,7 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { useThemeStore } from '@/stores/themeStore'
+import { useRoute } from 'vue-router'
 
 // ---- 类型定义 ----
 interface DropdownItem {
@@ -85,9 +86,11 @@ interface Menu {
   children?: DropdownItem[]
 }
 
+const route = useRoute()
+const isWelcome = computed(() => route.path === '/')
 // ---- Props & Emits ----
 const props = defineProps<{
-  projectName?: string
+  projectName?: string | null
 }>()
 
 const emit = defineEmits<{

@@ -308,21 +308,38 @@ fn start_api_server(
             }
         };
 
+        let oss_cad_dir = project_root
+            .join("chipcompiler")
+            .join("thirdparty")
+            .join("oss-cad-suite");
+
         println!(
             "Starting FastAPI server (dev mode) from: {:?} on port {}",
             server_script, port
         );
 
-        match Command::new(&interpreter)
-            .arg(&server_script)
+        let mut cmd = Command::new(&interpreter);
+        cmd.arg(&server_script)
             .arg("--host")
             .arg("127.0.0.1")
             .arg("--port")
             .arg(port.to_string())
             .arg("--reload")
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
+            .arg("--disable-stdio-redirect")
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit());
+
+        if oss_cad_dir.join("bin").join("yosys").exists() {
+            println!("Setting CHIPCOMPILER_OSS_CAD_DIR to {:?}", oss_cad_dir);
+            cmd.env("CHIPCOMPILER_OSS_CAD_DIR", &oss_cad_dir);
+        } else {
+            eprintln!(
+                "⚠️ OSS CAD Suite not found at {:?}, yosys must be available in PATH.",
+                oss_cad_dir
+            );
+        }
+
+        match cmd.spawn()
         {
             Ok(child) => {
                 println!(
@@ -550,13 +567,6 @@ fn stop_api_server(process: &mut Option<Child>, port: u16) {
     }
 }
 
-#[tauri::command]
-fn show_main_window(window: tauri::Window) {
-    window.show().unwrap();
-    window.set_focus().unwrap();
-    println!("Window shown via frontend signal");
-}
-
 /// 窗口最小化
 #[tauri::command]
 fn window_minimize(window: tauri::Window) {
@@ -753,9 +763,6 @@ async fn request_project_permission(app: tauri::AppHandle, path: String) -> Resu
     scope
         .allow_directory(&path_buf, true)
         .map_err(|e| format!("无法授予文件系统访问权限 {}: {}", path_buf.display(), e))?;
-
-    // 在 Tauri v2 中，convertFileSrc 自动使用 fs scope，不需要单独的 asset protocol scope
-    // println!("✅ 已授予文件系统访问权限: {}", path);
     Ok(())
 }
 
@@ -804,16 +811,19 @@ fn main() {
                     }
                 };
 
-                // Wait for the server to become healthy (max ~15s)
-                if using_external_server {
-                    println!(
-                        "Using externally started API server (debugger mode) on port {}",
-                        actual_port
-                    );
-                }
-                if !wait_for_server_ready(actual_port, 30) {
-                    eprintln!("⚠️ FastAPI server may not be fully ready after 15s");
-                }
+                // Wait for the server in the background so the webview can start
+                // loading immediately (splash screen visible sooner).
+                thread::spawn(move || {
+                    if using_external_server {
+                        println!(
+                            "Using externally started API server (debugger mode) on port {}",
+                            actual_port
+                        );
+                    }
+                    if !wait_for_server_ready(actual_port, 30) {
+                        eprintln!("⚠️ FastAPI server may not be fully ready after 15s");
+                    }
+                });
 
                 // Grant fs scope for the built-in data directory (demo data)
                 let mut data_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -827,16 +837,6 @@ fn main() {
                         Err(e) => eprintln!("❌ Failed to grant fs scope: {}", e),
                     }
                 }
-
-                // Safety timeout: show window after 1s even if frontend hasn't signalled
-                let window_clone = window.clone();
-                thread::spawn(move || {
-                    thread::sleep(Duration::from_secs(1));
-                    if let Ok(false) = window_clone.is_visible() {
-                        let _ = window_clone.show();
-                        println!("Window shown via safety timeout");
-                    }
-                });
 
                 #[cfg(debug_assertions)]
                 {
@@ -854,6 +854,16 @@ fn main() {
                 Ok(())
             }
         })
+        .on_page_load(|webview, payload| {
+            if matches!(payload.event(), tauri::webview::PageLoadEvent::Finished) {
+                let window = webview.window();
+                if let Ok(false) = window.is_visible() {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                    println!("Window shown via page load finished");
+                }
+            }
+        })
         .on_window_event(move |_window, event| {
             // Stop the API server when the window is destroyed
             if let tauri::WindowEvent::Destroyed = event {
@@ -863,7 +873,6 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
-            show_main_window,
             request_project_permission,
             window_minimize,
             window_maximize,
