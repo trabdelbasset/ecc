@@ -5,19 +5,6 @@ import os
 import time
 from functools import wraps
 
-from chipcompiler.data import (
-    create_workspace,
-    load_workspace,
-    StateEnum,
-    get_pdk,
-)
-
-from chipcompiler.engine import (
-    EngineFlow
-)
-
-from chipcompiler.rtl2gds import build_rtl2gds_flow
-
 from chipcompiler.server.schemas import (
     CMDEnum,
     ECCRequest, 
@@ -122,6 +109,9 @@ class ECCService:
         return True, None
     
     def __build_flow(self):
+        from chipcompiler.engine import EngineFlow
+        from chipcompiler.rtl2gds import build_rtl2gds_flow
+
         engine_flow = EngineFlow(workspace=self.workspace)
         if not engine_flow.has_init():
             steps = build_rtl2gds_flow()
@@ -153,6 +143,8 @@ class ECCService:
             "directory" : ""
         }
         """
+        from chipcompiler.data import create_workspace as _create_workspace
+
         # check cmd
         state, response = self.check_cmd(request, CMDEnum.create_workspace)
         if not state:
@@ -184,7 +176,7 @@ class ECCService:
                     )
         
         try:
-            workspace = create_workspace(directory=data.get("directory", ""),
+            workspace = _create_workspace(directory=data.get("directory", ""),
                                          pdk=data.get("pdk", ""),
                                          parameters=data.get("parameters", {}),
                                          origin_def=data.get("origin_def", ""),
@@ -238,6 +230,8 @@ class ECCService:
             "env_key" : "CHIPCOMPILER_ICS55_PDK_ROOT"
         }
         """
+        from chipcompiler.data import get_pdk
+
         state, response = self.check_cmd(request, CMDEnum.set_pdk_root)
         if not state:
             return response
@@ -308,6 +302,8 @@ class ECCService:
             "directory" : ""
         }
         """
+        from chipcompiler.data import load_workspace as _load_workspace
+
         # check cmd
         state, response = self.check_cmd(request, CMDEnum.load_workspace)
         if not state:
@@ -320,7 +316,7 @@ class ECCService:
         
         # process cmd
         try:
-            workspace = load_workspace(directory=data.get("directory", ""))
+            workspace = _load_workspace(directory=data.get("directory", ""))
         except Exception as e:
             logger.exception("load_workspace: load_workspace() raised exception")
             return ECCResponse(
@@ -509,6 +505,8 @@ class ECCService:
             "state" : "Unstart"
         }
         """
+        from chipcompiler.data import StateEnum
+
         # check cmd
         state, response = self.check_cmd(request, CMDEnum.run_step)
         if not state:

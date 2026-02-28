@@ -175,13 +175,23 @@ fn is_api_server_healthy(port: u16) -> bool {
         .unwrap_or(false)
 }
 
-/// Wait for the API server to become healthy, retrying up to `max_retries` times.
-/// Each retry waits 500ms, so total timeout is roughly `max_retries * 0.5` seconds.
-fn wait_for_server_ready(port: u16, max_retries: u32) -> bool {
+/// Wait for the API server to become healthy, with exponential backoff.
+///
+/// Starts polling at 100ms intervals, increasing by 1.5x each attempt up to 1000ms.
+/// Total timeout is approximately `timeout_secs` seconds.
+fn wait_for_server_ready(port: u16, timeout_secs: u64) -> bool {
+    use std::time::Instant;
+
     println!("Waiting for FastAPI server to be ready on port {}...", port);
-    for attempt in 1..=max_retries {
-        thread::sleep(Duration::from_millis(500));
-        // Quick TCP probe before the heavier HTTP health check
+    let start = Instant::now();
+    let deadline = Duration::from_secs(timeout_secs);
+    let mut delay_ms: u64 = 100;
+    let mut attempt: u32 = 0;
+
+    while start.elapsed() < deadline {
+        attempt += 1;
+        thread::sleep(Duration::from_millis(delay_ms));
+
         let addr: std::net::SocketAddr = format!("127.0.0.1:{}", port).parse().unwrap();
         if std::net::TcpStream::connect_timeout(&addr, Duration::from_millis(200)).is_ok()
             && is_api_server_healthy(port)
@@ -190,16 +200,20 @@ fn wait_for_server_ready(port: u16, max_retries: u32) -> bool {
                 "✅ FastAPI server ready on port {} after {} attempts ({:.1}s)",
                 port,
                 attempt,
-                attempt as f32 * 0.5
+                start.elapsed().as_secs_f32()
             );
             return true;
         }
-        if attempt % 4 == 0 {
+
+        if start.elapsed().as_secs() >= 4 && attempt % 3 == 0 {
             println!(
-                "⏳ Still waiting for server on port {}... (attempt {}/{})",
-                port, attempt, max_retries
+                "⏳ Still waiting for server on port {}... ({:.1}s elapsed)",
+                port,
+                start.elapsed().as_secs_f32()
             );
         }
+
+        delay_ms = (delay_ms * 3 / 2).min(1000);
     }
     false
 }
@@ -820,7 +834,7 @@ fn main() {
                             actual_port
                         );
                     }
-                    if !wait_for_server_ready(actual_port, 30) {
+                    if !wait_for_server_ready(actual_port, 15) {
                         eprintln!("⚠️ FastAPI server may not be fully ready after 15s");
                     }
                 });
