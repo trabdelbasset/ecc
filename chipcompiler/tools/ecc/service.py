@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
+import os
 from chipcompiler.data import (
     Workspace, 
     WorkspaceStep, 
@@ -33,6 +34,8 @@ def get_step_info(workspace: Workspace,
             step_info = build_maps(workspace=workspace, step=step)
         case "checklist":
             step_info = build_checklist(workspace=workspace, step=step)
+        case "sta":
+            step_info = build_sta(workspace=workspace, step=step)
 
     return step_info
 
@@ -259,4 +262,23 @@ def build_checklist(workspace: Workspace,
         "path" : step.checklist.get("path", "")
     }
     
+    return info
+
+def build_sta(workspace: Workspace, 
+                    step: WorkspaceStep) -> dict:          
+    top_module = workspace.design.top_module
+    sta_data_dir = step.data.get(f"{StepEnum.STA.value}", "")
+    if not sta_data_dir:
+        sta_data_dir = os.path.join(step.directory, "data", "sta")
+
+    sta_report = step.report.get("sta", {})
+    info = {
+        "timing": sta_report.get("timing", os.path.join(sta_data_dir, f"{top_module}.rpt")),
+        "hold": sta_report.get("hold", os.path.join(sta_data_dir, f"{top_module}_hold.skew")),
+        "setup": sta_report.get("setup", os.path.join(sta_data_dir, f"{top_module}_setup.skew")),
+        "cap": sta_report.get("cap", os.path.join(sta_data_dir, f"{top_module}.cap")),
+        "fanout": sta_report.get("fanout", os.path.join(sta_data_dir, f"{top_module}.fanout")),
+        "trans": sta_report.get("trans", os.path.join(sta_data_dir, f"{top_module}.trans")),
+    }
+
     return info
