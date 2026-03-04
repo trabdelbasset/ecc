@@ -146,6 +146,9 @@ test/examples/
 .cursor/
 .cursor-user/
 
+.codex
+openspec
+
 .vscode/
 
 # Egg info
