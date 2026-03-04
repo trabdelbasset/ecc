@@ -85,6 +85,9 @@ def run_step(workspace: Workspace,
     if eda_module is None:
         return False
     
+    # update config 
+    eda_module.build_step_config(workspace, step)
+    
     return eda_module.run_step(workspace=workspace, 
                                step=step,
                                module=module)

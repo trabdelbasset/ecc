@@ -258,6 +258,8 @@ def build_step_config(workspace: Workspace,
         config["PL"]["Filler"]["first_iter"] = workspace.pdk.fillers
         config["PL"]["Filler"]["second_iter"] = workspace.pdk.fillers
         
+        config["PL"]["GP"]["global_right_padding"] = workspace.parameters.data.get("Global right padding", 0)
+        
         # write back
         json_write(step.config[f"{StepEnum.PLACEMENT.value}"], config)
         
@@ -325,6 +327,12 @@ def build_step_config(workspace: Workspace,
     shutil.copytree(default_dir, step.config["dir"], dirs_exist_ok=True)
     _ensure_writable(step.config["dir"])
     
+    # reload parameters
+    from chipcompiler.data import load_parameter
+    parameter = load_parameter(workspace.parameters.path)
+    workspace.parameters = parameter
+    
+    # update config by parameters
     _update_flow()    
     _update_db()
     _update_fixfanout()

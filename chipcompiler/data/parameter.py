@@ -24,6 +24,7 @@ ICS55_PARAMETERS_TEMPLATE = {
     "Max fanout" : 20,
     "Target density" : 0.3,
     "Target overflow" : 0.1,
+    "Global right padding": 0,
     "Clock" : "",
     "Frequency max [MHz]" : 100,
     "Bottom layer" : "MET1",
