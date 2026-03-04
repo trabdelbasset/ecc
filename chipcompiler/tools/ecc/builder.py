@@ -94,7 +94,15 @@ def build_step(workspace: Workspace,
     step.report = {
         "dir": f"{step.directory}/report",
         "db": f"{step.directory}/report/{step.name}.db.rpt",
-        "step": f"{step.directory}/report/{step.name}.rpt"
+        "step": f"{step.directory}/report/{step.name}.rpt",
+        "sta": {
+            "timing": f"{step.directory}/data/sta/{workspace.design.top_module}.rpt",
+            "hold": f"{step.directory}/data/sta/{workspace.design.top_module}_hold.skew",
+            "setup": f"{step.directory}/data/sta/{workspace.design.top_module}_setup.skew",
+            "cap": f"{step.directory}/data/sta/{workspace.design.top_module}.cap",
+            "fanout": f"{step.directory}/data/sta/{workspace.design.top_module}.fanout",
+            "trans": f"{step.directory}/data/sta/{workspace.design.top_module}.trans",
+        },
     }
     
     # build log paths

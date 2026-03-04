@@ -12,6 +12,7 @@ class InfoEnum(Enum):
     analysis = "analysis" # analysis metrics
     maps = "maps" # maps for this step such as density map
     checklist = "checklist" # step checklist
+    sta = "sta" # sta timing analysis
     
 class NotifyEnum(Enum):
     step = "step"
