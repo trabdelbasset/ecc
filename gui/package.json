@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
+    "tauri:dev:debug": "ECOS_REUSE_API_SERVER=1 tauri dev",
     "tauri:build": "tauri build"
   },
   "dependencies": {
