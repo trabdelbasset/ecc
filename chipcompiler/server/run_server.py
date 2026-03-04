@@ -57,6 +57,13 @@ def main():
     parser.add_argument("--host", default="127.0.0.1", help="Host (default: 127.0.0.1)")
     parser.add_argument("--port", type=int, default=8765, help="Port (default: 8765)")
     parser.add_argument("--reload", action="store_true", help="Enable auto-reload")
+    parser.add_argument(
+        "--reload-dir",
+        dest="reload_dirs",
+        action="append",
+        default=[],
+        help="Directory to watch for reload (can be specified multiple times)",
+    )
     parser.add_argument("--log-file", default="/tmp/chipcompiler-api-server.log",
                         help="Runtime log file path")
     parser.add_argument("--log-max-bytes", type=int, default=20 * 1024 * 1024,
@@ -74,14 +81,24 @@ def main():
     args = parser.parse_args()
     log_file = _setup_logging(args)
 
-    print(f"[API_START] pid={os.getpid()} {args.host}:{args.port} "
-          f"reload={args.reload} log={log_file}", flush=True)
+    reload_dirs = [
+        os.path.abspath(os.path.expanduser(path))
+        for path in args.reload_dirs
+        if path and path.strip()
+    ]
+
+    print(
+        f"[API_START] pid={os.getpid()} {args.host}:{args.port} "
+        f"reload={args.reload} reload_dirs={reload_dirs or 'default'} log={log_file}",
+        flush=True,
+    )
     
     uvicorn.run(
         "chipcompiler.server.main:app",
         host=args.host,
         port=args.port,
         reload=args.reload,
+        reload_dirs=reload_dirs or None,
         log_level="info"
     )
 

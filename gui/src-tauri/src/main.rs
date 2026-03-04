@@ -298,6 +298,8 @@ fn start_api_server(
         let project_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("..")
             .join("..");
+        let chipcompiler_dir = project_root.join("chipcompiler");
+        let tauri_dir = project_root.join("gui").join("src-tauri");
 
         #[cfg(target_os = "windows")]
         let venv_python = project_root
@@ -339,9 +341,14 @@ fn start_api_server(
             .arg("--port")
             .arg(port.to_string())
             .arg("--reload")
+            .arg("--reload-dir")
+            .arg(chipcompiler_dir.to_string_lossy().to_string())
+            .arg("--reload-dir")
+            .arg(tauri_dir.to_string_lossy().to_string())
             .arg("--disable-stdio-redirect")
             .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit());
+            .stderr(Stdio::inherit())
+            .current_dir(&project_root);
 
         if oss_cad_dir.join("bin").join("yosys").exists() {
             println!("Setting CHIPCOMPILER_OSS_CAD_DIR to {:?}", oss_cad_dir);
