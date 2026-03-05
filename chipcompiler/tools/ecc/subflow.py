@@ -4,8 +4,6 @@ from chipcompiler.data import Workspace, WorkspaceStep, StateEnum, StepEnum
 
 from enum import Enum
 
-from ..eda import SubFlowBase
-
 class EccSubFlowEnum(Enum):
     load_data = "load data"
     save_data = "save data"
@@ -29,7 +27,7 @@ class EccSubFlowEnum(Enum):
 
 import time
 
-class EccSubFlow(SubFlowBase):
+class EccSubFlow:
     def __init__(self, workspace : Workspace, workspace_step: WorkspaceStep):
         self.workspace = workspace
         self.workspace_step = workspace_step
@@ -41,6 +39,11 @@ class EccSubFlow(SubFlowBase):
         
         # set start memory
         self.start_memory = self.get_peak_memory()
+        
+    def notify_subflow(self, step : str,  subflow_path : str , home_page : str=""):
+        notify_inst = self.workspace.gui_notify
+        if notify_inst is not None:
+            notify_inst.notify_subflow(step, subflow_path, home_page) 
     
     def init_sub_flow(self):
         from chipcompiler.utility import json_read

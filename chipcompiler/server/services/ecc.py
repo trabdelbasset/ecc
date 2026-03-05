@@ -15,9 +15,6 @@ from chipcompiler.server.schemas import (
 from chipcompiler.server.sse import server_notify
 gui_notify = server_notify()
 
-from chipcompiler.tools import set_gui_notify
-set_gui_notify(gui_notify)
-
 logger = logging.getLogger(__name__)
 
 
@@ -186,6 +183,8 @@ class ECCService:
                                          origin_verilog=data.get("origin_verilog", ""),
                                          input_filelist=input_filelist,
                                          pdk_root=data.get("pdk_root", ""))
+            
+            workspace.gui_notify = gui_notify
         except Exception as e:
             logger.exception("create_workspace: create_workspace() raised exception")
             return ECCResponse(
@@ -320,6 +319,7 @@ class ECCService:
         # process cmd
         try:
             workspace = _load_workspace(directory=data.get("directory", ""))
+            workspace.gui_notify = gui_notify
         except Exception as e:
             logger.exception("load_workspace: load_workspace() raised exception")
             return ECCResponse(
