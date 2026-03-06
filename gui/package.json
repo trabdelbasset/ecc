@@ -53,8 +53,7 @@
       "esbuild"
     ],
     "overrides": {
-      "pixi.js": "$pixi.js",
-      "estree-walker": "^2.0.2"
+      "pixi.js": "$pixi.js"
     }
   }
 }

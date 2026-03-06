@@ -604,10 +604,10 @@ class ECCService:
                                 home_page=self.workspace.home.path
                             )
                             last_modified = current_modified
-                    time.sleep(5)  # 5秒轮询一次
+                    time.sleep(0.3)
                 except Exception as e:
                     logger.exception("polling error: %s", e)
-                    time.sleep(1)
+                    time.sleep(0.3)
         
         # 启动轮询线程
         self._polling_thread = threading.Thread(target=_polling_function, daemon=True)

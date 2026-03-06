@@ -248,6 +248,30 @@ export function useFlowStages() {
     }
   }
 
+  /**
+   * 乐观更新：将指定 run 步骤设为 Ongoing
+   * 用于点击某个步骤页的 Run 时立即反映状态
+   */
+  function setRunStepOngoing(stepPath: string): void {
+    if (!stepPath) return
+
+    const targetPath = stepPath.toLowerCase()
+    const idx = dynamicFlowStages.value.findIndex(
+      s => s.path.toLowerCase() === targetPath
+    )
+
+    if (idx !== -1) {
+      dynamicFlowStages.value[idx] = {
+        ...dynamicFlowStages.value[idx],
+        state: 'Ongoing'
+      }
+      return
+    }
+
+    // 兼容路径无法匹配时的兜底行为
+    setFirstRunStepOngoing()
+  }
+
 
   /**
    * 重新加载流程步骤
@@ -343,6 +367,7 @@ export function useFlowStages() {
     loadFlowStagesFromPath,
     refreshFlowStages,
     clearFlowStages,  
-    setFirstRunStepOngoing
+    setFirstRunStepOngoing,
+    setRunStepOngoing
   }
 }

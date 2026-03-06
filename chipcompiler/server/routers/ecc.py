@@ -54,7 +54,7 @@ def rtl2gds(request: ECCRequest):
     return ecc_serv.rtl2gds(request)
 
 @router.post("/run_step", response_model=ECCResponse)
-async def run_step(request: ECCRequest):
+def run_step(request: ECCRequest):
     """
     run step for current workspace.
     """
