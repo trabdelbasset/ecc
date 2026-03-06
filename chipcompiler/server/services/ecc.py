@@ -184,7 +184,6 @@ class ECCService:
                                          input_filelist=input_filelist,
                                          pdk_root=data.get("pdk_root", ""))
             
-            workspace.gui_notify = gui_notify
         except Exception as e:
             logger.exception("create_workspace: create_workspace() raised exception")
             return ECCResponse(
@@ -319,7 +318,6 @@ class ECCService:
         # process cmd
         try:
             workspace = _load_workspace(directory=data.get("directory", ""))
-            workspace.gui_notify = gui_notify
         except Exception as e:
             logger.exception("load_workspace: load_workspace() raised exception")
             return ECCResponse(
@@ -464,6 +462,7 @@ class ECCService:
                 # get response for each step
                 # TBD, need to send response back to gui
                 step_response = self.run_step(ecc_req)
+                
                 if step_response.response != ResponseEnum.success.value:
                     failed_step = workspace_step.name
                     break
@@ -538,7 +537,9 @@ class ECCService:
         # process cmd
         state = StateEnum.Unstart
         try:
+            self.start_step_polling(step=step)
             state = self.engine_flow.run_step(step, rerun)
+            self.stop_step_polling(step=step)
         except Exception:
             state = StateEnum.Imcomplete
             logger.exception("run_step: engine_flow.run_step() raised exception")
@@ -559,6 +560,70 @@ class ECCService:
                 data=response_data,
                 message = [f"run step {step} failed with state {state.value} : {self.workspace.directory}"]
             )
+            
+    def start_step_polling(self, step: str):
+        """
+        启动子线程轮询 step 的 subflow 文件变化
+        当文件发生变化时，调用 gui_notify.notify_subflow
+        """
+        import threading
+        import os
+        import time
+        
+        workspace_step = self.engine_flow.get_workspace_step(step)
+        if workspace_step is None:
+            logger.warning("start_step_polling: workspace step not found: %s", step)
+            return
+        
+        # 获取 subflow 文件路径
+        subflow_path = workspace_step.subflow.get("path", "")
+        if not subflow_path:
+            logger.warning("start_step_polling: subflow path not found for step: %s", step)
+            return
+        
+        # 存储轮询线程
+        self._polling_thread = None
+        self._polling_stop_event = threading.Event()
+        
+        def _polling_function():
+            """轮询文件变化的函数"""
+            last_modified = 0
+            if os.path.exists(subflow_path):
+                last_modified = os.path.getmtime(subflow_path)
+            
+            while not self._polling_stop_event.is_set():
+                try:
+                    if os.path.exists(subflow_path):
+                        current_modified = os.path.getmtime(subflow_path)
+                        if current_modified > last_modified:
+                            # 文件发生变化，发送通知
+                            logger.debug("subflow file changed: %s", subflow_path)
+                            gui_notify.notify_subflow(
+                                step=step,
+                                subflow_path=subflow_path,
+                                home_page=self.workspace.home.path
+                            )
+                            last_modified = current_modified
+                    time.sleep(5)  # 5秒轮询一次
+                except Exception as e:
+                    logger.exception("polling error: %s", e)
+                    time.sleep(1)
+        
+        # 启动轮询线程
+        self._polling_thread = threading.Thread(target=_polling_function, daemon=True)
+        self._polling_thread.start()
+        logger.info("started polling thread for step: %s, file: %s", step, subflow_path)
+    
+    def stop_step_polling(self, step: str):
+        """
+        停止轮询线程
+        """
+        if hasattr(self, "_polling_stop_event") and self._polling_stop_event:
+            self._polling_stop_event.set()
+        
+        if hasattr(self, "_polling_thread") and self._polling_thread:
+            self._polling_thread.join(timeout=2.0)
+            logger.info("stopped polling thread for step: %s", step)
             
     @_log_api_command
     def get_info(self, request: ECCRequest) -> ECCResponse:

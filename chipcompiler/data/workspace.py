@@ -50,9 +50,6 @@ class Workspace:
     # logger
     logger : Logger = field(default_factory=Logger) # logger for this workspace
     
-    # notify service
-    gui_notify = None
-    
 @dataclass
 class WorkspaceStep:
     """

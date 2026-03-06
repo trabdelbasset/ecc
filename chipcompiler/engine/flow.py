@@ -132,7 +132,7 @@ class EngineFlow:
         return None
     
     def get_workspace_step(self,
-                           name : str):
+                           name : str) -> WorkspaceStep | None:
         for workspace_step in self.workspace_steps:
             if workspace_step.name == name:
                 return workspace_step

@@ -39,11 +39,6 @@ class EccSubFlow:
         
         # set start memory
         self.start_memory = self.get_peak_memory()
-        
-    def notify_subflow(self, step : str,  subflow_path : str , home_page : str=""):
-        notify_inst = self.workspace.gui_notify
-        if notify_inst is not None:
-            notify_inst.notify_subflow(step, subflow_path, home_page) 
     
     def init_sub_flow(self):
         from chipcompiler.utility import json_read
@@ -203,9 +198,5 @@ class EccSubFlow:
                                                    runtime = runtime,
                                                    instance=info.get("instance", 0),
                                                    frequency=info.get("frequency", 0))
-                
-                self.notify_subflow(step = self.workspace_step.name,
-                                    subflow_path=self.workspace_step.subflow.get("path", ""),
-                                    home_page=self.workspace.home.path)
                 
                 break
