@@ -32,6 +32,12 @@ function createAlovaClient() {
         ...method.config.headers,
         'Content-Type': 'application/json',
       }
+      // Abort if no response within timeout; skip long-running endpoints
+      if (!method.config.signal) {
+        const url = typeof method.url === 'string' ? method.url : ''
+        const isLongRunning = url.includes('run_step') || url.includes('rtl2gds')
+        method.config.signal = AbortSignal.timeout(isLongRunning ? 600_000 : 30_000)
+      }
     },
 
     // Response interceptor
