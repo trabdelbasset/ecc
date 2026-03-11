@@ -88,6 +88,7 @@ def build_step(workspace: Workspace,
         "db": f"{step.directory}/feature/{step.name}.db.json",
         "step": f"{step.directory}/feature/{step.name}.step.json",
         "map": f"{step.directory}/feature/{step.name}.map.json",
+        "timing": f"{step.directory}/data/sta/{workspace.design.top_module}.rpt.json",
     }
     
     # build report paths

@@ -25,20 +25,19 @@ def build_step_metrics(workspace: Workspace,
     design_data = data.get('design', {})
 
     metrics = {
-        "Step": step.name,
         "Tool": step.tool,
-        "Total cells": design_data.get("num_cells", 0),
-        "Total area": round(design_data.get("area", 0.0), 2),
-        "Number of wires": design_data.get("num_wires", 0),
-        "Number of ports": design_data.get("num_port_bits", 0),
+        "Cell number": design_data.get("num_cells", 0),
+        "Cell area": round(design_data.get("area", 0.0), 2),
+        "Wire number": design_data.get("num_wires", 0),
+        "Port number": design_data.get("num_port_bits", 0),
     }
 
     step_metrics.data = metrics
 
     report = (
         f"{step.name} synthesis metrics from yosys stat. "
-        f"Total cells: {metrics['Total cells']}, "
-        f"Area: {metrics['Total area']}"
+        f"Total cells: {metrics['Cell number']}, "
+        f"Area: {metrics['Cell area']}"
     )
     step_metrics.report.append(("", report))
 

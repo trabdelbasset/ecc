@@ -50,8 +50,9 @@ class EngineFlow:
         self.workspace = workspace
         self.workspace_steps = []
         self.db = None # db engine for this flow
-      
-        self.load()
+        
+        if self.workspace is not None:
+            self.load()
     
     def build_default_steps(self):
         # Flow step sequences
@@ -75,7 +76,7 @@ class EngineFlow:
         self.save()
     
     def has_init(self):
-        return True if len(self.workspace.flow.data.get("steps", [])) > 0 else False
+        return True if self.workspace is not None and len(self.workspace.flow.data.get("steps", [])) > 0 else False
     
     def init_flow_step(self,
                   step : StepEnum | str,

@@ -46,9 +46,45 @@ def build_step_metrics(workspace: Workspace,
         case StepEnum.FILLER.value:
             metrics = build_metrics_filler(workspace, step)
     
-    sub_flow.update_step(step_name=EccSubFlowEnum.analysis.value,
-                         state=StateEnum.Invalid if metrics is None else StateEnum.Success)
+    info = {}        
+    data = json_read(step.feature.get("db", ""))
+    if data is not None:
+        instance_num = data.get("Design Statis", {}).get("num_instances", 0) 
+        info["instance"] = instance_num
+
+        if metrics.data.get("Frequency [MHz]", 0) > 0:
+            info["frequency"] = metrics.data.get("Frequency [MHz]", 0)   
     
+    sub_flow.update_step(step_name=EccSubFlowEnum.analysis.value,
+                         state=StateEnum.Invalid if metrics is None else StateEnum.Success,
+                         info=info)
+    
+    return metrics
+
+
+def build_metrics_timing(workspace: Workspace, 
+                         step: WorkspaceStep) -> dict:
+    metrics = {}
+    
+    data = json_read(step.feature.get('timing', ""))
+    max_WNS = None
+    if len(data) > 0:
+        for slack_item in data.get('slack', []):
+            type = slack_item.get("delay_type", "")
+            metrics[f"{type}_TNS"] = slack_item.get("TNS", 0)
+            metrics[f"{type}_WNS"] = slack_item.get("WNS", 0)
+            
+            if type == "max":
+                max_WNS = float(slack_item.get("WNS", 0))
+            
+    # frequency
+    frequency = workspace.parameters.data.get("Frequency max [MHz]", 0)
+    if frequency > 0 and max_WNS is not None:
+        clk_period = 1000.0 / frequency
+        
+        real_frequency = 1000.0 / (clk_period + abs(max_WNS)) if max_WNS is not None else 0
+        metrics["Frequency [MHz]"] = round(real_frequency, 2)
+
     return metrics
 
 def build_metrics_db(workspace: Workspace, 
@@ -56,8 +92,6 @@ def build_metrics_db(workspace: Workspace,
     # db summary matrics
     metrics = {}
     
-    metrics['Design'] = workspace.design.name
-    metrics['Step'] = step.name
     metrics['Tool'] = step.tool
     
     data = json_read(step.feature.get('db', ""))
@@ -70,6 +104,8 @@ def build_metrics_db(workspace: Workspace,
         metrics["Total io pins"] = data.get('Design Statis', {}).get('num_iopins', 0)
         metrics["Total instances"] = data.get('Design Statis', {}).get('num_instances', 0)
         metrics["Total nets"] = data.get('Design Statis', {}).get('num_nets', 0)
+        
+    metrics.update(build_metrics_timing(workspace=workspace, step=step))
 
     return metrics
 
@@ -119,20 +155,10 @@ def build_metrics_net_opt(workspace: Workspace,
     # db summary matrics
     metrics.update(build_metrics_db(workspace, step))
     
-    # step matrics
+    # # step matrics
     json_path = step.feature.get('step', "")
-    data = json_read(json_path)
-    if len(data) > 0:
-        metrics["Max fanout"] = workspace.parameters.data.get("Max fanout", 0)
 
-        for clk_item in data.get("fixFanout", {}).get("clocks_timing", []):
-            metrics["suggest_freq"] = clk_item.get("opt_suggest_freq", 0)
-            metrics["setup_wns"] = clk_item.get("opt_setup_wns", 0)
-            metrics["setup_tns"] = clk_item.get("opt_setup_tns", 0)
-            metrics["hold_wns"] = clk_item.get("opt_hold_wns", 0)
-            metrics["hold_tns"] = clk_item.get("opt_hold_tns", 0)
-            
-            break
+    metrics["Max fanout"] = workspace.parameters.data.get("Max fanout", 0)
     
     step_metrics.data = metrics
     
@@ -297,14 +323,14 @@ def build_metrics_timing_opt_hold(workspace: Workspace,
     
     # step matrics
     json_path = step.feature.get('step', "")
-    data = json_read(json_path)
-    if len(data) > 0:
-        for clk_item in data.get("optHold", {}).get("clocks_timing", []):
-            metrics["suggest_freq"] = clk_item.get("opt_suggest_freq", 0)
-            metrics["hold_wns"] = clk_item.get("opt_wns", 0)
-            metrics["hold_tns"] = clk_item.get("opt_tns", 0)
+    # data = json_read(json_path)
+    # if len(data) > 0:
+    #     for clk_item in data.get("optHold", {}).get("clocks_timing", []):
+    #         metrics["suggest_freq"] = clk_item.get("opt_suggest_freq", 0)
+    #         metrics["hold_wns"] = clk_item.get("opt_wns", 0)
+    #         metrics["hold_tns"] = clk_item.get("opt_tns", 0)
             
-            break
+    #         break
     
     step_metrics.data = metrics
     
@@ -335,14 +361,14 @@ def build_metrics_timing_opt_drv(workspace: Workspace,
     
     # step matrics
     json_path = step.feature.get('step', "")
-    data = json_read(json_path)
-    if len(data) > 0:
-        for clk_item in data.get("optDrv", {}).get("clocks_timing", []):
-            metrics["suggest_freq"] = clk_item.get("opt_suggest_freq", 0)
-            metrics["wns"] = clk_item.get("opt_wns", 0)
-            metrics["tns"] = clk_item.get("opt_tns", 0)
+    # data = json_read(json_path)
+    # if len(data) > 0:
+    #     for clk_item in data.get("optDrv", {}).get("clocks_timing", []):
+    #         metrics["suggest_freq"] = clk_item.get("opt_suggest_freq", 0)
+    #         metrics["wns"] = clk_item.get("opt_wns", 0)
+    #         metrics["tns"] = clk_item.get("opt_tns", 0)
             
-            break
+    #         break
     
     step_metrics.data = metrics
     
@@ -368,7 +394,7 @@ def build_metrics_cts(workspace: Workspace,
     metrics = {}
     
     # db summary matrics
-    # metrics.update(build_metrics_db(workspace, step))
+    metrics.update(build_metrics_db(workspace, step))
     
     # step matrics
     json_path = step.feature.get('step', "")
@@ -379,15 +405,6 @@ def build_metrics_cts(workspace: Workspace,
         metrics["clock_path_max_buffer"] = data.get("CTS", {}).get("clock_path_max_buffer", 0)
         metrics["clock_path_min_buffer"] = data.get("CTS", {}).get("clock_path_min_buffer", 0)
         metrics["total_clock_wirelength"] = data.get("CTS", {}).get("total_clock_wirelength", 0)
-        
-        for clk_item in data.get("CTS", {}).get("clocks_timing", []):
-            metrics["suggest_freq"] = clk_item.get("suggest_freq", 0)
-            metrics["hold_wns"] = clk_item.get("hold_wns", 0)
-            metrics["hold_tns"] = clk_item.get("hold_tns", 0)
-            metrics["setup_wns"] = clk_item.get("setup_wns", 0)
-            metrics["setup_tns"] = clk_item.get("setup_tns", 0)
-            
-            break
     
     step_metrics.data = metrics
     

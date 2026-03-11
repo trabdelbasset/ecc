@@ -7,7 +7,7 @@ from chipcompiler.data import WorkspaceStep, Workspace, StateEnum, StepEnum
 from chipcompiler.tools.ecc.module import ECCToolsModule
 from chipcompiler.tools.ecc.utility import is_eda_exist
 from chipcompiler.tools.ecc.plot import ECCToolsPlot
-from chipcompiler.tools.ecc.metrics import build_step_metrics 
+from chipcompiler.tools.ecc.metrics import build_step_metrics
 from chipcompiler.tools.ecc.subflow import EccSubFlow, EccSubFlowEnum
 from chipcompiler.tools.ecc.checklist import EccChecklist
 from chipcompiler.utility import json_read
@@ -177,7 +177,7 @@ def run_step(workspace: Workspace,
 def run_analysis(workspace: Workspace,
                  step: WorkspaceStep,
                  subflow : EccSubFlow):
-            # save metrics
+    # save metrics
     build_step_metrics(workspace=workspace, 
                        step=step,
                        subflow=subflow)
@@ -212,16 +212,9 @@ def run_net_opt(workspace: Workspace,
         sub_flow.update_step(step_name=EccSubFlowEnum.run_net_optimization.value, state=StateEnum.Success)
         
         reslut = save_data(workspace=workspace, step=step, module=eda_inst)
-        
-        info = {}
-        data = json_read(step.feature.get("db", ""))
-        if data is not None:
-            instance_num = data.get("Design Statis", {}).get("num_instances", 0) 
-            info["instance"] = instance_num
             
         sub_flow.update_step(step_name=EccSubFlowEnum.save_data.value,
-                             state=StateEnum.Success,
-                             info=info) 
+                             state=StateEnum.Success) 
         
         run_analysis(workspace = workspace, step = step, subflow = sub_flow)
     
@@ -251,15 +244,8 @@ def run_placement(workspace: Workspace,
         
         reslut = save_data(workspace=workspace, step=step, module=eda_inst)
         
-        info = {}
-        data = json_read(step.feature.get("db", ""))
-        if data is not None:
-            instance_num = data.get("Design Statis", {}).get("num_instances", 0) 
-            info["instance"] = instance_num
-            
         sub_flow.update_step(step_name=EccSubFlowEnum.save_data.value,
-                             state=StateEnum.Success,
-                             info=info) 
+                             state=StateEnum.Success) 
         
         run_analysis(workspace = workspace, step = step, subflow = sub_flow)
     
@@ -294,26 +280,9 @@ def run_cts(workspace: Workspace,
         sub_flow.update_step(step_name=EccSubFlowEnum.run_CTS.value, state=StateEnum.Success)
         
         reslut = save_data(workspace=workspace, step=step, module=eda_inst)
-        
-        info = {}
-        data = json_read(step.feature.get("db", ""))
-        if data is not None:
-            instance_num = data.get("Design Statis", {}).get("num_instances", 0) 
-            info["instance"] = instance_num
-            
-        data = json_read(step.feature.get("step", ""))
-        if data is not None:
-            clk_list = data.get("CTS", {}).get("clocks_timing", [])
-            
-            frequency = 0
-            for item in clk_list:
-                frequency = item.get("suggest_freq", 0) 
-            
-            info["frequency"] = frequency
             
         sub_flow.update_step(step_name=EccSubFlowEnum.save_data.value,
-                             state=StateEnum.Success,
-                             info=info) 
+                             state=StateEnum.Success) 
         
         run_analysis(workspace = workspace, step = step, subflow = sub_flow)
     
@@ -345,16 +314,9 @@ def run_timing_opt_drv(workspace: Workspace,
         sub_flow.update_step(step_name=EccSubFlowEnum.run_timing_opt_drv.value, state=StateEnum.Success)
         
         reslut = save_data(workspace=workspace, step=step, module=eda_inst)
-        
-        info = {}
-        data = json_read(step.feature.get("db", ""))
-        if data is not None:
-            instance_num = data.get("Design Statis", {}).get("num_instances", 0) 
-            info["instance"] = instance_num
-            
+    
         sub_flow.update_step(step_name=EccSubFlowEnum.save_data.value,
-                             state=StateEnum.Success,
-                             info=info) 
+                             state=StateEnum.Success) 
         
         run_analysis(workspace = workspace, step = step, subflow = sub_flow)
     
@@ -382,16 +344,9 @@ def run_timing_opt_hold(workspace: Workspace,
         sub_flow.update_step(step_name=EccSubFlowEnum.run_timing_opt_hold.value, state=StateEnum.Success)
         
         reslut = save_data(workspace=workspace, step=step, module=eda_inst)
-        
-        info = {}
-        data = json_read(step.feature.get("db", ""))
-        if data is not None:
-            instance_num = data.get("Design Statis", {}).get("num_instances", 0) 
-            info["instance"] = instance_num
-            
+
         sub_flow.update_step(step_name=EccSubFlowEnum.save_data.value,
-                             state=StateEnum.Success,
-                             info=info) 
+                             state=StateEnum.Success) 
         
         run_analysis(workspace = workspace, step = step, subflow = sub_flow)
     
@@ -426,16 +381,9 @@ def run_routing(workspace: Workspace,
         sub_flow.update_step(step_name=EccSubFlowEnum.run_routing.value, state=StateEnum.Success)
         
         reslut = save_data(workspace=workspace, step=step, module=eda_inst)
-        
-        info = {}
-        data = json_read(step.feature.get("db", ""))
-        if data is not None:
-            instance_num = data.get("Design Statis", {}).get("num_instances", 0) 
-            info["instance"] = instance_num
-            
+
         sub_flow.update_step(step_name=EccSubFlowEnum.save_data.value,
-                             state=StateEnum.Success,
-                             info=info) 
+                             state=StateEnum.Success) 
         
         run_analysis(workspace = workspace, step = step, subflow = sub_flow)
     
@@ -470,16 +418,9 @@ def run_drc(workspace: Workspace,
         reslut = save_data(workspace=workspace, step=step, module=eda_inst)
         
         eda_inst.save_drc(feature_path=step.feature[f"step"])
-        
-        info = {}
-        data = json_read(step.feature.get("db", ""))
-        if data is not None:
-            instance_num = data.get("Design Statis", {}).get("num_instances", 0) 
-            info["instance"] = instance_num
-            
+   
         sub_flow.update_step(step_name=EccSubFlowEnum.save_data.value,
-                             state=StateEnum.Success,
-                             info=info) 
+                             state=StateEnum.Success) 
         
         run_analysis(workspace = workspace, step = step, subflow = sub_flow)
     
@@ -508,16 +449,9 @@ def run_legalization(workspace: Workspace,
         sub_flow.update_step(step_name=EccSubFlowEnum.run_legalization.value, state=StateEnum.Success)
         
         reslut = save_data(workspace=workspace, step=step, module=eda_inst)
-        
-        info = {}
-        data = json_read(step.feature.get("db", ""))
-        if data is not None:
-            instance_num = data.get("Design Statis", {}).get("num_instances", 0) 
-            info["instance"] = instance_num
-            
+   
         sub_flow.update_step(step_name=EccSubFlowEnum.save_data.value,
-                             state=StateEnum.Success,
-                             info=info) 
+                             state=StateEnum.Success) 
         
         run_analysis(workspace = workspace, step = step, subflow = sub_flow)
     
@@ -546,16 +480,9 @@ def run_filler(workspace: Workspace,
         sub_flow.update_step(step_name=EccSubFlowEnum.run_filler.value, state=StateEnum.Success)
         
         reslut = save_data(workspace=workspace, step=step, module=eda_inst)
-        
-        info = {}
-        data = json_read(step.feature.get("db", ""))
-        if data is not None:
-            instance_num = data.get("Design Statis", {}).get("num_instances", 0) 
-            info["instance"] = instance_num
-            
+      
         sub_flow.update_step(step_name=EccSubFlowEnum.save_data.value,
-                             state=StateEnum.Success,
-                             info=info) 
+                             state=StateEnum.Success) 
         
         run_analysis(workspace = workspace, step = step, subflow = sub_flow)
     
@@ -706,16 +633,9 @@ def run_floorplan(workspace: Workspace,
                              state=StateEnum.Success)
         
         reslut = save_data(workspace=workspace, step=step, module=eda_inst, feature_step=False)
-        
-        info = {}
-        data = json_read(step.feature.get("db", ""))
-        if data is not None:
-            instance_num = data.get("Design Statis", {}).get("num_instances", 0) 
-            info["instance"] = instance_num
             
         sub_flow.update_step(step_name=EccSubFlowEnum.save_data.value,
-                             state=StateEnum.Success,
-                             info=info) 
+                             state=StateEnum.Success) 
         
         run_analysis(workspace = workspace, step = step, subflow = sub_flow)
         
