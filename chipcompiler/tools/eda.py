@@ -77,7 +77,7 @@ def create_step(workspace : Workspace,
 
 def run_step(workspace: Workspace,
              step: WorkspaceStep,
-             module = None) -> bool:
+             ecc_module = None) -> bool:
     """
     Run the given step using the provided EDA engine.
     """
@@ -91,7 +91,7 @@ def run_step(workspace: Workspace,
     
     return eda_module.run_step(workspace=workspace, 
                                step=step,
-                               module=module)
+                               ecc_module=ecc_module)
     
 def save_layout_image(workspace: Workspace,
                       step: WorkspaceStep) -> bool:

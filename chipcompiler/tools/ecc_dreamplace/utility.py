@@ -1,23 +1,16 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
 
-from chipcompiler.tools.ecc.utility import is_eda_exist as is_ecc_exist
-
-
 def is_eda_exist() -> bool:
+    # check ecc exist
+    from chipcompiler.tools.ecc.utility import is_eda_exist as is_ecc_exist
     if not is_ecc_exist():
         return False
-
+    
+    # check ecc-dreamplace exist 
     try:
-        from .module import ECCToolsModule
-        from .run_dreamplace import is_dreamplace_available
-    except Exception:
-        return False
-
-    if not is_dreamplace_available():
-        return False
-
-    try:
-        return ECCToolsModule().has_dreamplace_db_io()
+        from dreamplace.Params import Params
+        from dreamplace.Placer import PlacementEngine
+        return True
     except Exception:
         return False

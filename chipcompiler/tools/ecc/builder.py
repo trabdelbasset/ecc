@@ -10,14 +10,15 @@ def build_step(workspace: Workspace,
                input_verilog : str,
                output_def : str | None = None,
                output_verilog : str | None = None,
-               output_gds : str | None = None) -> WorkspaceStep:
+               output_gds : str | None = None,
+               tool : str = "ecc") -> WorkspaceStep:
     """
     Build the given step in the specified workspace.
     """
     
     step = WorkspaceStep()
     step.name = step_name
-    step.tool = "ecc"
+    step.tool = tool
     step.version = "0.1"
 
     # build step directory
@@ -56,12 +57,14 @@ def build_step(workspace: Workspace,
     if output_gds is None:
         output_gds = f"{step.directory}/output/{workspace.design.name}_{step.name}.gds"
     output_image = f"{step.directory}/output/{workspace.design.name}_{step.name}.png"
+    output_json = f"{step.directory}/output/{workspace.design.name}_{step.name}.json"
     step.output = {
         "dir": f"{step.directory}/output",
         "def": output_def,
         "verilog": output_verilog,
         "gds": output_gds,
-        "image": output_image
+        "image": output_image,
+        "json" : output_json
     }
     
     # build data paths

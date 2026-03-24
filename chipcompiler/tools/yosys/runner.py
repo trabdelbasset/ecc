@@ -13,7 +13,7 @@ from chipcompiler.tools.yosys.utility import check_slang_plugin, get_yosys_runti
 
 def run_step(workspace: Workspace,
              step: WorkspaceStep,
-             module=None) -> bool:
+             ecc_module=None) -> bool:
     """
     Run the synthesis step using yosys.
 
@@ -23,7 +23,7 @@ def run_step(workspace: Workspace,
     Args:
         workspace: The workspace containing design info
         step: The step workspace with paths and config
-        module: Not used for yosys (kept for API compatibility)
+        ecc_module: Not used for yosys (kept for API compatibility)
 
     Returns:
         True if synthesis succeeded, False otherwise

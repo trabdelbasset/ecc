@@ -31,7 +31,7 @@ class ECCToolsModule:
         self.ecc.flow_exit()
         
     def get_dmInst_ptr(self):
-        self.ecc.get_dmInst()
+        return self.ecc.get_dmInst()
         
     def pydb(
         self,
@@ -135,6 +135,10 @@ class ECCToolsModule:
             netlist_path=output_verilog, 
             exclude_cell_names=cell_names
         )
+        
+    def json_save(self,
+                  path : str):
+        self.ecc.json_save(path=path)
     
     ########################################################################
     # feature api
@@ -584,3 +588,10 @@ class ECCToolsModule:
     ########################################################################
     def run_net_opt(self, config : str):
         return self.ecc.run_no_fixfanout(config)
+    
+    def build_rc_tree_from_flat_data(self, *args, **kwargs):
+        raise NotImplementedError("ecc dreamplace STA bridge is not implemented in this runtime")
+
+    def update_and_get_all_pin_timings(self, *args, **kwargs):
+        raise NotImplementedError("ecc dreamplace STA bridge is not implemented in this runtime")
+

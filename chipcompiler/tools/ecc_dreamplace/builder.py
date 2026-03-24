@@ -4,57 +4,11 @@
 from __future__ import annotations
 
 import shutil
-from copy import deepcopy
 from pathlib import Path
 
 from chipcompiler.data import Workspace, WorkspaceStep
 from chipcompiler.tools.ecc import builder as ecc_builder
 from chipcompiler.utility import json_read, json_write
-
-
-TOOL_NAME = "dreamplace"
-
-
-def _replace_directory_prefix(value, old_prefix: str, new_prefix: str):
-    if isinstance(value, str):
-        return value.replace(old_prefix, new_prefix)
-    if isinstance(value, dict):
-        return {
-            key: _replace_directory_prefix(item, old_prefix, new_prefix)
-            for key, item in value.items()
-        }
-    if isinstance(value, list):
-        return [_replace_directory_prefix(item, old_prefix, new_prefix) for item in value]
-    if isinstance(value, tuple):
-        return tuple(_replace_directory_prefix(item, old_prefix, new_prefix) for item in value)
-    return deepcopy(value)
-
-
-def _retarget_step_paths(step: WorkspaceStep, new_directory: str) -> WorkspaceStep:
-    old_directory = step.directory
-    step.directory = new_directory
-    step.tool = TOOL_NAME
-
-    for attr in (
-        "config",
-        "input",
-        "output",
-        "data",
-        "feature",
-        "report",
-        "log",
-        "script",
-        "analysis",
-        "subflow",
-        "checklist",
-        "result",
-    ):
-        value = getattr(step, attr)
-        setattr(step, attr, _replace_directory_prefix(value, old_directory, new_directory))
-
-    step.config["dreamplace"] = f"{step.config['dir']}/dreamplace.json"
-    return step
-
 
 def build_step(
     workspace: Workspace,
@@ -73,16 +27,21 @@ def build_step(
         output_def=output_def,
         output_verilog=output_verilog,
         output_gds=output_gds,
+        tool = "dreamplace"
     )
-    new_directory = f"{workspace.directory}/{step_name}_{TOOL_NAME}"
-    return _retarget_step_paths(step=step, new_directory=new_directory)
-
+    
+    step.config["dreamplace"] = f"{step.config['dir']}/dreamplace.json"
+    
+    return step
 
 def build_step_space(step: WorkspaceStep) -> None:
     ecc_builder.build_step_space(step)
 
-
-def _update_dreamplace_config(workspace: Workspace, step: WorkspaceStep) -> None:
+def build_step_config(workspace: Workspace, step: WorkspaceStep) -> None:
+    # build ecc config
+    ecc_builder.build_step_config(workspace, step)
+    
+    # build dreamplace config
     param_src = Path(__file__).resolve().parent / "configs" / "dreamplace.json"
     shutil.copy2(param_src, step.config["dreamplace"])
 
@@ -105,8 +64,3 @@ def _update_dreamplace_config(workspace: Workspace, step: WorkspaceStep) -> None
     params["differentiable_timing_obj"] = 0
 
     json_write(step.config["dreamplace"], params)
-
-
-def build_step_config(workspace: Workspace, step: WorkspaceStep) -> None:
-    ecc_builder.build_step_config(workspace, step)
-    _update_dreamplace_config(workspace, step)

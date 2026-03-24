@@ -21,7 +21,10 @@ from .service import(
     get_step_info
 )
 
-from .subflow import EccSubFlow
+from .subflow import (
+    EccSubFlow,
+    EccSubFlowEnum
+)
 
 from .checklist import EccChecklist
 
@@ -41,5 +44,6 @@ __all__ = [
     'ECCToolsPlot',
     'build_step_metrics',
     'get_step_info',
-    'EccSubFlow'
+    'EccSubFlow',
+    'EccSubFlowEnum'
 ]

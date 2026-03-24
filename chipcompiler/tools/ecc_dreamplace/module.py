@@ -1,56 +1,88 @@
-from chipcompiler.tools.ecc.module import ECCToolsModule as _BaseECCToolsModule
+#!/usr/bin/env python
+# -*- encoding: utf-8 -*-
 
+import importlib.machinery
+import json
+import logging
+import os
+import sys
+from pathlib import Path
 
-class ECCToolsModule(_BaseECCToolsModule):
-    def _require_dreamplace_api(self, api_name: str):
-        aliases = {
-            "get_dmInst_ptr": ("get_dmInst_ptr", "get_dmInst"),
-        }
-        candidate_names = aliases.get(api_name, (api_name,))
-        api = None
-        for candidate_name in candidate_names:
-            api = getattr(self.ecc, candidate_name, None)
-            if api is not None:
-                break
-        if api is None:
-            raise AttributeError(
-                f"ecc_py does not expose dreamplace IO API '{api_name}' "
-                f"(checked aliases: {', '.join(candidate_names)}). "
-                "Please use an ecc runtime that includes the ecc-tools/DreamPlace bridge."
-            )
-        return api
-
-    def has_dreamplace_db_io(self) -> bool:
-        has_dm_inst = any(
-            hasattr(self.ecc, api_name) for api_name in ("get_dmInst_ptr", "get_dmInst")
-        )
-        required = ("pydb", "write_placement_back")
-        return has_dm_inst and all(hasattr(self.ecc, api_name) for api_name in required)
-
-    def get_dmInst_ptr(self):
-        return self._require_dreamplace_api("get_dmInst_ptr")()
-
-    def pydb(
+from chipcompiler.data import StepEnum, Workspace, WorkspaceStep
+from chipcompiler.tools.ecc.module import ECCToolsModule
+    
+class DreamplaceModule:
+    def __init__(
         self,
-        dm_inst_ptr,
-        route_num_bins_x: int,
-        route_num_bins_y: int,
-        routability_opt_flag: int,
-        with_sta: int,
+        workspace: Workspace,
+        step: WorkspaceStep,
+        ecc_module: ECCToolsModule,
+        input_def: str,
+        input_verilog: str,
+        output_def: str,
+        output_verilog: str,
     ):
-        return self._require_dreamplace_api("pydb")(
-            dm_inst_ptr,
-            route_num_bins_x,
-            route_num_bins_y,
-            routability_opt_flag,
-            with_sta,
-        )
+        self.workspace = workspace
+        self.step = step
+        self.ecc_module = ecc_module
+        self.input_def = input_def
+        self.input_verilog = input_verilog
+        self.output_def = output_def
+        self.output_verilog = output_verilog
+        self.param_path = step.config["dreamplace"]
+        self.result_dir = step.data.get(step.name, step.data["dir"])
 
-    def build_macro_connection_map(self, max_hop: int):
-        api = getattr(self.ecc, "build_macro_connection_map", None)
-        if api is None:
-            return []
-        return api(max_hop)
+    def _build_params(self, params_cls, legalize_only: bool):
+        with open(self.param_path, encoding="utf-8") as f_reader:
+            config = json.load(f_reader)
 
+        params = params_cls()
+        params.fromJson(config)
+        params.def_input = self.input_def
+        params.verilog_input = self.input_verilog
+        params.result_dir = self.result_dir
+        params.base_design_name = self.workspace.design.name
+        params.with_sta = False
+        params.timing_opt_flag = 0
+        params.timing_eval_flag = 0
+        params.differentiable_timing_obj = 0
 
-__all__ = ["ECCToolsModule"]
+        if legalize_only:
+            params.global_place_flag = 0
+            params.legalize_flag = 1
+            params.enable_fillers = 0
+            params.random_center_init_flag = 0
+            params.auto_adjust_bins = 1
+
+        return params
+
+    def _log_path(self, legalize_only: bool) -> str:
+        log_name = "dreamplace_legalization.log" if legalize_only else "dreamplace_placement.log"
+        return os.path.join(self.result_dir, log_name)
+
+    def _run(self, legalize_only: bool) -> bool:
+        from dreamplace.Params import Params
+        from dreamplace.Placer import PlacementEngine
+        
+        params = self._build_params(Params, legalize_only=legalize_only)
+
+        engine = PlacementEngine(params)
+        engine.setup_rawdb(ecc_module=self.ecc_module)
+        ppa = engine.run()
+
+        if ppa.get("hpwl") == float("inf"):
+            LOGGER = logging.getLogger(__name__)
+            LOGGER.error("dreamplace failed for %s", self.step.name)
+            return False
+
+        return True
+
+    def run_placement(self) -> bool:
+        return self._run(legalize_only=False)
+
+    def run_legalization(self) -> bool:
+        if self.step.name != StepEnum.LEGALIZATION.value:
+            return False
+        return self._run(legalize_only=True)
+
+__all__ = ["DreamplaceModule"]
