@@ -89,6 +89,21 @@ Common failures:
 - auditwheel policy mismatch (e.g. glibc symbols too new): rebuild on older compatible base or adjust target policy
 - missing runtime libraries: inspect `dist/wheel/reports/show.txt`
 
+### Bazel Wheel Build (DreamPlace + auditwheel)
+
+Build a portable DreamPlace wheel (includes compiled C++ operators, excludes PyTorch/CUDA runtime):
+
+```bash
+bazel build //:dreamplace_raw_wheel    # Sandboxed, cacheable — produces raw .whl
+bazel run //:build_dreamplace_wheel    # auditwheel repair + smoke test
+```
+
+Artifacts output to `dist/wheel/` (shared with ECC wheel). Requirements same as ECC wheel build, plus `torch` in venv.
+
+Common failures:
+- torch lib dir not found: run `uv sync --frozen --all-groups --extra dreamplace --python 3.11`
+- auditwheel not found: run `uv sync --frozen --all-groups --python 3.11 --all-extras`
+
 ### Standalone Executable
 ```bash
 source .venv/bin/activate
@@ -270,6 +285,29 @@ Runtime handling:
 - `get_yosys_command()` - Side-effect-free detection
 - `get_yosys_runtime()` - Returns `(command, env)` for subprocess (no global `os.environ` mutation)
 - `check_slang_plugin()` - Preflight check: `yosys -p "plugin -i slang"`
+
+#### Troubleshooting: Yosys executable not found
+
+If you see this error:
+
+```
+RuntimeError: Yosys executable not found in system PATH, and CHIPCOMPILER_OSS_CAD_DIR is not set.
+Please install yosys or set CHIPCOMPILER_OSS_CAD_DIR to the OSS CAD Suite root directory.
+```
+
+Download the [OSS CAD Suite](https://github.com/YosysHQ/oss-cad-suite-build/releases) pre-built package for your platform, extract it, and set the environment variable:
+
+```bash
+# Download and extract (example for Linux x86_64)
+wget https://github.com/YosysHQ/oss-cad-suite-build/releases/download/<version>/oss-cad-suite-linux-x64-<date>.tgz
+tar -xzf oss-cad-suite-linux-x64-<date>.tgz
+
+# Set the environment variable
+export CHIPCOMPILER_OSS_CAD_DIR=/path/to/oss-cad-suite
+
+# Or add yosys to PATH directly
+source /path/to/oss-cad-suite/environment
+```
 
 ### PDK Runtime Resolution
 
