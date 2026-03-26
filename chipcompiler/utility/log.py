@@ -10,8 +10,6 @@ from typing import Optional, TextIO
 import time
 
 
-API_RUNTIME_LOG_ENV_KEY = "CHIPCOMPILER_API_SERVER_LOG_FILE"
-
 #TODO: Move some functions to Logger Module
 def build_timestamped_log_file(log_file: str, pid: int | None = None) -> str:
     """
@@ -91,14 +89,6 @@ def init_api_runtime_log(
     return resolved
 
 
-def get_api_log_file_from_env() -> str | None:
-    """
-    Get runtime log file path from environment.
-    """
-    value = os.environ.get(API_RUNTIME_LOG_ENV_KEY, "").strip()
-    return value or None
-
-
 class Logger:
     def __init__(
         self,
@@ -108,16 +98,20 @@ class Logger:
         max_bytes: int = 10 * 1024 * 1024,  # 10MB
         backup_count: int = 5,
         level: int = logging.INFO,
+        console_level: Optional[int] = None,
+        file_level: Optional[int] = None,
         fmt: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     ):
         self.logger = logging.getLogger(name)
         self.logger.setLevel(level)
+        self.logger.propagate = False
 
         if not self.logger.handlers:
             formatter = logging.Formatter(fmt)
 
             console_handler = logging.StreamHandler(sys.stdout)
             console_handler.setFormatter(formatter)
+            console_handler.setLevel(logging.WARNING if console_level is None else console_level)
             self.logger.addHandler(console_handler)
             
             if log_file or log_dir:
@@ -126,6 +120,7 @@ class Logger:
                     file, maxBytes=max_bytes, backupCount=backup_count
                 )
                 file_handler.setFormatter(formatter)
+                file_handler.setLevel(level if file_level is None else file_level)
                 self.logger.addHandler(file_handler)
 
     def debug(self, msg: str, *args, **kwargs):
@@ -164,6 +159,8 @@ def create_logger(
     max_bytes: int = 10 * 1024 * 1024,  # 10MB
     backup_count: int = 5,
     level: int = logging.INFO,
+    console_level: Optional[int] = None,
+    file_level: Optional[int] = None,
     fmt: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 ) -> Logger:
     if log_file is not None and os.path.exists(log_file):
@@ -173,6 +170,8 @@ def create_logger(
             max_bytes=max_bytes,
             backup_count=backup_count,
             level=level,
+            console_level=console_level,
+            file_level=file_level,
             fmt=fmt,
         )
     elif log_dir is not None and os.path.exists(log_dir):
@@ -182,6 +181,8 @@ def create_logger(
             max_bytes=max_bytes,
             backup_count=backup_count,
             level=level,
+            console_level=console_level,
+            file_level=file_level,
             fmt=fmt,
         ) 
     else:
@@ -191,5 +192,7 @@ def create_logger(
             max_bytes=max_bytes,
             backup_count=backup_count,
             level=level,
+            console_level=console_level,
+            file_level=file_level,
             fmt=fmt,
         )
