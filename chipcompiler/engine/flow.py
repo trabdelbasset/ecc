@@ -11,19 +11,19 @@ from threading import Thread
 from chipcompiler.data import Workspace, WorkspaceStep, StateEnum, StepEnum, log_flow
 from chipcompiler.engine import EngineDB
 from chipcompiler.utility import track_process_memory
-from chipcompiler.utility.log import (
-    API_RUNTIME_LOG_ENV_KEY,
-    redirect_stdio_to_file,
-)
+from chipcompiler.utility.log import redirect_stdio_to_file
+
+logger = logging.getLogger(__name__)
 
 def _run_step_in_subprocess(workspace: Workspace, workspace_step: WorkspaceStep) -> None:
     """
     Step subprocess entry point: redirect stdio to log file if configured,
     then execute the EDA tool step.
     """
-    # Redirect stdout/stderr to runtime log file (if set by API server)
-    log_file = os.environ.get(API_RUNTIME_LOG_ENV_KEY, "").strip()
+    # Redirect stdout/stderr to the step's own log file.
+    log_file = workspace_step.log.get("file", "")
     if log_file:
+        log_file = os.path.abspath(log_file)
         try:
             os.makedirs(os.path.dirname(log_file) or ".", exist_ok=True)
             redirect_stdio_to_file(log_file)
@@ -324,7 +324,9 @@ class EngineFlow:
         p = Process(target=_run_step_in_subprocess,
                     args=(self.workspace, workspace_step))
         p.start()
-        self.workspace.logger.info("[DISPATCH] %s pid=%s", step_tag, p.pid)
+        step_log_file = workspace_step.log.get("file", "")
+        logger.info("[DISPATCH] %s pid=%s log=%s", step_tag, p.pid,
+                    os.path.abspath(step_log_file) if step_log_file else "N/A")
 
         # track peak memory in a background thread
         peak_memory_result = [0]
