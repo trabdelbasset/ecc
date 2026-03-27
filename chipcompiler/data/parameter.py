@@ -154,7 +154,7 @@ ICS55_PARAMETERS_TEMPLATE = {
                 "is power" : False
             }
         ],
-        "grid" : {
+        "Grid" : {
             "layer" : "MET1",
             "power net" : "VDD",
             "power ground" : "VSS",
