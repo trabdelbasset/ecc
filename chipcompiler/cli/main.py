@@ -6,6 +6,7 @@ import sys
 from collections.abc import Sequence
 
 from chipcompiler.data import create_workspace, get_parameters
+from chipcompiler.data.pdk import ECC_PDK_CONFIG_FILENAME
 from chipcompiler.engine import EngineFlow
 from chipcompiler.rtl2gds import build_rtl2gds_flow
 from chipcompiler.utility.filelist import parse_filelist, validate_filelist
@@ -24,7 +25,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--design", required=True, help="Design name")
     parser.add_argument("--top", required=True, help="Top module name")
     parser.add_argument("--clock", required=True, help="Clock port name")
-    parser.add_argument("--pdk-root", required=True, help="ICS55 PDK root directory")
+    parser.add_argument("--pdk-root", required=True, help="PDK root directory")
+    parser.add_argument(
+        "--pdk",
+        default="ics55",
+        help="PDK name (default: ics55). For external PDKs, --pdk-root must "
+             "contain an ecc_pdk.json config file.",
+    )
     parser.add_argument(
         "--freq",
         type=float,
@@ -56,10 +63,18 @@ def resolve_rtl_input(rtl_path: str) -> tuple[str, str, str]:
 
 
 def build_parameters(args: argparse.Namespace) -> dict:
-    parameters = get_parameters("ics55")
+    pdk_name = args.pdk.strip().lower()
+
+    # For external PDKs, set the env var so get_parameters can find ecc_pdk.json
+    if pdk_name != "ics55":
+        env_var = f"CHIPCOMPILER_{pdk_name.upper()}_PDK_ROOT"
+        if not os.environ.get(env_var):
+            os.environ[env_var] = os.path.abspath(args.pdk_root)
+
+    parameters = get_parameters(pdk_name)
     parameters.data.update(
         {
-            "PDK": "ics55",
+            "PDK": pdk_name,
             "Design": args.design,
             "Top module": args.top,
             "Clock": args.clock,
@@ -91,6 +106,16 @@ def _validate_args(args: argparse.Namespace) -> str | None:
     if not os.path.isdir(pdk_root):
         return f"--pdk-root must point to a directory: {pdk_root}"
 
+    # For external PDKs, verify ecc_pdk.json exists
+    pdk_name = args.pdk.strip().lower()
+    if pdk_name != "ics55":
+        config_path = os.path.join(pdk_root, ECC_PDK_CONFIG_FILENAME)
+        if not os.path.isfile(config_path):
+            return (
+                f"External PDK '{pdk_name}' requires an {ECC_PDK_CONFIG_FILENAME} "
+                f"in --pdk-root ({pdk_root})"
+            )
+
     if args.freq <= 0:
         return "--freq must be greater than 0"
 
@@ -109,12 +134,13 @@ def run(argv: Sequence[str] | None = None) -> int:
     try:
         _, origin_verilog, input_filelist = resolve_rtl_input(args.rtl)
         parameters = build_parameters(args)
+        pdk_name = args.pdk.strip().lower()
 
         workspace = create_workspace(
             directory=args.workspace,
             origin_def="",
             origin_verilog=origin_verilog,
-            pdk="ics55",
+            pdk=pdk_name,
             parameters=parameters,
             input_filelist=input_filelist,
             pdk_root=args.pdk_root,

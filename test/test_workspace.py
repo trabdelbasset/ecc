@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from chipcompiler.data import create_workspace, load_workspace
+from chipcompiler.data.pdk import ECC_PDK_CONFIG_FILENAME
 
 
 def _create_minimal_ics55_pdk(root: Path) -> Path:
@@ -85,7 +86,7 @@ def test_load_workspace_restores_pdk_root_from_parameters(tmp_path):
 #SG13G2 workspace tests
 
 def _create_minimal_sg13g2_pdk(root: Path) -> Path:
-    """Create the minimal SG13G2 directory tree required by get_pdk()."""
+    """Create the minimal SG13G2 directory tree and ecc_pdk.json."""
     tech_path = root / "libs.ref" / "sg13g2_stdcell" / "lef" / "sg13g2_tech.lef"
     tech_path.parent.mkdir(parents=True, exist_ok=True)
     tech_path.write_text("VERSION 5.8 ;\n")
@@ -96,6 +97,44 @@ def _create_minimal_sg13g2_pdk(root: Path) -> Path:
     lib_path = root / "libs.ref" / "sg13g2_stdcell" / "lib" / "sg13g2_stdcell_typ_1p20V_25C.lib"
     lib_path.parent.mkdir(parents=True, exist_ok=True)
     lib_path.write_text("library(test) { }\n")
+
+    config = {
+        "name": "sg13g2",
+        "version": "1.0",
+        "env_vars": ["CHIPCOMPILER_SG13G2_PDK_ROOT", "SG13G2_PDK_ROOT"],
+        "files": {
+            "tech_lef": "libs.ref/sg13g2_stdcell/lef/sg13g2_tech.lef",
+            "lefs": ["libs.ref/sg13g2_stdcell/lef/sg13g2_stdcell.lef"],
+            "libs": ["libs.ref/sg13g2_stdcell/lib/sg13g2_stdcell_typ_1p20V_25C.lib"]
+        },
+        "cells": {
+            "site_core": "CoreSite",
+            "buffers": ["sg13g2_buf_1"],
+            "fillers": ["sg13g2_fill_1"],
+            "tie_high_cell": "sg13g2_tiehi",
+            "tie_high_port": "L_HI",
+            "tie_low_cell": "sg13g2_tielo",
+            "tie_low_port": "L_LO",
+            "dont_use": []
+        },
+        "parameters": {
+            "PDK": "sg13g2",
+            "Design": "",
+            "Top module": "",
+            "Clock": "",
+            "Frequency max [MHz]": 100,
+            "Die": {"Size": [], "Area": 0},
+            "Core": {"Size": [], "Area": 0, "Bounding box": "",
+                     "Utilitization": 0.65, "Margin": [17.5, 17.5], "Aspect ratio": 1},
+            "Max fanout": 20, "Target density": 0.65, "Target overflow": 0.1,
+            "Global right padding": 0, "Cell padding x": 0, "Routability opt flag": 1,
+            "Bottom layer": "Metal2", "Top layer": "Metal5",
+            "Floorplan": {"Tap distance": 0, "Auto place pin": {"layer": "Metal3", "width": 300, "height": 600, "sides": []},
+                          "Tracks": []},
+            "PDN": {"IO": [], "Global connect": [], "Grid": {}, "Stripe": [], "Connect layers": []}
+        }
+    }
+    (root / ECC_PDK_CONFIG_FILENAME).write_text(json.dumps(config, indent=4))
 
     return root
 

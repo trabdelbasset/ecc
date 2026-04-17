@@ -1,9 +1,16 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
 
+import json
 import os
 from copy import deepcopy
 from dataclasses import dataclass, field
+
+from chipcompiler.data.pdk import (
+    ECC_PDK_CONFIG_FILENAME,
+    _resolve_pdk_root,
+    _resolve_env_vars_for_pdk,
+)
 
 ICS55_PARAMETERS_TEMPLATE = {
     "PDK":"ICS55",
@@ -197,74 +204,6 @@ ICS55_PARAMETERS_TEMPLATE = {
         ]
     } 
 }
-SG13G2_PARAMETERS_TEMPLATE = {
-    "PDK": "sg13g2",
-    "Design": "",
-    "Top module": "",
-    "Die": {
-        "Size": [],
-        "Area": 0
-    },
-    "Core": {
-        "Size": [],
-        "Area": 0,
-        "Bounding box": "",
-        "Utilitization": 0.65,       
-        "Margin": [17.5, 17.5],      
-        "Aspect ratio": 1
-    },
-    "Max fanout": 20,
-    "Target density": 0.65,
-    "Target overflow": 0.1,
-    "Global right padding": 0,
-    "Cell padding x": 0,
-    "Routability opt flag": 1,
-    "Clock": "",
-    "Frequency max [MHz]": 100,
-    "Bottom layer": "Metal2",        
-    "Top layer": "Metal5",           
-    "Floorplan": {
-        "Tap distance": 0,           
-        "Auto place pin": {
-            "layer": "Metal3", 
-            "width": 300,
-            "height": 600,
-            "sides": []
-        },
-        "Tracks": [
-            {"layer": "Metal1", "x start": 0, "x step": 420, "y start": 0, "y step": 420},
-            {"layer": "Metal2", "x start": 0, "x step": 480, "y start": 0, "y step": 480},  
-            {"layer": "Metal3", "x start": 0, "x step": 420, "y start": 0, "y step": 420},
-            {"layer": "Metal4", "x start": 0, "x step": 480, "y start": 0, "y step": 480},
-            {"layer": "Metal5", "x start": 0, "x step": 420, "y start": 0, "y step": 420},
-        ]
-    },
-    "PDN": {
-        "IO": [
-            {"net name": "VDD", "direction": "INOUT", "is power": True},
-            {"net name": "VSS", "direction": "INOUT", "is power": False}
-        ],
-        "Global connect": [
-            {"net name": "VDD", "instance pin name": "VDD", "is power": True},
-            {"net name": "VSS", "instance pin name": "VSS", "is power": False}
-        ],
-        "Grid": {
-            "layer": "Metal1",
-            "power net": "VDD",
-            "power ground": "VSS",
-            "width": 0.44,
-            "offset": 0
-        },
-        "Stripe": [
-            {"layer": "Metal4", "power net": "VDD", "ground net": "VSS", "width": 1.6, "pitch": 20, "offset": 1},
-            {"layer": "Metal5", "power net": "VDD", "ground net": "VSS", "width": 1.6, "pitch": 20, "offset": 1}
-        ],
-        "Connect layers": [
-            {"layers": ["Metal1", "Metal5"]},
-            {"layers": ["Metal4", "Metal5"]}
-        ]
-    }
-}
 
 ICS55_DESIGN_PARAMETERS = {
     "gcd": {
@@ -295,6 +234,25 @@ def save_parameter(parameter : Parameters) -> bool:
     return json_write(file_path=parameter.path,
                       data=parameter.data)
 
+def load_parameters_from_json(pdk_name: str) -> dict:
+    """
+    Load the parameters template from ecc_pdk.json for an external PDK.
+    Returns the "parameters" section as a dict, or empty dict if not found.
+    """
+    env_vars = _resolve_env_vars_for_pdk(pdk_name)
+    pdk_root = _resolve_pdk_root("", env_vars)
+    if not pdk_root:
+        return {}
+    config_path = os.path.join(pdk_root, ECC_PDK_CONFIG_FILENAME)
+    if not os.path.isfile(config_path):
+        return {}
+    try:
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+        return config.get("parameters", {})
+    except (json.JSONDecodeError, OSError):
+        return {}
+
 def get_parameters(pdk_name: str = "", path: str = "") -> Parameters:
     if os.path.isfile(path):
         return load_parameter(path)
@@ -302,11 +260,13 @@ def get_parameters(pdk_name: str = "", path: str = "") -> Parameters:
     parameters = Parameters()
     parameters.path = path
 
-    match pdk_name.lower():
-        case "ics55":
-            parameters.data = deepcopy(ICS55_PARAMETERS_TEMPLATE)
-        case "sg13g2":
-            parameters.data = deepcopy(SG13G2_PARAMETERS_TEMPLATE)
+    pdk_lower = pdk_name.lower() if pdk_name else ""
+    if pdk_lower == "ics55":
+        parameters.data = deepcopy(ICS55_PARAMETERS_TEMPLATE)
+    elif pdk_lower:
+        template = load_parameters_from_json(pdk_lower)
+        if template:
+            parameters.data = deepcopy(template)
 
     return parameters
 

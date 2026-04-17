@@ -2,10 +2,13 @@
 # -*- encoding: utf-8 -*-
 
 from dataclasses import dataclass, field
+import json
 import logging
 import os
 
 logger = logging.getLogger(__name__)
+
+ECC_PDK_CONFIG_FILENAME = "ecc_pdk.json"
 
 @dataclass
 class PDK:
@@ -49,17 +52,104 @@ class PDK:
             logger.error(msg)
             raise ValueError(msg)
 
+def _resolve_pdk_root(pdk_root: str, env_vars: list) -> str:
+    candidate = (pdk_root or "").strip()
+    if not candidate:
+        for var in env_vars:
+            candidate = os.environ.get(var, "").strip()
+            if candidate:
+                break
+    if not candidate:
+        return ""
+    return os.path.abspath(os.path.expanduser(candidate))
+
+def _find_pdk_config(pdk_root: str) -> str:
+    """Return path to ecc_pdk.json inside pdk_root, or empty string."""
+    if not pdk_root:
+        return ""
+    config_path = os.path.join(pdk_root, ECC_PDK_CONFIG_FILENAME)
+    if os.path.isfile(config_path):
+        return config_path
+    return ""
+
+def _resolve_env_vars_for_pdk(pdk_name: str) -> list:
+    """Return the standard env var names for a given PDK name."""
+    upper = pdk_name.upper()
+    return [
+        f"CHIPCOMPILER_{upper}_PDK_ROOT",
+        f"{upper}_PDK_ROOT",
+    ]
+
+def load_pdk_from_json(pdk_root: str) -> PDK:
+    """
+    Load a PDK configuration from ecc_pdk.json in the given pdk_root.
+    File paths in the JSON are relative to pdk_root and resolved to absolute.
+    Raises ValueError if the config file is missing or malformed.
+    """
+    config_path = _find_pdk_config(pdk_root)
+    if not config_path:
+        raise ValueError(
+            f"PDK config file '{ECC_PDK_CONFIG_FILENAME}' not found in: {pdk_root}"
+        )
+
+    try:
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+    except (json.JSONDecodeError, OSError) as e:
+        raise ValueError(
+            f"Failed to read PDK config '{config_path}': {e}"
+        )
+
+    files = config.get("files", {})
+    cells = config.get("cells", {})
+
+    tech_rel = files.get("tech_lef", "")
+    tech_path = os.path.join(pdk_root, tech_rel) if tech_rel else ""
+
+    lef_paths = [
+        os.path.join(pdk_root, p) for p in files.get("lefs", [])
+    ]
+    lib_paths = [
+        os.path.join(pdk_root, p) for p in files.get("libs", [])
+    ]
+
+    pdk = PDK(
+        name=config.get("name", ""),
+        version=config.get("version", ""),
+        root=pdk_root,
+        tech=tech_path if tech_path and os.path.isfile(tech_path) else "",
+        lefs=[path for path in lef_paths if os.path.isfile(path)],
+        libs=[path for path in lib_paths if os.path.isfile(path)],
+        site_core=cells.get("site_core", ""),
+        site_io=cells.get("site_io", ""),
+        site_corner=cells.get("site_corner", ""),
+        tap_cell=cells.get("tap_cell", ""),
+        end_cap=cells.get("end_cap", ""),
+        buffers=cells.get("buffers", []),
+        fillers=cells.get("fillers", []),
+        tie_high_cell=cells.get("tie_high_cell", ""),
+        tie_high_port=cells.get("tie_high_port", ""),
+        tie_low_cell=cells.get("tie_low_cell", ""),
+        tie_low_port=cells.get("tie_low_port", ""),
+        dont_use=cells.get("dont_use", []),
+    )
+
+    return pdk
+
 def get_pdk(pdk_name : str, pdk_root: str = "") -> PDK:
     """
     Return the PDK instance based on the given pdk name.
+
+    - "ics55": uses the hardcoded ICS55 configuration.
+    - Any other name: loads from ecc_pdk.json in the resolved pdk_root.
     """
     pdk_name_normalized = (pdk_name or "").strip().lower()
     if pdk_name_normalized == "ics55":
         pdk = PDK_ICS55(pdk_root=pdk_root)
-    elif pdk_name_normalized == "sg13g2":
-        pdk = PDK_SG13G2(pdk_root=pdk_root)
     else:
-        pdk = PDK(name=pdk_name_normalized)
+        env_vars = _resolve_env_vars_for_pdk(pdk_name_normalized)
+        resolved_root = _resolve_pdk_root(pdk_root, env_vars)
+        pdk = load_pdk_from_json(resolved_root)
     pdk.validate()
     return pdk
 
@@ -67,14 +157,11 @@ def PDK_ICS55(pdk_root: str = "") -> PDK:
     current_dir = os.path.split(os.path.abspath(__file__))[0]
     root = current_dir.rsplit('/', 2)[0]
     default_pdk_root = "{}/chipcompiler/thirdparty/icsprout55-pdk".format(root)
+    resolved_root = _resolve_pdk_root(
+        pdk_root,
+        ["CHIPCOMPILER_ICS55_PDK_ROOT", "ICS55_PDK_ROOT"]
+    ) or os.path.abspath(default_pdk_root)
 
-    # Resolve: explicit arg > env vars > default
-    resolved_root = os.path.abspath(os.path.expanduser(
-        (pdk_root or "").strip()
-        or os.environ.get("CHIPCOMPILER_ICS55_PDK_ROOT", "").strip()
-        or os.environ.get("ICS55_PDK_ROOT", "").strip()
-        or default_pdk_root
-    ))
     stdcell_dir = "{}/IP/STD_cell/ics55_LLSC_H7C_V1p10C100".format(resolved_root)
 
     tech_path = "{}/prtech/techLEF/N551P6M.lef".format(resolved_root)
@@ -130,56 +217,6 @@ def PDK_ICS55(pdk_root: str = "") -> PDK:
             "*OAI33*",
             "*NOR4*",
             "ICG*"
-        ]
-    )
-
-    return pdk
-
-def PDK_SG13G2(pdk_root: str = "") -> PDK:
-    resolved_root = os.path.abspath(os.path.expanduser(
-        (pdk_root or "").strip()
-        or os.environ.get("CHIPCOMPILER_SG13G2_PDK_ROOT", "").strip()
-        or os.environ.get("SG13G2_PDK_ROOT", "").strip()
-    ))
-
-    tech_path = "{}/libs.ref/sg13g2_stdcell/lef/sg13g2_tech.lef".format(resolved_root)
-    lef_paths = [
-        "{}/libs.ref/sg13g2_stdcell/lef/sg13g2_stdcell.lef".format(resolved_root)
-    ]
-    lib_paths = [
-        "{}/libs.ref/sg13g2_stdcell/lib/sg13g2_stdcell_typ_1p20V_25C.lib".format(resolved_root)
-    ]
-
-    pdk = PDK(
-        name="sg13g2",
-        version="1.0",
-        root=resolved_root,
-        tech=tech_path if os.path.isfile(tech_path) else "",
-        lefs=[path for path in lef_paths if os.path.isfile(path)],
-        libs=[path for path in lib_paths if os.path.isfile(path)],
-        site_core="CoreSite",
-        buffers=[
-            "sg13g2_buf_1",
-            "sg13g2_buf_2",
-            "sg13g2_buf_4",
-            "sg13g2_buf_8",
-            "sg13g2_buf_16"
-        ],
-        fillers=[
-            "sg13g2_fill_1",
-            "sg13g2_fill_2",
-            "sg13g2_decap_4",
-            "sg13g2_decap_8"
-        ],
-        tie_high_cell="sg13g2_tiehi",
-        tie_high_port="L_HI",
-        tie_low_cell="sg13g2_tielo",
-        tie_low_port="L_LO",
-        dont_use=[
-            "sg13g2_lgcp_1",
-            "sg13g2_sighold",
-            "sg13g2_slgcp_1",
-            "sg13g2_dfrbp_2"
         ]
     )
 

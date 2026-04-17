@@ -56,12 +56,14 @@ def test_sg13g2_gcd():
 
     input_def = ""
     input_verilog = "{}/test/fixtures/gcd/gcd.v".format(root) # RTL file
+    pdk_root = "{}/ihp-sg13g2".format(root)
+    os.environ["CHIPCOMPILER_SG13G2_PDK_ROOT"] = pdk_root
+
     parameters=get_design_parameters("sg13g2", "gcd")
     parameters.data["Design"] = "gcd"
     parameters.data["Top module"] = "gcd"
     parameters.data["Clock"] = "clk"
     
-    pdk_root = "{}/ihp-sg13g2".format(root)
     pdk = get_pdk("sg13g2", pdk_root=pdk_root)
 
     workspace = create_workspace(
