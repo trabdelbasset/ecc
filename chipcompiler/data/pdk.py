@@ -142,12 +142,12 @@ def PDK_SG13G2(pdk_root: str = "") -> PDK:
         or os.environ.get("SG13G2_PDK_ROOT", "").strip()
     ))
 
-    tech_path = "{}/lef/sg13g2_tech.lef".format(resolved_root)
+    tech_path = "{}/libs.ref/sg13g2_stdcell/lef/sg13g2_tech.lef".format(resolved_root)
     lef_paths = [
-        "{}/lef/sg13g2_stdcell.lef".format(resolved_root)
+        "{}/libs.ref/sg13g2_stdcell/lef/sg13g2_stdcell.lef".format(resolved_root)
     ]
     lib_paths = [
-        "{}/lib/sg13g2_stdcell_typ_1p20V_25C.lib".format(resolved_root)
+        "{}/libs.ref/sg13g2_stdcell/lib/sg13g2_stdcell_typ_1p20V_25C.lib".format(resolved_root)
     ]
 
     pdk = PDK(
