@@ -259,13 +259,13 @@ def PDK_SG13G2(pdk_root: str | Path = "") -> PDK:
     )
     resolved_root = Path(root_text).expanduser().resolve()
 
-    tech_path = resolved_root / "libs.ref" / "sg13g2_stdcell" / "lef" / "sg13g2_tech.lef"
+    tech_path = resolved_root / "lef" / "sg13g2_tech.lef"
     lef_paths = [
-        resolved_root / "libs.ref" / "sg13g2_stdcell" / "lef" / "sg13g2_stdcell.lef"
+        resolved_root / "lef" / "sg13g2_stdcell.lef"
     ]
     lib_paths = [
         (
-            resolved_root / "libs.ref" / "sg13g2_stdcell" / "lib"
+            resolved_root / "lib"
             / "sg13g2_stdcell_typ_1p20V_25C.lib"
         )
     ]
@@ -278,6 +278,8 @@ def PDK_SG13G2(pdk_root: str | Path = "") -> PDK:
         lefs=[path for path in lef_paths if path.is_file()],
         libs=[path for path in lib_paths if path.is_file()],
         site_core="CoreSite",
+        site_io="CoreSite",
+        site_corner="CoreSite",
         buffers=[
             "sg13g2_buf_1",
             "sg13g2_buf_2",

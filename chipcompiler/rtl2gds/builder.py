@@ -17,6 +17,7 @@ def build_rtl2gds_flow() -> list:
     steps.append((StepEnum.LEGALIZATION, "dreamplace", StateEnum.Unstart))
     steps.append((StepEnum.ROUTING, "ecc", StateEnum.Unstart))
     steps.append((StepEnum.DRC, "ecc", StateEnum.Unstart))
+    steps.append((StepEnum.ANTENNA, "ecc", StateEnum.Unstart))
     steps.append((StepEnum.FILLER, "ecc", StateEnum.Unstart))
     
     return steps

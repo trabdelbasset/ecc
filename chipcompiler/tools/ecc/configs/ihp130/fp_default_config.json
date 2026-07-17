@@ -1,0 +1,168 @@
+{
+    "Floorplan" : {
+        "Tap distance" : 58,
+        "Auto place pin" : {
+          "layer" : "Metal3",
+          "width" : 300,
+          "height" : 600,
+          "sides" : []  
+        },
+        "Tracks" :[
+            {
+                "layer" : "Metal1",
+                "x start" : 0,
+                "x step" : 200,
+                "y start" : 0,
+                "y step" : 200
+            },
+            {
+                "layer" : "Metal2",
+                "x start" : 0,
+                "x step" : 200,
+                "y start" : 0,
+                "y step" : 200
+            },
+            {
+                "layer" : "Metal3",
+                "x start" : 0,
+                "x step" : 200,
+                "y start" : 0,
+                "y step" : 200
+            },
+            {
+                "layer" : "Metal4",
+                "x start" : 0,
+                "x step" : 200,
+                "y start" : 0,
+                "y step" : 200
+            },
+            {
+                "layer" : "Metal5",
+                "x start" : 0,
+                "x step" : 200,
+                "y start" : 0,
+                "y step" : 200
+            },
+            {
+                "layer" : "TopMetal1",
+                "x start" : 0,
+                "x step" : 800,
+                "y start" : 0,
+                "y step" : 800
+            },
+            {
+                "layer" : "TopMetal2",
+                "x start" : 0,
+                "x step" : 5000,
+                "y start" : 0,
+                "y step" : 5000
+            }
+        ]
+    },
+    "Macro Placement" : [],
+    "PDN" : {
+        "IO" : [
+            {
+                "net name" : "VDD",
+                "direction" : "INOUT",
+                "is power" : true
+            },
+            {
+                "net name" : "VDDIO",
+                "direction" : "INOUT",
+                "is power" : true
+            },
+            {
+                "net name" : "VSS",
+                "direction" : "INOUT",
+                "is power" : false
+            },
+            {
+                "net name" : "VSSIO",
+                "direction" : "INOUT",
+                "is power" : false
+            }
+        ],
+        "Global connect" : [
+            {
+                "net name" : "VDD",
+                "instance pin name" : "VDD",
+                "is power" : true
+            },
+            {
+                "net name" : "VDD",
+                "instance pin name" : "VDD1",
+                "is power" : true
+            },
+            {
+                "net name" : "VDD",
+                "instance pin name" : "VNW",
+                "is power" : true
+            },
+            {
+                "net name" : "VDDIO",
+                "instance pin name" : "VDDIO",
+                "is power" : true
+            },
+            {
+                "net name" : "VSS",
+                "instance pin name" : "VSS",
+                "is power" : false
+            },
+            {
+                "net name" : "VSS",
+                "instance pin name" : "VSS1",
+                "is power" : false
+            },
+            {
+                "net name" : "VSS",
+                "instance pin name" : "VPW",
+                "is power" : false
+            },
+            {
+                "net name" : "VSSIO",
+                "instance pin name" : "VSSIO",
+                "is power" : false
+            }
+        ],
+        "Grid" : {
+            "layer" : "Metal1",
+            "power net" : "VDD",
+            "ground net" : "VSS",
+            "width" : 0.16,
+            "offset" : 0
+        },
+        "Stripe" : [
+            {
+                "layer" : "Metal4",
+                "power net" : "VDD",
+                "ground net" : "VSS",
+                "width" : 1,
+                "pitch" : 16,
+                "offset" : 0.5                        
+            },
+            {
+                "layer" : "Metal5",
+                "power net" : "VDD",
+                "ground net" : "VSS",
+                "width" : 1,
+                "pitch" : 16,
+                "offset" : 0.5                        
+            }
+        ],
+        "Connect layers" : [
+            {
+                "layers" : [
+                    "Metal1",
+                    "Metal4"
+                ]
+            },
+            {
+                "layers" : [
+                    "Metal4",
+                    "Metal5"
+                ]
+            }
+        ]
+    } 
+}

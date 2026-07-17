@@ -100,6 +100,7 @@ def build_step(workspace: Workspace,
         f"{StepEnum.ROUTING.value}": data_dir / "rt",
         f"{StepEnum.STA.value}": data_dir / "sta",
         f"{StepEnum.DRC.value}": data_dir / "drc",
+        f"{StepEnum.ANTENNA.value}": data_dir / "zh",
         f"{StepEnum.RCX.value}": data_dir / "rcx"
     }
     

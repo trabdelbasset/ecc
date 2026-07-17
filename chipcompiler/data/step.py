@@ -27,6 +27,7 @@ class StepEnum(Enum):
     SIGNOFF = "Signoff"
     STA = "sta"
     DRC = "drc"
+    ANTENNA = "antenna"
     RCX = "RCX"
     ABSTRACT_LEF = "Abstract lef"
     MERGE = "GDS merge"
