@@ -35,7 +35,7 @@ GUI（ECOS Studio）已迁移至 [ecos-studio](https://github.com/0xharry/ecos-s
 可以使用 `nix run . -- ...` 创建 ECC 项目，校验 `ecc.toml`，并执行完整 RTL2GDS 流程。
 
 ```bash
-nix run . -- init gcd
+nix run . -- init gcd # 如果 PATH 中已有 `ecc`，也可以使用 `ecc init gcd`
 cp ./rtl/gcd.v gcd/rtl/gcd.v
 ```
 
@@ -54,9 +54,13 @@ name = "ics55"
 root = "/path/to/ics55"
 
 [flow]
-preset = "rtl2gds"
+preset = "rtl2gds" # rtl2gds | rcx | harden | syn_sta
 run = "default"
 ```
+
+`flow.preset` 可选 `rtl2gds`、`rcx`、`harden`、`syn_sta`（`rcx` 追加 RCX 和
+STA 步骤，`harden` 再追加 Harden 步骤，`syn_sta` 仅综合，并尝试生成
+netlist 级 STA 报告（STA 失败不影响综合结果）。已有项目切换 flow：修改 `flow.preset` 后加 `--overwrite` 重跑。
 
 然后校验并运行：
 
@@ -64,8 +68,14 @@ run = "default"
 nix run . -- check --project gcd
 nix run . -- run --project gcd
 nix run . -- status --project gcd
-nix run . -- metrics --project gcd
 nix run . -- log --project gcd
+
+# 如果 PATH 中已有 `ecc`，也可以使用 ecc 命令
+# ecc check --project gcd
+# ecc run --project gcd
+# ecc status --project gcd
+# ecc metrics --project gcd
+# ecc log --project gcd
 ```
 
 ## 功能特性

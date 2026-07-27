@@ -36,7 +36,7 @@ Use `nix run . -- ...` to create an ECC project, validate its `ecc.toml`,
 and run the full RTL2GDS flow.
 
 ```bash
-nix run . -- init gcd
+nix run . -- init gcd # Or use `ecc init gcd` if you have `ecc` in the Path
 cp ./rtl/gcd.v gcd/rtl/gcd.v
 ```
 
@@ -55,9 +55,15 @@ name = "ics55"
 root = "/path/to/ics55"
 
 [flow]
-preset = "rtl2gds"
+preset = "rtl2gds" # rtl2gds | rcx | harden | syn_sta
 run = "default"
 ```
+
+`flow.preset` accepts `rtl2gds`, `rcx`, `harden`, or `syn_sta` (`rcx` appends
+the RCX and STA steps, `harden` additionally appends the Harden step, and
+`syn_sta` runs synthesis only, with a best-effort
+netlist-level STA report (an STA failure does not fail the step). To switch
+flows on an existing project, update `flow.preset` and re-run with `--overwrite`.
 
 Then validate and run:
 
@@ -66,6 +72,12 @@ nix run . -- check --project gcd
 nix run . -- run --project gcd
 nix run . -- status --project gcd
 nix run . -- log --project gcd
+
+# Or use ecc command if you have `ecc` in the Path
+# ecc check --project gcd
+# ecc run --project gcd
+# ecc status --project gcd
+# ecc log --project gcd
 ```
 
 ## Features
