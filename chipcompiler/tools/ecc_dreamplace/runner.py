@@ -56,7 +56,7 @@ def run_placement(workspace: Workspace,
     """
     run placement
     """
-    reslut = False
+    result = False
     
     sub_flow = EccSubFlow(workspace=workspace, workspace_step=step)
     
@@ -77,20 +77,20 @@ def run_placement(workspace: Workspace,
             output_def=step.output.get("def", ""),
             output_verilog=step.output.get("verilog", ""),
         )
-        reslut = dreamplace_module.run_placement()
+        result = dreamplace_module.run_placement()
     
         ecc_module.feature_placement_map(json_path=step.feature["map"])
         
         sub_flow.update_step(step_name=EccSubFlowEnum.run_placement.value, state=StateEnum.Success)
         
-        reslut = ecc_runner.save_data(workspace=workspace, step=step, ecc_module=ecc_module, feature_step=False)
+        result = ecc_runner.save_data(workspace=workspace, step=step, ecc_module=ecc_module, feature_step=False)
         
         sub_flow.update_step(step_name=EccSubFlowEnum.save_data.value,
                              state=StateEnum.Success) 
         
         run_analysis(workspace=workspace, step=step, subflow=sub_flow)
     
-    return reslut
+    return result
 
 
 def run_legalization(workspace: Workspace,
@@ -99,7 +99,7 @@ def run_legalization(workspace: Workspace,
     """
     run placement legalization
     """
-    reslut = False
+    result = False
     
     sub_flow = EccSubFlow(workspace=workspace,
                           workspace_step=step)
@@ -121,15 +121,15 @@ def run_legalization(workspace: Workspace,
             output_def=step.output.get("def", ""),
             output_verilog=step.output.get("verilog", ""),
         )
-        reslut = dreamplace_module.run_legalization()
+        result = dreamplace_module.run_legalization()
         
         sub_flow.update_step(step_name=EccSubFlowEnum.run_legalization.value, state=StateEnum.Success)
         
-        reslut = ecc_runner.save_data(workspace=workspace, step=step, ecc_module=ecc_module, feature_step=False)
+        result = ecc_runner.save_data(workspace=workspace, step=step, ecc_module=ecc_module, feature_step=False)
    
         sub_flow.update_step(step_name=EccSubFlowEnum.save_data.value,
                              state=StateEnum.Success) 
         
         run_analysis(workspace=workspace, step=step, subflow=sub_flow)
     
-    return reslut
+    return result
