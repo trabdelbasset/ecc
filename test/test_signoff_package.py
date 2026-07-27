@@ -71,6 +71,7 @@ def _make_signoff_workspace(
             "steps": [
                 {"name": "route", "tool": "ecc", "state": StateEnum.Success.value},
                 {"name": "drc", "tool": "ecc", "state": StateEnum.Success.value},
+                {"name": "antenna", "tool": "ecc", "state": StateEnum.Success.value},
                 {"name": "filler", "tool": "ecc", "state": StateEnum.Success.value},
                 {"name": "RCX", "tool": "ecc", "state": StateEnum.Success.value},
                 {"name": "sta", "tool": "ecc", "state": StateEnum.Success.value},
@@ -138,6 +139,25 @@ def _make_signoff_workspace(
     _write_json(
         workspace_dir / "drc_ecc" / "analysis" / "qor_summary.json",
         _qor_summary(_qor_gate("qor.drc.clean", "Final DRC clean")),
+    )
+    _write_json(
+        workspace_dir / "antenna_ecc" / "analysis" / "qor_metrics.json",
+        {
+            "schema_version": 3,
+            "metrics": [
+                {
+                    "id": "antenna_count",
+                    "value": 0,
+                    "unit": "count",
+                }
+            ],
+            "details": [],
+            "sources": [],
+        },
+    )
+    _write_json(
+        workspace_dir / "antenna_ecc" / "analysis" / "qor_summary.json",
+        _qor_summary(_qor_gate("qor.antenna.clean", "Final Antenna clean")),
     )
     _write_json(
         workspace_dir / "RCX_ecc" / "analysis" / "qor_summary.json",

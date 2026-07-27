@@ -14,7 +14,7 @@ def _record(metric_id, value, path="feature/step.json"):
     }
 
 
-def test_quality_gates_only_include_final_drc_rcx_and_sta(tmp_path):
+def test_quality_gates_only_include_final_drc_antenna_rcx_and_sta(tmp_path):
     drc = WorkspaceStep(name=StepEnum.DRC.value, directory=tmp_path / "drc_ecc")
     drc_gates = _quality_gates(drc, [_record("drc_count", 0)])
     assert drc_gates == [
@@ -33,6 +33,27 @@ def test_quality_gates_only_include_final_drc_rcx_and_sta(tmp_path):
                 }
             ],
             "evidence": [_record("drc_count", 0)["source"]],
+        }
+    ]
+
+    antenna = WorkspaceStep(name=StepEnum.ANTENNA.value, directory=tmp_path / "antenna_ecc")
+    antenna_gates = _quality_gates(antenna, [_record("antenna_count", 0)])
+    assert antenna_gates == [
+        {
+            "id": "qor.antenna.clean",
+            "title": "Final Antenna clean",
+            "state": "pass",
+            "blocking": True,
+            "metrics": [
+                {
+                    "id": "antenna_count",
+                    "actual": 0,
+                    "operator": "==",
+                    "expected": 0,
+                    "source": _record("antenna_count", 0)["source"],
+                }
+            ],
+            "evidence": [_record("antenna_count", 0)["source"]],
         }
     ]
 
@@ -83,6 +104,7 @@ def test_step_checklist_references_v4_qor_gate_without_recomputing_it(tmp_path):
             for step in (
                 StepEnum.ROUTING,
                 StepEnum.DRC,
+                StepEnum.ANTENNA,
                 StepEnum.FILLER,
                 StepEnum.RCX,
                 StepEnum.STA,

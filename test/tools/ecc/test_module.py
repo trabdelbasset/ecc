@@ -412,6 +412,7 @@ def test_ecc_runtime_wrappers_stringify_path_arguments(tmp_path):
     module.init_drc(Path("/ws/data/drc"))
     module.run_drc(Path("/ws/config/drc.json"), Path("/ws/report/drc.rpt"))
     module.save_drc(Path("/ws/feature/drc.json"))
+    module.check_antenna(Path("/ws/config/antenna.json"), Path("/ws/report/antenna"), Path("/ws/feature/antenna.json"))
     module.pnp(Path("/ws/config/pnp.json"))
     module.run_placement(Path("/ws/config/place.json"))
     module.init_pl(Path("/ws/config/place.json"))

@@ -272,6 +272,13 @@ QOR_METRIC_MAP = {
         "dimension": "clock_robustness_dfm",
         "polarity": "lower_is_better",
     },
+    "antenna_num": {
+        "name": "antenna_count",
+        "display_name": "Antenna Violation Count",
+        "unit": "count",
+        "dimension": "clock_robustness_dfm",
+        "polarity": "lower_is_better",
+    },
     "route_dr_total_violation_count": {
         "name": "route_dr_total_violation_count",
         "display_name": "Route DR Violations",
@@ -573,6 +580,9 @@ QOR_EXPECTED_METRICS_BY_STEP = {
     ],
     StepEnum.DRC.value: [
         "drc_count",
+    ],
+    StepEnum.ANTENNA.value: [
+        "antenna_count",
     ],
     StepEnum.RCX.value: [
         "rcx_spef_file_count",
@@ -1698,6 +1708,10 @@ def _metric_scope_and_roles(step: WorkspaceStep, metric_id: str) -> tuple[str, s
         scope = "final_drc"
         project_role = "gate" if metric_id == "drc_count" else "final"
         step_role = "primary"
+    elif step.name == StepEnum.ANTENNA.value:
+        scope = "final_antenna"
+        project_role = "gate" if metric_id == "antenna_count" else "final"
+        step_role = "primary"
     elif step.name == StepEnum.RCX.value:
         scope = "signoff_rcx"
         project_role = "gate" if metric_id == "rcx_missing_corner_count" else "final"
@@ -1992,10 +2006,11 @@ def _metric_feature_source(
             "route_wirelength": "/Nets/wire_len",
             "route_via_count": "/Nets/num_via",
         }.get(metric_id, "")
-    elif metric_id.startswith("route_") or metric_id == "drc_count":
+    elif metric_id.startswith("route_") or metric_id == "drc_count" or metric_id == "antenna_count":
         feature_path = step.feature.get("step")
         selector = {
             "drc_count": "/drc/number",
+            "antenna_count": "/antenna/number",
             "route_dr_total_violation_count": "/route/DR",
             "route_dr_total_patch_count": "/route/DR",
             "route_dr_total_wirelength": "/route/DR",
@@ -2219,6 +2234,7 @@ def _is_blocking_qor_record(record: dict) -> bool:
 
     if metric_name in {
         "drc_count",
+        "antenna_count",
         "route_dr_total_violation_count",
         "route_la_total_overflow",
         "rcx_spef_parse_failure_count",
@@ -2762,6 +2778,17 @@ def _quality_gates(step: WorkspaceStep, records: list[dict]) -> list[dict]:
                 "Final DRC clean",
                 _gate_state(available=count is not None, passed=count == 0),
                 [_quality_gate_metric("drc_count", count, "==", 0, source)],
+                _quality_gate_evidence(source),
+            )
+        ]
+    if step.name == StepEnum.ANTENNA.value:
+        count, source = metric("antenna_count")
+        return [
+            _quality_gate(
+                "qor.antenna.clean",
+                "Final Antenna clean",
+                _gate_state(available=count is not None, passed=count == 0),
+                [_quality_gate_metric("antenna_count", count, "==", 0, source)],
                 _quality_gate_evidence(source),
             )
         ]
