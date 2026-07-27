@@ -458,7 +458,10 @@ class ECCToolsModule:
         """
         run antenna check
         """
-        self.ecc.check_antenna(config=path_text(config), report_dir=path_text(report_dir), feature_file=path_text(feature_file))
+        try:
+            self.ecc.check_antenna(config=path_text(config), report_dir=path_text(report_dir), feature_file=path_text(feature_file))
+        except TypeError:
+            self.ecc.check_antenna(config=path_text(config), report_dir=path_text(report_dir))
 
     ########################################################################
     # floorplan api
