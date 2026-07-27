@@ -460,11 +460,11 @@ class ECCToolsModule:
         """
         self.ecc.save_drc(path=path_text(feature_path))
         
-    def check_antenna(self, config: str = "", report_dir: str = ""):
+    def check_antenna(self, config: str = "", report_dir: str = "", feature_file: str = ""):
         """
         run antenna check
         """
-        self.ecc.check_antenna(config=path_text(config), report_dir=path_text(report_dir))
+        self.ecc.check_antenna(config=path_text(config), report_dir=path_text(report_dir), feature_file=path_text(feature_file))
     
     ########################################################################    
     # floorplan api
