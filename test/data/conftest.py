@@ -22,14 +22,14 @@ def create_minimal_ics55_pdk(root: Path) -> Path:
 
 
 def create_minimal_sg13g2_pdk(root: Path) -> Path:
-    tech_path = root / "libs.ref" / "sg13g2_stdcell" / "lef" / "sg13g2_tech.lef"
+    tech_path = root / "lef" / "sg13g2_tech.lef"
     tech_path.parent.mkdir(parents=True, exist_ok=True)
     tech_path.write_text("VERSION 5.8 ;\n")
 
-    lef_path = root / "libs.ref" / "sg13g2_stdcell" / "lef" / "sg13g2_stdcell.lef"
+    lef_path = root / "lef" / "sg13g2_stdcell.lef"
     lef_path.write_text("VERSION 5.8 ;\n")
 
-    lib_path = root / "libs.ref" / "sg13g2_stdcell" / "lib" / "sg13g2_stdcell_typ_1p20V_25C.lib"
+    lib_path = root / "lib" / "sg13g2_stdcell_typ_1p20V_25C.lib"
     lib_path.parent.mkdir(parents=True, exist_ok=True)
     lib_path.write_text("library(test) { }\n")
 

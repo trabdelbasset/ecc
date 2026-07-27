@@ -512,9 +512,9 @@ def init_workspace_config(workspace: Workspace) -> None:
     root_dir = Path(__file__).resolve().parent.parent
     pdk_name = (workspace.pdk.name or "").lower()
     pdk_name_mapped = "ihp130" if pdk_name == "sg13g2" else pdk_name
-    
-    ecc_config_dir = root_dir / "tools" / "ecc" / "configs" / pdk_name_mapped
-    if not ecc_config_dir.is_dir():
+
+    ecc_config_dir = root_dir / "tools" / "ecc" / "configs" / pdk_name_mapped if pdk_name_mapped else None
+    if not ecc_config_dir or not ecc_config_dir.is_dir():
         ecc_config_dir = root_dir / "tools" / "ecc" / "configs" / "ics55"
         workspace.logger.warning(f"Unknown PDK config directory for {pdk_name}, defaulting to ics55")
 
