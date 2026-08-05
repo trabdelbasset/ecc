@@ -503,12 +503,19 @@ class ECCToolsModule:
         run antenna check
         """
         try:
-            self.ecc.check_antenna(config=path_text(config), report_dir=path_text(report_dir), feature_file=path_text(feature_file))
+            self.ecc.check_antenna(
+                config=path_text(config),
+                report_dir=path_text(report_dir),
+                feature_file=path_text(feature_file),
+            )
         except TypeError:
             self.ecc.check_antenna(config=path_text(config), report_dir=path_text(report_dir))
         except AttributeError:
             import logging
-            logging.getLogger(__name__).warning("check_antenna is not supported by the current ecc_py binary.")
+
+            logging.getLogger(__name__).warning(
+                "check_antenna is not supported by the current ecc_py binary."
+            )
 
     ########################################################################
     # floorplan api

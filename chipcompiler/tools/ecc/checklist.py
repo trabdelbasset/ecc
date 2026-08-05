@@ -937,7 +937,6 @@ class EccAntennaChecklist(EccChecklist):
         return self.apply_checks(step, checks, warning_items)
 
 
-
 class EccFillerChecklist(EccChecklist):
     def check(self) -> bool:
         return refresh_step_checklist(self.workspace, self.workspace_step)

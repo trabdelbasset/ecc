@@ -279,22 +279,23 @@ def test_candidate_runtime_methods_bind_existing_workspace_artifacts(monkeypatch
 
     monkeypatch.setattr(
         "chipcompiler.data.export_candidate_capabilities",
-        lambda workspace: calls.append(("export", workspace.directory))
-        or {"registry_sha256": "registry"},
+        lambda workspace: (
+            calls.append(("export", workspace.directory)) or {"registry_sha256": "registry"}
+        ),
     )
     monkeypatch.setattr(
         "chipcompiler.data.bind_candidate_input",
-        lambda workspace, flow, target, source, candidate: calls.append(
-            ("bind", workspace.directory, flow, target, source, candidate)
-        )
-        or {"receipt_sha256": "input"},
+        lambda workspace, flow, target, source, candidate: (
+            calls.append(("bind", workspace.directory, flow, target, source, candidate))
+            or {"receipt_sha256": "input"}
+        ),
     )
     monkeypatch.setattr(
         "chipcompiler.data.materialize_candidate_config",
-        lambda workspace, target, patch, candidate: calls.append(
-            ("materialize", workspace.directory, target, patch, candidate)
-        )
-        or {"receipt_sha256": "materialization"},
+        lambda workspace, target, patch, candidate: (
+            calls.append(("materialize", workspace.directory, target, patch, candidate))
+            or {"receipt_sha256": "materialization"}
+        ),
     )
 
     capabilities = api.export_candidate_capabilities(WorkspaceIdRequest(created["workspaceId"]))
@@ -1229,8 +1230,9 @@ def test_flow_run_step_rerun_verifies_and_reapplies_candidate_input(monkeypatch,
 
     monkeypatch.setattr(
         "chipcompiler.data.validate_candidate_step_contract",
-        lambda workspace, step: candidate_calls.append(("validate", workspace.directory, step))
-        or "gcd-rerun-place",
+        lambda workspace, step: (
+            candidate_calls.append(("validate", workspace.directory, step)) or "gcd-rerun-place"
+        ),
     )
     monkeypatch.setattr(
         "chipcompiler.data.reapply_candidate_input_binding",
@@ -1324,17 +1326,15 @@ def test_candidate_rerun_rebuilds_the_requested_scope(
     calls = []
     monkeypatch.setattr(
         "chipcompiler.data.bind_candidate_input",
-        lambda workspace, flow, target, source, candidate: calls.append(
-            ("bind", target, source, candidate)
-        )
-        or {},
+        lambda workspace, flow, target, source, candidate: (
+            calls.append(("bind", target, source, candidate)) or {}
+        ),
     )
     monkeypatch.setattr(
         "chipcompiler.data.materialize_candidate_config",
-        lambda workspace, target, patch, candidate: calls.append(
-            ("materialize", target, patch, candidate)
-        )
-        or {},
+        lambda workspace, target, patch, candidate: (
+            calls.append(("materialize", target, patch, candidate)) or {}
+        ),
     )
     monkeypatch.setattr(
         "chipcompiler.data.validate_candidate_step_contract",

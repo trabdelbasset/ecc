@@ -313,9 +313,9 @@ class ECCToolsPlot:
                 antenna_statis[antenna_type] = copy.deepcopy(layer_dict)
 
                 for layer, layer_data in antenna_data.get("layers", {}).items():
-                    antenna_statis[antenna_type][layer] = (
-                        antenna_statis[antenna_type][layer] + layer_data.get("number", 0)
-                    )
+                    antenna_statis[antenna_type][layer] = antenna_statis[antenna_type][
+                        layer
+                    ] + layer_data.get("number", 0)
                     antenna_total_dict[layer] = antenna_total_dict.get(layer, 0) + layer_data.get(
                         "number", 0
                     )
@@ -348,6 +348,7 @@ class ECCToolsPlot:
         )
 
         return True
+
     def plot_instance_distribution(self) -> bool:
         data = json_read(self.step.feature.db or "")
         if not data or "Instances" not in data:

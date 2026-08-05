@@ -730,7 +730,9 @@ def run_drc(workspace: Workspace, step: EccStep, ecc_module: ECCToolsModule | No
     return reslut
 
 
-def run_antenna(workspace: Workspace, step: EccStep, ecc_module: ECCToolsModule | None = None) -> bool:
+def run_antenna(
+    workspace: Workspace, step: EccStep, ecc_module: ECCToolsModule | None = None
+) -> bool:
     """
     run chip antenna check
     """
