@@ -318,9 +318,14 @@ class EngineFlow:
         workspace_step = None
         for ws_step in self.workspace_steps:
             if not self.check_state(name=ws_step.name, tool=ws_step.tool, state=StateEnum.Success):
+                if ws_step.name == StepEnum.SYNTHESIS.value:
+                    continue
                 # use the first unsuccess step to setup db engine
                 workspace_step = ws_step
                 break
+
+        if workspace_step is None:
+            return True
 
         return self.engine_db.create_db_engine(step=workspace_step)
 

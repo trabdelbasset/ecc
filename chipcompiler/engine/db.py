@@ -52,6 +52,8 @@ class EngineDB:
         if self.ecc_module is not None:
             self.workspace.logger.info(f"ecc db initialize success for step {step.name}.")
             return True
+        elif step.name == StepEnum.SYNTHESIS.value:
+            return True
         else:
             self.workspace.logger.warning(f"ecc db initialize failed for step {step.name}.")
             return False
