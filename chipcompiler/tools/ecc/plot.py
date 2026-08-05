@@ -301,7 +301,10 @@ class ECCToolsPlot:
         if len(antenna_json) == 0:
             return False
 
-        antenna_distribution = antenna_json.get("antenna", {}).get("distribution", {})
+        antenna_data = antenna_json.get("antenna")
+        if antenna_data is None:
+            antenna_data = {}
+        antenna_distribution = antenna_data.get("distribution", {})
 
         antenna_statis = {}
         import copy
@@ -320,7 +323,7 @@ class ECCToolsPlot:
                         "number", 0
                     )
 
-        antenna_total_dict["total"] = antenna_json.get("antenna", {}).get("number", 0)
+        antenna_total_dict["total"] = antenna_data.get("number", 0)
         antenna_statis["total"] = antenna_total_dict
 
         import csv

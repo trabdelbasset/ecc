@@ -751,7 +751,7 @@ def run_antenna(
             feature_file=step.feature.step or "",
         )
 
-        sub_flow.update_step(step_name=EccSubFlowEnum.check_Antenna.value, state=StateEnum.Success)
+        sub_flow.update_step(step_name=EccSubFlowEnum.run_antenna.value, state=StateEnum.Success)
 
         reslut = save_data(
             workspace=workspace, step=step, ecc_module=ecc_module, report_timing=False
