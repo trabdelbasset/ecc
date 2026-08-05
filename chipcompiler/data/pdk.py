@@ -134,7 +134,7 @@ def get_pdk(
         )
     elif pdk_name_normalized == "ics55":
         pdk = PDK_ICS55(pdk_root=pdk_root)
-    elif pdk_name_normalized == "sg13g2":
+    elif pdk_name_normalized in ("sg13g2", "ihp130", "ihp_sg13g2", "ihp"):
         pdk = PDK_SG13G2(pdk_root=pdk_root)
     else:
         pdk = PDK(name=pdk_name_normalized)
@@ -254,21 +254,30 @@ def PDK_ICS55(pdk_root: str | Path = "") -> PDK:
 def PDK_SG13G2(pdk_root: str | Path = "") -> PDK:
     root_text = (
         str(pdk_root).strip()
+        or os.environ.get("CHIPCOMPILER_IHP130_PDK_ROOT", "").strip()
+        or os.environ.get("IHP130_PDK_ROOT", "").strip()
         or os.environ.get("CHIPCOMPILER_SG13G2_PDK_ROOT", "").strip()
         or os.environ.get("SG13G2_PDK_ROOT", "").strip()
     )
     resolved_root = Path(root_text).expanduser().resolve()
 
-    tech_path = resolved_root / "lef" / "sg13g2_tech.lef"
-    lef_paths = [
-        resolved_root / "lef" / "sg13g2_stdcell.lef"
+    tech_candidates = [
+        resolved_root / "libs.ref" / "sg13g2_stdcell" / "lef" / "sg13g2_tech.lef",
+        resolved_root / "lef" / "sg13g2_tech.lef",
     ]
-    lib_paths = [
-        (
-            resolved_root / "lib"
-            / "sg13g2_stdcell_typ_1p20V_25C.lib"
-        )
+    tech_path = next((p for p in tech_candidates if p.is_file()), tech_candidates[0])
+
+    lef_candidates = [
+        resolved_root / "libs.ref" / "sg13g2_stdcell" / "lef" / "sg13g2_stdcell.lef",
+        resolved_root / "lef" / "sg13g2_stdcell.lef",
     ]
+    lef_paths = [p for p in lef_candidates if p.is_file()]
+
+    lib_candidates = [
+        resolved_root / "libs.ref" / "sg13g2_stdcell" / "lib" / "sg13g2_stdcell_typ_1p20V_25C.lib",
+        resolved_root / "lib" / "sg13g2_stdcell_typ_1p20V_25C.lib",
+    ]
+    lib_paths = [p for p in lib_candidates if p.is_file()]
 
     pdk = PDK(
         name="sg13g2",
