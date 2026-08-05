@@ -24,7 +24,6 @@ def _flow_run_problem(value: object) -> str | None:
         if value and value == value.strip() and "\x00" not in value:
             return None
     return f"unsupported flow.run: {value}"
->>>>>>> upstream/main
 
 
 # TODO: Move ecc.toml parsing and validation into chipcompiler.data.project_config
