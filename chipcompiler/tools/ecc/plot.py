@@ -42,6 +42,8 @@ class ECCToolsPlot:
                 state = state & self.default_plot() & self.plot_routing_heatmap() & self.plot_layer_via_distribution() & self.plot_layer_wire_distribution()
             case StepEnum.DRC.value:
                 state = state & self.default_plot() & self.plot_drc_statis() & self.plot_layer_via_distribution() & self.plot_layer_wire_distribution()
+            case StepEnum.ANTENNA.value:
+                state = state & self.default_plot() & self.plot_antenna_statis() & self.plot_layer_via_distribution() & self.plot_layer_wire_distribution()
             case StepEnum.FILLER.value:
                 state = state & self.default_plot() & self.plot_layer_via_distribution() & self.plot_layer_wire_distribution()
                 
@@ -217,6 +219,67 @@ class ECCToolsPlot:
         self.workspace.home.set_metrics_drc_dist(image_path=output_path)
         
         return True
+
+    def plot_antenna_statis(self) -> bool:
+        # build layer header
+        layers = []
+        layer_dict = {}
+        db_json = json_read(self.step.feature.get("db", ""))
+
+        for item in db_json.get("Layers", {}).get("cut_layers", []):
+            layer_dict[item.get("layer_name")] = 0
+            layers.append(item)
+
+        for item in db_json.get("Layers", {}).get("routing_layers", []):
+            layer_dict[item.get("layer_name")] = 0
+            layers.append(item)
+
+        def cmp_layer(item):
+            return item.get("layer_order", 0)
+        sorted_layers = sorted(layers, key=cmp_layer)
+
+        layer_names = [layer.get("layer_name") for layer in sorted_layers]
+        layer_names.append("total")
+
+        antenna_json = json_read(self.step.feature.get("step", ""))
+        if len(antenna_json) == 0:
+            return False
+
+        antenna_distribution = antenna_json.get("antenna", {}).get("distribution", {})
+
+        antenna_statis = {}
+        import copy
+        antenna_total_dict = copy.deepcopy(layer_dict)
+
+        if isinstance(antenna_distribution, dict):
+            for antenna_type, antenna_data in antenna_distribution.items():
+                antenna_statis[antenna_type] = copy.deepcopy(layer_dict)
+
+                for layer, layer_data in antenna_data.get("layers", {}).items():
+                    antenna_statis[antenna_type][layer] = antenna_statis[antenna_type][layer] + layer_data.get("number", 0)
+                    antenna_total_dict[layer] = antenna_total_dict.get(layer, 0) + layer_data.get("number", 0)
+
+        antenna_total_dict["total"] = antenna_json.get("antenna", {}).get("number", 0)
+        antenna_statis["total"] = antenna_total_dict
+
+        import csv
+        statis_csv = str(self.step.analysis.get("statis_csv", ""))
+        with open(statis_csv, 'w', newline='') as csvfile:
+            csv_headers = ["Type"] + layer_names
+            writer = csv.DictWriter(csvfile, fieldnames=csv_headers)
+            writer.writeheader()
+
+            for antenna_type, layer_counts in antenna_statis.items():
+                row = {"Type": antenna_type}
+                for layer in layer_names:
+                    row[layer] = layer_counts.get(layer, 0)
+                writer.writerow(row)
+
+        output_path = str(statis_csv).replace(".csv", ".png")
+        plot_csv_bar_chart(input_path=statis_csv, output_path=output_path, title="Antenna Violation Distribution by Layer", xlabel="Antenna Type", ylabel="Violation Count", integer_yaxis=True)
+
+        return True
+
     
     def plot_instance_distribution(self) -> bool:
         data = json_read(self.step.feature.get("db", ""))

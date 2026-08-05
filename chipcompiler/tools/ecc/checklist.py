@@ -89,6 +89,12 @@ class EccChecklist:
             ("DRC", "check DRC waiver list"),
             ("Signoff", "check final DRC requirement"),
         ],
+        StepEnum.ANTENNA: [
+            ("Antenna", "check Antenna violation count"),
+            ("Antenna", "check Antenna violation distribution"),
+            ("Antenna", "check Antenna waiver list"),
+            ("Signoff", "check final Antenna requirement"),
+        ],
         StepEnum.FILLER: [
             ("Filler", "check filler cell list"),
             ("Filler", "check filler coverage"),
@@ -876,6 +882,70 @@ class EccDrcChecklist(EccChecklist):
             "check DRC waiver list",
         }
         return self.apply_checks(step, checks, warning_items)
+
+
+class EccAntennaChecklist(EccChecklist):
+    def check(self) -> bool:
+        return refresh_step_checklist(self.workspace, self.workspace_step)
+
+        step = StepEnum.ANTENNA.value
+        metrics = self.qor_metrics()
+        feature = json_read(self.workspace_step.feature.get("step", "")).get("antenna", {})
+        output_success = all(
+            [
+                self.check_file(self.workspace_step.output.get("def", "")),
+                self.check_file(self.workspace_step.output.get("verilog", "")),
+            ]
+        )
+
+        metric_antenna_num, metric_error = metrics.number("antenna_count")
+        feature_antenna_num = self.to_float(feature.get("number"))
+        distribution = feature.get("distribution")
+        antenna_clean = (
+            metric_antenna_num is not None
+            and feature_antenna_num is not None
+            and metric_antenna_num == 0
+            and feature_antenna_num == 0
+        )
+
+        checks = [
+            (
+                "Antenna",
+                "check Antenna violation count",
+                antenna_clean,
+                metric_error
+                or (
+                    f"antenna_count={metric_antenna_num} and feature/antenna.step.json reports "
+                    f"{feature_antenna_num} violations"
+                ),
+            ),
+            (
+                "Antenna",
+                "check Antenna violation distribution",
+                antenna_clean or isinstance(distribution, dict),
+                "antenna.step.json has violations but no structured rule/layer distribution",
+            ),
+            (
+                "Antenna",
+                "check Antenna waiver list",
+                antenna_clean,
+                "Current Antenna flow has no structured waiver list; "
+                "unresolved violations require review",
+            ),
+            (
+                "Signoff",
+                "check final Antenna requirement",
+                output_success and antenna_clean,
+                "Final Antenna requires DEF/verilog output and zero violations",
+            ),
+        ]
+
+        warning_items = {
+            "check Antenna violation distribution",
+            "check Antenna waiver list",
+        }
+        return self.apply_checks(step, checks, warning_items)
+
 
 
 class EccFillerChecklist(EccChecklist):

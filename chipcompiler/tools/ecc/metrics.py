@@ -3210,6 +3210,8 @@ def build_step_metrics(
             metrics = build_metrics_routing(workspace, step)
         case StepEnum.DRC.value:
             metrics = build_metrics_drc(workspace, step)
+        case StepEnum.ANTENNA.value:
+            metrics = build_metrics_antenna(workspace, step)
         case StepEnum.FILLER.value:
             metrics = build_metrics_filler(workspace, step)
         case StepEnum.RCX.value:
@@ -3439,6 +3441,41 @@ def build_metrics_drc(workspace: Workspace, step: WorkspaceStep) -> StepMetrics:
         return step_metrics
     else:
         return None
+
+
+def build_metrics_antenna(workspace: Workspace, step: WorkspaceStep) -> StepMetrics:
+    """
+    Build and return Antenna metrics dictionary.
+    """
+    step_metrics = StepMetrics()
+    step_metrics.path = step.analysis["metrics"]
+
+    metrics = {}
+
+    # db summary metrics
+    metrics.update(build_metrics_db(workspace, step))
+
+    # step metrics
+    json_path = step.feature.get("step", "")
+    data = json_read(json_path)
+    if isinstance(data, dict):
+        antenna = data.get("antenna", {})
+        if isinstance(antenna, dict):
+            _add_number_metric(metrics, "antenna_num", antenna.get("number"))
+
+    step_metrics.data = metrics
+
+    # generate report image and description
+    image_path = str(json_path).replace(".json", ".png")
+    report = f"{step.name} step metrics:\n"
+
+    step_metrics.report.append((image_path, report))
+
+    if save_step_metrics(workspace, step, step_metrics):
+        return step_metrics
+    else:
+        return None
+
 
 
 def build_metrics_routing(workspace: Workspace, step: WorkspaceStep) -> StepMetrics:
