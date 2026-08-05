@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from chipcompiler.data import StepEnum, Workspace, WorkspaceStep
+from chipcompiler.data import Workspace, WorkspaceStep
 
 
 class EngineDB:
@@ -52,11 +52,9 @@ class EngineDB:
         if self.ecc_module is not None:
             self.workspace.logger.info(f"ecc db initialize success for step {step.name}.")
             return True
-        elif step.name == StepEnum.SYNTHESIS.value:
-            return True
         else:
-            self.workspace.logger.warning(f"ecc db initialize failed for step {step.name}.")
-            return False
+            self.workspace.logger.info(f"ecc db initialize deferred for step {step.name}.")
+            return True
 
     def update_db_from_step(self, step: WorkspaceStep):
         """
