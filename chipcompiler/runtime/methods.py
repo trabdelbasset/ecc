@@ -4,16 +4,27 @@ from dataclasses import dataclass
 from typing import Any, Final, Generic, TypeVar
 
 from chipcompiler.runtime.requests import (
+    CandidateBindInputRequest,
+    CandidateMaterializeRequest,
+    CandidateRerunRequest,
     DbEnsureRequest,
     DbReleaseRequest,
+    FloorplanEditInspectRequest,
+    FloorplanEditRunAutoRequest,
+    FloorplanEditValidateRequest,
     FlowRunRequest,
     FlowRunStepRequest,
+    LayoutEditApplyRequest,
+    LayoutEditBeginRequest,
+    LayoutEditDiscardRequest,
+    LayoutEditSaveRequest,
     WorkspaceCloseRequest,
     WorkspaceCreateRequest,
     WorkspaceExportSignoffRequest,
+    WorkspaceExtractFoundationRequest,
     WorkspaceIdRequest,
-    WorkspaceInspectSignoffRequest,
     WorkspaceInfoRequest,
+    WorkspaceInspectSignoffRequest,
     WorkspaceOpenRequest,
     WorkspaceSyncConfigRequest,
 )
@@ -80,6 +91,31 @@ RUNTIME_METHODS: Final[tuple[RuntimeMethodSpec[Any], ...]] = (
         handler_name="inspect_signoff",
     ),
     RuntimeMethodSpec(
+        method_name="workspace.extract_foundation",
+        request_model=WorkspaceExtractFoundationRequest,
+        handler_name="extract_foundation",
+    ),
+    RuntimeMethodSpec(
+        method_name="candidate.export_capabilities",
+        request_model=WorkspaceIdRequest,
+        handler_name="export_candidate_capabilities",
+    ),
+    RuntimeMethodSpec(
+        method_name="candidate.bind_input",
+        request_model=CandidateBindInputRequest,
+        handler_name="bind_candidate_input",
+    ),
+    RuntimeMethodSpec(
+        method_name="candidate.materialize",
+        request_model=CandidateMaterializeRequest,
+        handler_name="materialize_candidate",
+    ),
+    RuntimeMethodSpec(
+        method_name="candidate.rerun",
+        request_model=CandidateRerunRequest,
+        handler_name="candidate_rerun",
+    ),
+    RuntimeMethodSpec(
         method_name="flow.run",
         request_model=FlowRunRequest,
         handler_name="flow_run",
@@ -102,6 +138,41 @@ PERSISTENT_DB_METHODS: Final[tuple[RuntimeMethodSpec[Any], ...]] = (
         method_name="db.release",
         request_model=DbReleaseRequest,
         handler_name="db_release",
+    ),
+    RuntimeMethodSpec(
+        method_name="layout.edit.begin",
+        request_model=LayoutEditBeginRequest,
+        handler_name="layout_edit_begin",
+    ),
+    RuntimeMethodSpec(
+        method_name="layout.edit.apply",
+        request_model=LayoutEditApplyRequest,
+        handler_name="layout_edit_apply",
+    ),
+    RuntimeMethodSpec(
+        method_name="layout.edit.save",
+        request_model=LayoutEditSaveRequest,
+        handler_name="layout_edit_save",
+    ),
+    RuntimeMethodSpec(
+        method_name="layout.edit.discard",
+        request_model=LayoutEditDiscardRequest,
+        handler_name="layout_edit_discard",
+    ),
+    RuntimeMethodSpec(
+        method_name="floorplan.edit.inspect",
+        request_model=FloorplanEditInspectRequest,
+        handler_name="floorplan_edit_inspect",
+    ),
+    RuntimeMethodSpec(
+        method_name="floorplan.edit.run_auto",
+        request_model=FloorplanEditRunAutoRequest,
+        handler_name="floorplan_edit_run_auto",
+    ),
+    RuntimeMethodSpec(
+        method_name="floorplan.edit.validate",
+        request_model=FloorplanEditValidateRequest,
+        handler_name="floorplan_edit_validate",
     ),
 )
 

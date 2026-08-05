@@ -7,7 +7,19 @@ from pathlib import Path
 
 import pytest
 
-from chipcompiler.data import PDK, OriginDesign, Parameters, StepEnum, Workspace, WorkspaceStep
+from chipcompiler.data import (
+    PDK,
+    OriginDesign,
+    Parameters,
+    StepEnum,
+    StepInput,
+    Workspace,
+    YosysData,
+    YosysFeature,
+    YosysOutput,
+    YosysReport,
+    YosysStep,
+)
 from chipcompiler.tools.yosys import builder as yosys_builder
 from chipcompiler.tools.yosys.service import get_step_info
 from chipcompiler.tools.yosys.subflow import YosysSubFlow
@@ -41,7 +53,7 @@ def _build_workspace_and_step(tmp_path, *, rtl_name="top.v", create_rtl=True, fi
             input_filelist=str(filelist) if filelist is not None else "",
         ),
         pdk=PDK(
-            libs=[str(lib_a), str(lib_b)],
+            libs=[lib_a, lib_b],
             dont_use=["DFF*", "CELL WITH SPACE"],
             tie_low_cell="TIELO",
             tie_low_port="Z",
@@ -54,17 +66,20 @@ def _build_workspace_and_step(tmp_path, *, rtl_name="top.v", create_rtl=True, fi
         config={"db": str(db_config)},
     )
 
-    step = WorkspaceStep(
+    step = YosysStep(
         name="Synthesis",
         directory=str(tmp_path / "Synthesis_yosys"),
-        input={"verilog": str(rtl_file)},
-        output={"verilog": str(tmp_path / "Synthesis_yosys" / "output" / "top.v.gz")},
-        data={"dir": str(tmp_path / "Synthesis_yosys" / "data")},
-        feature={"stat": str(tmp_path / "Synthesis_yosys" / "feature" / "stat.json")},
-        report={
-            "stat": str(tmp_path / "Synthesis_yosys" / "report" / "stat.json"),
-            "check": str(tmp_path / "Synthesis_yosys" / "report" / "check.rpt"),
-        },
+        input=StepInput(verilog=rtl_file),
+        output=YosysOutput(
+            verilog=tmp_path / "Synthesis_yosys" / "output" / "top.v.gz",
+            sim_verilog=tmp_path / "Synthesis_yosys" / "output" / "top_sim.v.gz",
+        ),
+        data=YosysData(dir=tmp_path / "Synthesis_yosys" / "data"),
+        feature=YosysFeature(stat=tmp_path / "Synthesis_yosys" / "feature" / "stat.json"),
+        report=YosysReport(
+            stat=tmp_path / "Synthesis_yosys" / "report" / "stat.json",
+            check=tmp_path / "Synthesis_yosys" / "report" / "check.rpt",
+        ),
     )
     return workspace, step, rtl_file
 
@@ -86,17 +101,16 @@ def test_yosys_builder_constructs_path_objects_and_creates_dirs(tmp_path):
     expected_step_dir = tmp_path / f"{StepEnum.SYNTHESIS.value}_yosys"
     assert step.directory == expected_step_dir
     assert isinstance(step.directory, Path)
-    assert step.input["verilog"] == rtl_file
-    assert step.output["dir"] == expected_step_dir / "output"
-    assert step.output["fixed_verilog"] == expected_step_dir / "output" / "top_Synthesis_fixed.v.gz"
-    assert step.script["main"] == expected_step_dir / "script" / "Synthesis_main.tcl"
+    assert step.input.verilog == rtl_file
+    assert step.output.dir == expected_step_dir / "output"
+    assert step.script.main == expected_step_dir / "script" / "Synthesis_main.tcl"
 
     yosys_builder.build_step_space(step)
 
-    assert step.output["dir"].is_dir()
-    assert step.data["tmp"].is_dir()
-    assert step.script["dir"].is_dir()
-    assert step.analysis["dir"].is_dir()
+    assert step.output.dir and step.output.dir.is_dir()
+    assert step.data.tmp and step.data.tmp.is_dir()
+    assert step.script.dir and step.script.dir.is_dir()
+    assert step.analysis.dir and step.analysis.dir.is_dir()
 
 
 def test_yosys_subflow_writes_path_payload_as_json_strings(tmp_path):
@@ -114,9 +128,9 @@ def test_yosys_subflow_writes_path_payload_as_json_strings(tmp_path):
 
     YosysSubFlow(workspace, step)
 
-    with open(step.subflow["path"], encoding="utf-8") as file:
+    with open(str(step.subflow.path), encoding="utf-8") as file:
         data = json.load(file)
-    assert data["path"] == str(step.subflow["path"])
+    assert data["path"] == str(step.subflow.path)
 
 
 def test_yosys_step_info_stringifies_path_payloads(tmp_path):
@@ -132,10 +146,10 @@ def test_yosys_step_info_stringifies_path_payloads(tmp_path):
         input_verilog=tmp_path / "top.v",
     )
 
-    assert get_step_info(workspace, step, "views")["image"] == str(step.output["image"])
-    assert get_step_info(workspace, step, "metrics") == {"metrics": str(step.analysis["metrics"])}
-    assert get_step_info(workspace, step, "subflow") == {"path": str(step.subflow["path"])}
-    assert get_step_info(workspace, step, "checklist") == {"path": str(step.checklist["path"])}
+    assert get_step_info(workspace, step, "views")["image"] == str(step.output.image)
+    assert get_step_info(workspace, step, "metrics") == {"metrics": str(step.analysis.metrics)}
+    assert get_step_info(workspace, step, "subflow") == {"path": str(step.subflow.path)}
+    assert get_step_info(workspace, step, "checklist") == {"path": str(step.checklist.path)}
     assert get_step_info(workspace, step, "config") == {"path": str(workspace.config["flow"])}
 
 
@@ -149,7 +163,7 @@ def test_plain_verilog_filelist_uses_native_parser(tmp_path):
     assert "set filelist" not in text
     assert "set rtl_file [list " in text
     assert os.path.abspath(tmp_path / "top.v") in text
-    assert step.data["requires_slang"] is False
+    assert step.data.requires_slang is False
 
 
 def test_systemverilog_filelist_keeps_slang_mode(tmp_path):
@@ -162,7 +176,7 @@ def test_systemverilog_filelist_keeps_slang_mode(tmp_path):
     assert "set use_slang true" in text
     assert re.search(rf"^set\s+filelist\s+{re.escape(os.path.abspath(filelist))}$", text, re.M)
     assert "set rtl_file" not in text
-    assert step.data["requires_slang"] is True
+    assert step.data.requires_slang is True
 
 
 def test_rtl_mode_emits_rtl_file_as_tcl_list(tmp_path):
@@ -173,7 +187,7 @@ def test_rtl_mode_emits_rtl_file_as_tcl_list(tmp_path):
     assert "set rtl_file [list " in text
     assert os.path.abspath(rtl_file) in text
     assert "set use_slang false" in text
-    assert step.data["requires_slang"] is False
+    assert step.data.requires_slang is False
 
 
 def test_lists_are_emitted_as_tcl_lists_without_split(tmp_path):
@@ -209,7 +223,7 @@ def test_validation_errors_are_preserved(tmp_path, case, message):
     elif case == "invalid_frequency":
         workspace.parameters.data["Frequency max [MHz]"] = "fast"
     elif case == "missing_inputs":
-        step.input["verilog"] = str(tmp_path / "missing.v")
+        step.input.verilog = tmp_path / "missing.v"
 
     with pytest.raises(ValueError, match=message):
         yosys_builder.generate_global_var_tcl(workspace, step)
@@ -241,9 +255,7 @@ def test_liberty_args_keep_paths_with_spaces_as_single_arguments(tmp_path):
         pytest.skip("tclsh is not available")
 
     workspace, step, _ = _build_workspace_and_step(tmp_path)
-    init_tech = (
-        Path(yosys_builder.__file__).resolve().parent / "scripts" / "init_tech.tcl"
-    )
+    init_tech = Path(yosys_builder.__file__).resolve().parent / "scripts" / "init_tech.tcl"
 
     text = yosys_builder.generate_global_var_tcl(workspace, step)
     result = subprocess.run(
@@ -252,8 +264,8 @@ def test_liberty_args_keep_paths_with_spaces_as_single_arguments(tmp_path):
             text
             + "\nproc yosys args {}\n"
             + f"source {{{init_tech}}}\n"
-            + "foreach arg $liberty_args {puts \"LIB:$arg\"}\n"
-            + "foreach arg $tech_cells_args {puts \"STD:$arg\"}\n"
+            + 'foreach arg $liberty_args {puts "LIB:$arg"}\n'
+            + 'foreach arg $tech_cells_args {puts "STD:$arg"}\n'
         ),
         text=True,
         capture_output=True,

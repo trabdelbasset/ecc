@@ -1,12 +1,10 @@
 #!/usr/bin/env python
-# -*- encoding: utf-8 -*-
-from chipcompiler.data import Workspace, WorkspaceStep, StepMetrics
-from chipcompiler.utility import json_read, dict_to_str
+from chipcompiler.data import StepMetrics, Workspace, YosysStep
 from chipcompiler.tools.ecc.metrics import save_step_metrics
+from chipcompiler.utility import dict_to_str, json_read
 
 
-def build_step_metrics(workspace: Workspace,
-                       step: WorkspaceStep) -> StepMetrics:
+def build_step_metrics(workspace: Workspace, step: YosysStep) -> StepMetrics:
     """
     Build and persist synthesis metrics from Yosys stat JSON.
     Args:
@@ -16,14 +14,14 @@ def build_step_metrics(workspace: Workspace,
         StepMetrics: The populated step metrics object, or None if not available.
     """
     step_metrics = StepMetrics()
-    step_metrics.path = step.analysis.get('metrics', '')
+    step_metrics.path = step.analysis.metrics or ""
 
-    stat_json_path = step.feature.get('stat')
+    stat_json_path = step.feature.stat or ""
     data = json_read(stat_json_path)
     if not data:
         return None
 
-    design_data = data.get('design', {})
+    design_data = data.get("design", {})
 
     metrics = {
         "Tool": step.tool,
@@ -41,7 +39,7 @@ def build_step_metrics(workspace: Workspace,
         f"Area: {metrics['Cell area']}"
     )
     step_metrics.report.append(("", report))
-    
+
     workspace.logger.info("\nmetrics - \n%s", dict_to_str(step_metrics.data))
 
     if save_step_metrics(workspace, step, step_metrics):

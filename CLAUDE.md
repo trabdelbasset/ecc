@@ -20,6 +20,12 @@ import.
 
 For integrating thirdparty tools, see [docs/development.md](docs/development.md#integrating-a-thirdparty-tool).
 
+## Ignore Python 2 compatibility
+
+This project uses Python 3+. You should not use the `__future__` module.
+
+If you need to worry about feature compatibility between different 3.xx point releases, check the closest pyproject.toml's requires-python field to see what minimum runtime version is supported.
+
 # Gotchas
 
 - ECC-Tools tool identifier in code is `"ecc"`, not `"ecc-tools"`. Wrapper: `chipcompiler/tools/ecc/`
@@ -63,3 +69,20 @@ For integrating thirdparty tools, see [docs/development.md](docs/development.md#
 - Place tests near the ownership boundary they exercise. Tool-specific behavior belongs under `test/tools/<tool>/`; shared workspace/data behavior belongs under `test/data/`; CLI behavior belongs under `test/cli/`; cross-cutting invariants belong under `test/formal/`.
 - Keep helper fixtures local to the narrowest useful scope, such as a tool test directory `conftest.py`, before promoting them to shared test fixtures.
 - When tests need production defaults or tool config baselines, read the real template/config factory through a helper or fixture instead of duplicating default values. Keep literal values for explicit override inputs and assertions that intentionally define the default contract.
+- Do not add tests for values that are statically defined.
+- When writing tests, prefer comparing the equality of entire objects over fields one by one.
+- Do not add negative tests for logic that was removed.
+
+## 6. Avoid Large Modules
+
+- Prefer adding new modules instead of growing existing ones.
+- If a file exceeds roughly 800 LoC, add new functionality in a new module instead of extending the existing file unless there is a strong documented reason not to.
+- This rule applies especially to high-touch files that already attract unrelated changes.
+- When extracting code from a large module, move the related tests and module/type docs toward the new implementation so the invariants stay close to the code that owns them.
+
+# Code Review Standards
+
+All code review in this repository MUST enforce
+[docs/review-guidelines.md](docs/review-guidelines.md): apply its
+"Non-Negotiable Additional Standards" and "Approval Bar" to every diff.
+Findings that violate it are presumptive blockers.

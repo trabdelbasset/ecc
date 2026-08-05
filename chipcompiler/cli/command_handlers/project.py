@@ -1,3 +1,4 @@
+import contextlib
 import os
 import shutil
 import sys
@@ -79,16 +80,12 @@ run = "default"
 
 
 def check(command_input: CheckInput, ctx: CommandContext) -> CommandResult:
-    from chipcompiler.cli.project.config import (
-        find_config_path,
-        load_project_config,
-        validate_project_config,
-    )
+    from chipcompiler.cli.project.config import validate_project_config
 
     project = ctx.project
 
-    config_path = find_config_path(ctx.project_dir)
-    if config_path is None:
+    cfg = ctx.config
+    if cfg is None:
         return CommandResult.err(
             [
                 error_record(
@@ -99,7 +96,6 @@ def check(command_input: CheckInput, ctx: CommandContext) -> CommandResult:
             ]
         )
 
-    cfg = load_project_config(config_path)
     errors = validate_project_config(cfg)
 
     if errors:
@@ -116,12 +112,21 @@ def check(command_input: CheckInput, ctx: CommandContext) -> CommandResult:
             ]
         )
 
+    run_dir_display = "runs/default"
+    if ctx.run_id is not None:
+        run_dir_display = ctx.run_dir
+        if _canonically_inside(ctx.run_dir, ctx.project_dir):
+            with contextlib.suppress(ValueError):
+                run_dir_display = os.path.relpath(
+                    os.path.realpath(ctx.run_dir), os.path.realpath(ctx.project_dir)
+                )
+
     records = [
         {
             "project": cfg.design_name,
             "status": "checked",
             "config": "ecc.toml",
-            "run_dir": "runs/default",
+            "run_dir": run_dir_display,
             "run": disclosure_cmd("ecc run", project),
             "inspect_cmd": disclosure_cmd("ecc status", project),
         }
@@ -140,11 +145,51 @@ def check(command_input: CheckInput, ctx: CommandContext) -> CommandResult:
     return CommandResult.ok(records)
 
 
+def _is_ecc_run_dir(path: str) -> bool:
+    if not os.path.isdir(path):
+        return False
+    try:
+        if not os.listdir(path):
+            return True
+    except OSError:
+        return False
+    home = os.path.join(path, "home")
+    flow_json = os.path.join(home, "flow.json")
+    return not os.path.islink(home) and not os.path.islink(flow_json) and os.path.isfile(flow_json)
+
+
+def _resolves_as_spelled(path: str, anchor: str) -> bool:
+    """Return True when path canonically resolves where its spelling claims.
+
+    For a path spelled inside anchor, the canonical resolution must equal the
+    anchor's canonical resolution plus the textual tail; for any other path
+    (external or escaping), the canonical resolution must equal the
+    normalized spelling. A symlink component that redirects the target —
+    including one hidden behind ".." segments, which os.path.normpath would
+    collapse textually — breaks the equality. The anchor itself is trusted,
+    so a project reached through a symlinked parent keeps working.
+    """
+    spelled = os.path.normpath(path)
+    base = os.path.normpath(anchor)
+    if spelled == base:
+        return os.path.realpath(path) == os.path.realpath(base)
+    if spelled.startswith(base + os.sep):
+        tail = spelled[len(base) + 1 :]
+        return os.path.realpath(path) == os.path.join(os.path.realpath(base), tail)
+    return os.path.realpath(path) == spelled
+
+
+def _canonically_inside(path: str, anchor: str) -> bool:
+    """Return True when path's canonical resolution is anchor or below it."""
+    real_base = os.path.realpath(anchor)
+    real = os.path.realpath(path)
+    return real == real_base or real.startswith(real_base.rstrip(os.sep) + os.sep)
+
+
 def run(command_input: RunInput, ctx: CommandContext) -> CommandResult:
     from chipcompiler import rtl2gds as rtl2gds_api
     from chipcompiler.cli.project.config import (
-        find_config_path,
-        load_project_config,
+        resolve_pdk_overrides,
         resolve_pdk_root,
         resolve_rtl,
         to_parameters,
@@ -156,8 +201,8 @@ def run(command_input: RunInput, ctx: CommandContext) -> CommandResult:
     project = ctx.project
     project_dir = ctx.project_dir
 
-    config_path = find_config_path(project_dir)
-    if config_path is None:
+    cfg = ctx.config
+    if cfg is None:
         return CommandResult.err(
             [
                 {
@@ -168,7 +213,6 @@ def run(command_input: RunInput, ctx: CommandContext) -> CommandResult:
             ]
         )
 
-    cfg = load_project_config(config_path)
     errors = validate_project_config(cfg)
     if errors:
         return CommandResult.err(
@@ -204,7 +248,23 @@ def run(command_input: RunInput, ctx: CommandContext) -> CommandResult:
     # chipcompiler.runtime.project_runner.run_project or
     # chipcompiler.engine.project_run.prepare_and_run. Keep CLI ownership limited
     # to input parsing, progress renderer selection, and CommandResult mapping.
-    run_dir = os.path.join(project_dir, "runs", "default")
+    run_dir = ctx.run_dir
+    run_name = ctx.run_id or "default"
+    protected = (project_dir, os.path.join(project_dir, "runs"))
+    spelled = {os.path.normpath(p) for p in protected}
+    canonical = {os.path.realpath(p) for p in protected}
+    if os.path.normpath(run_dir) in spelled or os.path.realpath(run_dir) in canonical:
+        return CommandResult.err(
+            [
+                {
+                    "kind": "error",
+                    "error": "invalid_run_id",
+                    "run": run_name,
+                    "workspace": run_dir,
+                    "reason": "run id must not resolve to the project or runs container",
+                }
+            ]
+        )
     flow_json = os.path.join(run_dir, "home", "flow.json")
 
     if os.path.exists(flow_json) and not command_input.overwrite:
@@ -213,14 +273,26 @@ def run(command_input: RunInput, ctx: CommandContext) -> CommandResult:
                 {
                     "kind": "error",
                     "error": "run_exists",
-                    "run": "default",
+                    "run": run_name,
                     "workspace": run_dir,
-                    "overwrite": disclosure_cmd("ecc run --overwrite", project),
+                    "overwrite": disclosure_cmd("ecc run --overwrite", project, ctx.run_id),
                 }
             ]
         )
 
-    if command_input.overwrite and os.path.exists(run_dir):
+    if command_input.overwrite and os.path.lexists(run_dir):
+        if not _resolves_as_spelled(run_dir, project_dir) or not _is_ecc_run_dir(run_dir):
+            return CommandResult.err(
+                [
+                    {
+                        "kind": "error",
+                        "error": "overwrite_refused",
+                        "run": run_name,
+                        "workspace": run_dir,
+                        "reason": "target is not an ECC run directory",
+                    }
+                ]
+            )
         for root, dirs, files in os.walk(run_dir):
             for d in dirs:
                 dp = os.path.join(root, d)
@@ -232,6 +304,30 @@ def run(command_input: RunInput, ctx: CommandContext) -> CommandResult:
                     os.chmod(fp, 0o644)
         os.chmod(run_dir, 0o755)
         shutil.rmtree(run_dir)
+
+    # Only the process that atomically creates the target may proceed or
+    # clean up a failed create_workspace: an existing target (pre-existing
+    # or won by a concurrent run) is never written into or removed by this
+    # invocation. create_workspace re-attempts the creation, so any other
+    # error surfaces from there.
+    owns_target = False
+    try:
+        os.makedirs(run_dir)
+        owns_target = True
+    except FileExistsError:
+        return CommandResult.err(
+            [
+                {
+                    "kind": "error",
+                    "error": "run_exists",
+                    "run": run_name,
+                    "workspace": run_dir,
+                    "overwrite": disclosure_cmd("ecc run --overwrite", project, ctx.run_id),
+                }
+            ]
+        )
+    except OSError:
+        pass
 
     _, origin_verilog, input_filelist = resolve_rtl(cfg)
     parameters = to_parameters(cfg)
@@ -261,14 +357,17 @@ def run(command_input: RunInput, ctx: CommandContext) -> CommandResult:
             parameters=parameters,
             input_filelist=input_filelist,
             pdk_root=pdk_root,
+            pdk_overrides=resolve_pdk_overrides(cfg),
         )
     except Exception as exc:
+        if owns_target:
+            shutil.rmtree(run_dir, ignore_errors=True)
         return CommandResult.err(
             [
                 {
                     "kind": "error",
                     "error": "workspace_failed",
-                    "run": "default",
+                    "run": run_name,
                     "workspace": run_dir,
                     "reason": str(exc),
                 }
@@ -276,12 +375,14 @@ def run(command_input: RunInput, ctx: CommandContext) -> CommandResult:
         )
 
     if workspace is None:
+        if owns_target:
+            shutil.rmtree(run_dir, ignore_errors=True)
         return CommandResult.err(
             [
                 {
                     "kind": "error",
                     "error": "workspace_failed",
-                    "run": "default",
+                    "run": run_name,
                     "workspace": run_dir,
                 }
             ]
@@ -318,11 +419,11 @@ def run(command_input: RunInput, ctx: CommandContext) -> CommandResult:
             return CommandResult.err(
                 [
                     {
-                        "run": "default",
+                        "run": run_name,
                         "status": "failed",
                         "workspace": run_dir,
-                        "inspect_cmd": disclosure_cmd("ecc status", project),
-                        "log": disclosure_cmd("ecc log", project),
+                        "inspect_cmd": disclosure_cmd("ecc status", project, ctx.run_id),
+                        "log": disclosure_cmd("ecc log", project, ctx.run_id),
                     }
                 ]
             )
@@ -332,7 +433,7 @@ def run(command_input: RunInput, ctx: CommandContext) -> CommandResult:
                 {
                     "kind": "error",
                     "error": "flow_failed",
-                    "run": "default",
+                    "run": run_name,
                     "workspace": run_dir,
                     "reason": str(exc),
                 }
@@ -342,11 +443,11 @@ def run(command_input: RunInput, ctx: CommandContext) -> CommandResult:
     return CommandResult.ok(
         [
             {
-                "run": "default",
+                "run": run_name,
                 "status": "success",
                 "workspace": run_dir,
-                "inspect_cmd": disclosure_cmd("ecc status", project),
-                "log_cmd": disclosure_cmd("ecc log", project),
+                "inspect_cmd": disclosure_cmd("ecc status", project, ctx.run_id),
+                "log_cmd": disclosure_cmd("ecc log", project, ctx.run_id),
             }
         ]
     )

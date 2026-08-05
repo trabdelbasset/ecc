@@ -1,19 +1,15 @@
 #!/usr/bin/env python
-# -*- encoding: utf-8 -*-
-from chipcompiler.data import Workspace, WorkspaceStep
-from chipcompiler.tools.yosys.metrics import build_step_metrics
+from chipcompiler.data import Workspace, YosysStep
 from chipcompiler.utility import dict_to_str
 from chipcompiler.utility.path import stringify_paths
 
 
-def get_step_info(workspace: Workspace, 
-                  step: WorkspaceStep,
-                  id : str) -> dict:
+def get_step_info(workspace: Workspace, step: YosysStep, id: str) -> dict:
     """
     get step info by step and command id, return dict as resource definition
     """
     step_info = {}
-    
+
     match id:
         case "views":
             step_info = build_views(workspace=workspace, step=step)
@@ -37,66 +33,58 @@ def get_step_info(workspace: Workspace,
 
     return step_info
 
-def build_views(workspace: Workspace, 
-                step: WorkspaceStep) -> dict:
-    info = {
-        "image" : stringify_paths(step.output.get("image", "")),
-        "metrics" : stringify_paths(step.analysis.get('metrics', '')),
-        "information" : {}
-    }
-    
-    return info
 
-def build_layout(workspace: Workspace, 
-                 step: WorkspaceStep) -> dict:
+def build_views(workspace: Workspace, step: YosysStep) -> dict:
     info = {
-        "image" : stringify_paths(step.output.get("image", "")),
+        "image": stringify_paths(step.output.image or ""),
+        "metrics": stringify_paths(step.analysis.metrics or ""),
+        "information": {},
     }
-    
-    return info
 
-def build_metrics(workspace: Workspace, 
-                  step: WorkspaceStep) -> dict:
-    info = {
-        "metrics" : stringify_paths(step.analysis.get('metrics', ''))
-    }
-    
-    return info
-
-def build_subflow(workspace: Workspace, 
-                  step: WorkspaceStep) -> dict:       
-    info = {
-        "path" : stringify_paths(step.subflow.get("path", ""))
-    }
-    
     return info
 
 
-def build_config(workspace: Workspace, step: WorkspaceStep) -> dict:
+def build_layout(workspace: Workspace, step: YosysStep) -> dict:
+    info = {
+        "image": stringify_paths(step.output.image or ""),
+    }
+
+    return info
+
+
+def build_metrics(workspace: Workspace, step: YosysStep) -> dict:
+    info = {"metrics": stringify_paths(step.analysis.metrics or "")}
+
+    return info
+
+
+def build_subflow(workspace: Workspace, step: YosysStep) -> dict:
+    info = {"path": stringify_paths(step.subflow.path or "")}
+
+    return info
+
+
+def build_config(workspace: Workspace, step: YosysStep) -> dict:
     return {"path": stringify_paths(workspace.config.get("flow", ""))}
 
-def build_analysis(workspace: Workspace, 
-                   step: WorkspaceStep) -> dict:          
+
+def build_analysis(workspace: Workspace, step: YosysStep) -> dict:
     info = {
-        "metrics" : stringify_paths(step.analysis.get("metrics", "")),
-        "data summary" : stringify_paths(step.feature.get("stat", "")),
-        "step report" : stringify_paths(step.report.get("check", ""))
+        "metrics": stringify_paths(step.analysis.metrics or ""),
+        "data summary": stringify_paths(step.feature.stat or ""),
+        "step report": stringify_paths(step.report.check or ""),
     }
-    
+
     return info
 
-def build_maps(workspace: Workspace, 
-                   step: WorkspaceStep) -> dict:          
-    info = {
-        
-    }
-    
+
+def build_maps(workspace: Workspace, step: YosysStep) -> dict:
+    info = {}
+
     return info
 
-def build_checklist(workspace: Workspace, 
-                    step: WorkspaceStep) -> dict:          
-    info = {
-        "path" : stringify_paths(step.checklist.get("path", ""))
-    }
-    
+
+def build_checklist(workspace: Workspace, step: YosysStep) -> dict:
+    info = {"path": stringify_paths(step.checklist.path or "")}
+
     return info

@@ -7,9 +7,9 @@ from pathlib import Path
 from chipcompiler.data import (
     Checklist,
     CheckState,
+    EccStep,
     StepEnum,
     Workspace,
-    WorkspaceStep,
 )
 from chipcompiler.tools.ecc.qor_metrics import QorMetrics
 from chipcompiler.tools.ecc.signoff_checklist import refresh_step_checklist
@@ -35,7 +35,7 @@ class DreamplaceChecklist:
     }
 
     def __init__(
-        self, workspace: Workspace, workspace_step: WorkspaceStep, init_checklist: bool = True
+        self, workspace: Workspace, workspace_step: EccStep, *, init_checklist: bool = True
     ):
         self.workspace = workspace
         self.workspace_step = workspace_step
@@ -63,14 +63,14 @@ class DreamplaceChecklist:
 
     def build_checklist(self) -> list:
         refresh_step_checklist(self.workspace, self.workspace_step)
-        return self.workspace_step.checklist["checklist"]
+        return self.workspace_step.checklist.checklist
 
     def save(self) -> bool:
-        checklist = Checklist(path=self.workspace_step.checklist.get("path", ""))
+        checklist = Checklist(path=self.workspace_step.checklist.path or "")
         return checklist.save()
 
     def update_item(self, step: str, type: str, item: str, state: str | CheckState, info: str = ""):
-        checklist = Checklist(path=self.workspace_step.checklist.get("path", ""))
+        checklist = Checklist(path=self.workspace_step.checklist.path or "")
         checklist.update(step=step, type=type, item=item, state=state, info=info)
 
     def set_item_state(self, step: str, type: str, item: str, state: CheckState, info: str = ""):
@@ -82,7 +82,7 @@ class DreamplaceChecklist:
     def check(self) -> bool:
         return refresh_step_checklist(self.workspace, self.workspace_step)
 
-    def check_file(self, path: str, text_tokens: list | None = None) -> bool:
+    def check_file(self, path: str | Path, text_tokens: list | None = None) -> bool:
         if not path or not os.path.isfile(path) or os.path.getsize(path) <= 0:
             return False
 
@@ -97,7 +97,7 @@ class DreamplaceChecklist:
 
         return all(token in content for token in text_tokens)
 
-    def read_text(self, path: str) -> str:
+    def read_text(self, path: str | Path) -> str:
         if not path or not os.path.isfile(path):
             return ""
 
@@ -114,25 +114,25 @@ class DreamplaceChecklist:
             return default
 
     def step_file_success(self) -> bool:
+        output = self.workspace_step.output
         return all(
-            self.check_file(self.workspace_step.output.get(key, ""))
-            for key in ("def", "verilog", "gds")
+            self.check_file(path or "") for path in (output.def_, output.verilog, output.gds)
         )
 
     def qor_metrics(self) -> QorMetrics:
-        return QorMetrics(self.workspace_step.analysis.get("metrics", ""))
+        return QorMetrics(self.workspace_step.analysis.metrics or "")
 
     def feature_db(self) -> dict:
-        return json_read(self.workspace_step.feature.get("db", ""))
+        return json_read(self.workspace_step.feature.db or "")
 
     def feature_map(self) -> dict:
-        return json_read(self.workspace_step.feature.get("map", ""))
+        return json_read(self.workspace_step.feature.map or "")
 
     def dreamplace_config(self) -> dict:
         return json_read(self.workspace.config.get("dreamplace", ""))
 
     def log_text(self) -> str:
-        return self.read_text(self.workspace_step.log.get("file", ""))
+        return self.read_text(self.workspace_step.log.file or "")
 
     def update_checks(self, checks: list) -> bool:
         step = self.workspace_step.name
@@ -160,8 +160,8 @@ class DreamplaceChecklist:
             )
             results.append(success or warning)
 
-        self.workspace_step.checklist["checklist"] = Checklist(
-            path=self.workspace_step.checklist.get("path", "")
+        self.workspace_step.checklist.checklist = Checklist(
+            path=self.workspace_step.checklist.path or ""
         ).data
 
         return all(results)
@@ -185,7 +185,7 @@ class DreamplaceChecklist:
         return data
 
     def view_instances(self) -> dict:
-        view_dir = self.workspace_step.output.get("view_json", "")
+        view_dir = self.workspace_step.output.view_json or ""
         return json_read(Path(view_dir) / "design" / "instances.json")
 
     def count_unplaced_instances(self) -> int | None:
@@ -198,8 +198,9 @@ class DreamplaceChecklist:
         )
 
     def has_plot_files(self) -> bool:
+        step_dirs = self.workspace_step.data.steps or {}
         pattern = os.path.join(
-            self.workspace_step.data.get(self.workspace_step.name, ""),
+            step_dirs.get(self.workspace_step.name, ""),
             self.workspace.design.name,
             "plot",
             "*.png",

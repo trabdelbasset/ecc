@@ -6,7 +6,7 @@ from pathlib import Path
 
 from rosettakit import cmdfile
 
-from chipcompiler.data import Workspace, WorkspaceStep
+from chipcompiler.data import EccStep, Workspace
 from chipcompiler.tools.ecc import builder as ecc_builder
 
 from .utility import find_sizer_root
@@ -17,11 +17,11 @@ def build_step(
     step_name: str,
     input_def: Path | None,
     input_verilog: Path | None,
-    input_db: Path | None = None,
+    input_db: Path | str | None = None,
     output_def: Path | None = None,
     output_verilog: Path | None = None,
     output_gds: Path | None = None,
-) -> WorkspaceStep:
+) -> EccStep:
     safe_step_name = "_".join(step_name.split()).lower()
     step_directory = Path(workspace.directory) / f"{safe_step_name}_sizer"
     if output_def is None:
@@ -43,24 +43,29 @@ def build_step(
         tool="sizer",
         step_directory=step_directory,
     )
-    step.output["db"] = ""
-    step.script["sizer_env"] = step.script["dir"] / f"{workspace.design.name}.env_file"
-    step.script["sizer_cmd"] = step.script["dir"] / f"{workspace.design.name}.cmd_file"
+    step.output.db = ""
+    # Sizer produces no geometry snapshot; leave the destination undeclared so
+    # it is not part of this step's success contract (see EngineFlow.check_step_result).
+    step.output.geometry = None
+    step.output.geometry_manifest = None
+    script_dir = step.script.dir or step_directory / "script"
+    step.script.sizer_env = script_dir / f"{workspace.design.name}.env_file"
+    step.script.sizer_cmd = script_dir / f"{workspace.design.name}.cmd_file"
     return step
 
 
-def build_step_space(step: WorkspaceStep) -> None:
+def build_step_space(step: EccStep) -> None:
     ecc_builder.build_step_space(step)
 
 
-def build_sub_flow(workspace: Workspace, workspace_step: WorkspaceStep) -> None:
+def build_sub_flow(workspace: Workspace, workspace_step: EccStep) -> None:
     from .subflow import SizerSubFlow
 
     subflow = SizerSubFlow(workspace=workspace, workspace_step=workspace_step)
     subflow.build_sub_flow()
 
 
-def build_checklist(workspace: Workspace, workspace_step: WorkspaceStep) -> None:
+def build_checklist(workspace: Workspace, workspace_step: EccStep) -> None:
     from .checklist import SizerChecklist
 
     checklist = SizerChecklist(workspace=workspace, workspace_step=workspace_step)
@@ -114,21 +119,21 @@ def _append_route_layer_options(command: cmdfile.CommandFile, workspace: Workspa
         command.option("max_route_layer", top)
 
 
-def _cmd_text(workspace: Workspace, step: WorkspaceStep) -> str:
-    output_dir = step.data.get(step.name, step.data["dir"])
+def _cmd_text(workspace: Workspace, step: EccStep) -> str:
+    output_dir = step.data.workdir_for(step.name) or ""
     command = cmdfile.CommandFile(prefix="-", dialect=cmdfile.PLAIN_DIALECT)
 
     command.flag("useOpenSTA")
     command.option("top", workspace.design.top_module or workspace.design.name)
     command.option(
         "def",
-        step.input.get("def") or "",
+        step.input.def_ or "",
         value_type=cmdfile.ValueType.PATH,
         omit_empty=True,
     )
     command.option(
         "v",
-        step.input.get("verilog") or "",
+        step.input.verilog or "",
         value_type=cmdfile.ValueType.PATH,
         omit_empty=True,
     )
@@ -147,22 +152,24 @@ def _cmd_text(workspace: Workspace, step: WorkspaceStep) -> str:
     command.option("outputPath", ".")
     command.option(
         "def_out_path",
-        os.path.relpath(step.output["def"], output_dir),
+        os.path.relpath(step.output.def_ or "", output_dir),
         value_type=cmdfile.ValueType.PATH,
     )
     command.option(
         "verilog_out_path",
-        os.path.relpath(step.output["verilog"], output_dir),
+        os.path.relpath(step.output.verilog or "", output_dir),
         value_type=cmdfile.ValueType.PATH,
     )
     _append_route_layer_options(command, workspace)
     return command.build()
 
 
-def build_step_config(workspace: Workspace, step: WorkspaceStep) -> None:
+def build_step_config(workspace: Workspace, step: EccStep) -> None:
     env_template = _sizer_env_template()
-    env_path = step.script["sizer_env"]
-    cmd_path = step.script["sizer_cmd"]
+    env_path = step.script.sizer_env
+    cmd_path = step.script.sizer_cmd
+    if env_path is None or cmd_path is None:
+        raise ValueError("sizer step is missing script env/cmd paths")
 
     _copy_or_seed_template(env_template, env_path, "-num_vt 1\n")
     Path(cmd_path).parent.mkdir(parents=True, exist_ok=True)

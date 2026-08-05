@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 import os
+from pathlib import Path
 
-from chipcompiler.data import Checklist, CheckState, StepEnum, Workspace, WorkspaceStep
+from chipcompiler.data import Checklist, CheckState, StepEnum, Workspace, YosysStep
 from chipcompiler.tools.ecc.qor_metrics import QorMetrics
 from chipcompiler.tools.ecc.signoff_checklist import refresh_step_checklist
 from chipcompiler.utility import json_read
@@ -21,7 +22,7 @@ class YosysChecklist:
     }
 
     def __init__(
-        self, workspace: Workspace, workspace_step: WorkspaceStep, init_checklist: bool = True
+        self, workspace: Workspace, workspace_step: YosysStep, *, init_checklist: bool = True
     ):
         self.workspace = workspace
         self.workspace_step = workspace_step
@@ -48,16 +49,16 @@ class YosysChecklist:
                 state=CheckState.Unstart.value,
             )
 
-    def build_checklist(self) -> list:
+    def build_checklist(self) -> list | dict:
         refresh_step_checklist(self.workspace, self.workspace_step)
-        return self.workspace_step.checklist["checklist"]
+        return self.workspace_step.checklist.checklist
 
     def save(self) -> bool:
-        checklist = Checklist(path=self.workspace_step.checklist.get("path", ""))
+        checklist = Checklist(path=self.workspace_step.checklist.path or "")
         return checklist.save()
 
     def update_item(self, step: str, type: str, item: str, state: str | CheckState, info: str = ""):
-        checklist = Checklist(path=self.workspace_step.checklist.get("path", ""))
+        checklist = Checklist(path=self.workspace_step.checklist.path or "")
         checklist.update(step=step, type=type, item=item, state=state, info=info)
 
     def set_item_state(self, step: str, type: str, item: str, state: CheckState, info: str = ""):
@@ -71,7 +72,7 @@ class YosysChecklist:
 
 
 class YosysSynthesisChecklist(YosysChecklist):
-    def check_file(self, path: str, text_tokens: list | None = None) -> bool:
+    def check_file(self, path: str | Path, text_tokens: list | None = None) -> bool:
         if not path or not os.path.isfile(path) or os.path.getsize(path) <= 0:
             return False
 
@@ -95,20 +96,20 @@ class YosysSynthesisChecklist(YosysChecklist):
         return refresh_step_checklist(self.workspace, self.workspace_step)
 
         step = StepEnum.SYNTHESIS.value
-        qor_metrics = QorMetrics(self.workspace_step.analysis.get("metrics", ""))
-        stat = json_read(self.workspace_step.feature.get("stat", ""))
+        qor_metrics = QorMetrics(self.workspace_step.analysis.metrics or "")
+        stat = json_read(self.workspace_step.feature.stat or "")
 
         try:
-            log_text = read_text_maybe_gzip(self.workspace_step.log.get("file", ""))
+            log_text = read_text_maybe_gzip(self.workspace_step.log.file or "")
         except (OSError, EOFError):
             log_text = ""
 
         try:
-            netlist_text = read_text_maybe_gzip(self.workspace_step.output.get("verilog", ""))
+            netlist_text = read_text_maybe_gzip(self.workspace_step.output.verilog or "")
         except (OSError, EOFError):
             netlist_text = ""
 
-        input_verilog = self.workspace_step.input.get("verilog", "")
+        input_verilog = self.workspace_step.input.verilog or ""
         filelist = (
             self.workspace.design.input_filelist
             if self.workspace.design.input_filelist
@@ -161,7 +162,7 @@ class YosysSynthesisChecklist(YosysChecklist):
             (
                 "Netlist",
                 "check mapped gate netlist",
-                self.check_file(self.workspace_step.output.get("verilog", ""))
+                self.check_file(self.workspace_step.output.verilog or "")
                 and bool(top_module)
                 and f"module {top_module}" in netlist_text,
             ),
@@ -191,8 +192,8 @@ class YosysSynthesisChecklist(YosysChecklist):
                 info="" if success else info,
             )
 
-        self.workspace_step.checklist["checklist"] = Checklist(
-            path=self.workspace_step.checklist.get("path", "")
+        self.workspace_step.checklist.checklist = Checklist(
+            path=self.workspace_step.checklist.path or ""
         ).data
 
         return all(success for _, _, success in checks)

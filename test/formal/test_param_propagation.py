@@ -9,12 +9,20 @@ Verifies:
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import pytest
 from z3 import ArithRef, Int, Real, Solver, unsat
 
-from chipcompiler.data import OriginDesign, StepEnum, Workspace, WorkspaceStep, get_parameters
+from chipcompiler.data import (
+    EccData,
+    OriginDesign,
+    StepEnum,
+    Workspace,
+    WorkspaceStep,
+    get_parameters,
+)
 from chipcompiler.tools.ecc_dreamplace.module import DreamplaceModule
 from chipcompiler.utility import json_write
 
@@ -184,18 +192,19 @@ def test_routability_runtime_flags_are_config_driven(tmp_path) -> None:
         config={"dreamplace": config_path},
     )
     result_dir = tmp_path / "data" / "pl"
+    step_data = EccData(dir=tmp_path / "data", steps={StepEnum.PLACEMENT.value: result_dir})
     step = WorkspaceStep(
         name=StepEnum.PLACEMENT.value,
-        data={"dir": tmp_path / "data", StepEnum.PLACEMENT.value: result_dir},
+        data=step_data,
     )
     module = DreamplaceModule(
         workspace=workspace,
         step=step,
         ecc_module=None,
-        input_def="input.def",
-        input_verilog="input.v",
-        output_def="output.def",
-        output_verilog="output.v",
+        input_def=Path("input.def"),
+        input_verilog=Path("input.v"),
+        output_def=Path("output.def"),
+        output_verilog=Path("output.v"),
     )
 
     params = module._build_params(FakeDreamplaceParams, legalize_only=False)
@@ -229,7 +238,7 @@ PROPAGATION_MAP: list[tuple[str, str, bool]] = [
     PROPAGATION_MAP,
     ids=[t[1] for t in PROPAGATION_MAP],
 )
-def test_propagation_z3(param_key: str, config_field: str, reads_param: bool) -> None:
+def test_propagation_z3(param_key: str, config_field: str, *, reads_param: bool) -> None:
     """z3: for each parameter -> config mapping, prove that the parameter
     value reaches the config field.
 

@@ -2,11 +2,29 @@ import os
 import tomllib
 from dataclasses import dataclass, field
 
-SUPPORTED_PDK_NAMES = {"ics55", "sg13g2"}
+from chipcompiler.utility.filelist import FILELIST_SUFFIXES, RTL_SUFFIXES
+
+SUPPORTED_PDK_NAMES = {"ics55", "sg13g2", "ihp130"}
 SUPPORTED_FLOW_PRESETS = {"rtl2gds"}
 SUPPORTED_FLOW_RUNS = {"default"}
-FILELIST_SUFFIXES = {".f", ".fl", ".filelist"}
-RTL_SUFFIXES = {".v", ".sv", ".svh", ".vh"}
+
+
+class InvalidFlowRun:
+    """config_run_id result for a [flow] run value that cannot name a run directory."""
+
+    def __init__(self, problem: str) -> None:
+        self.problem = problem
+
+
+def _flow_run_problem(value: object) -> str | None:
+    """Return the rejection reason for a present [flow] run value, or None."""
+    if isinstance(value, str):
+        if value == "default":
+            return None
+        if value and value == value.strip() and "\x00" not in value:
+            return None
+    return f"unsupported flow.run: {value}"
+>>>>>>> upstream/main
 
 
 # TODO: Move ecc.toml parsing and validation into chipcompiler.data.project_config
@@ -21,6 +39,7 @@ class ProjectConfig:
 
     pdk_name: str = ""
     pdk_root: str = ""
+    pdk_overrides: dict[str, object] = field(default_factory=dict)
 
     flow_preset: str = ""
     flow_run: str = ""
@@ -29,6 +48,11 @@ class ProjectConfig:
     project_dir: str = ""
 
     params_overrides: dict[str, object] = field(default_factory=dict)
+
+    _toml_error: str | None = field(default=None, init=False, repr=False)
+    _param_errors: list[str] = field(default_factory=list, init=False, repr=False)
+    _pdk_config_errors: list[str] = field(default_factory=list, init=False, repr=False)
+    _flow_run_error: str | None = field(default=None, init=False, repr=False)
 
 
 def load_project_config(config_path: str) -> ProjectConfig:
@@ -69,6 +93,11 @@ def _parse_config(data: dict, config_path: str) -> ProjectConfig:
     def _str(val, default=""):
         return val if isinstance(val, str) else default
 
+    pdk_overrides_raw = pdk.get("overrides", {})
+    pdk_overrides = {} if not isinstance(pdk_overrides_raw, dict) else pdk_overrides_raw
+
+    raw_run = flow.get("run", "default")
+
     cfg = ProjectConfig(
         design_name=_str(design.get("name", "")),
         design_top=_str(design.get("top", "")),
@@ -77,11 +106,19 @@ def _parse_config(data: dict, config_path: str) -> ProjectConfig:
         design_frequency_mhz=freq,
         pdk_name=_str(pdk.get("name", "")),
         pdk_root=_str(pdk.get("root", "")),
+        pdk_overrides=pdk_overrides,
         flow_preset=_str(flow.get("preset", "")),
-        flow_run=_str(flow.get("run", "default"), "default"),
+        flow_run=_str(raw_run, "default"),
         config_path=config_path,
         project_dir=project_dir,
     )
+
+    cfg._flow_run_error = _flow_run_problem(raw_run)
+
+    if not isinstance(pdk_overrides_raw, dict):
+        cfg._pdk_config_errors = [
+            "[pdk.overrides] must be a table (mapping), not " + type(pdk_overrides_raw).__name__
+        ]
 
     params_raw = data.get("params")
     if isinstance(params_raw, dict):
@@ -106,6 +143,38 @@ def find_config_path(project_dir: str) -> str | None:
     return path if os.path.isfile(path) else None
 
 
+def load_run_config(project_dir: str) -> ProjectConfig | None:
+    """Parse the project's ecc.toml; None when it is missing or unreadable."""
+    config_path = find_config_path(project_dir)
+    if config_path is None:
+        return None
+    try:
+        return load_project_config(config_path)
+    except (OSError, UnicodeDecodeError):
+        return None
+
+
+def config_run_id_from(cfg: ProjectConfig | None) -> str | InvalidFlowRun | None:
+    """Apply the canonical [flow] run rule to an already-parsed config."""
+    if cfg is None or cfg._toml_error:
+        return None
+    if cfg._flow_run_error is not None:
+        return InvalidFlowRun(cfg._flow_run_error)
+    if cfg.flow_run == "default":
+        return None
+    return cfg.flow_run
+
+
+def config_run_id(project_dir: str) -> str | InvalidFlowRun | None:
+    """Return the [flow] run id configured in the project's ecc.toml.
+
+    None when the key is absent, is "default", or the config cannot be read;
+    InvalidFlowRun when the key is present but cannot name a run directory;
+    otherwise the run id string.
+    """
+    return config_run_id_from(load_run_config(project_dir))
+
+
 def _supported_flow_presets() -> set[str]:
     from chipcompiler import rtl2gds as rtl2gds_api
 
@@ -113,16 +182,16 @@ def _supported_flow_presets() -> set[str]:
 
 
 def validate_project_config(cfg: ProjectConfig) -> list[str]:
-    toml_error = getattr(cfg, "_toml_error", None)
-    if toml_error:
-        return [f"malformed ecc.toml: {toml_error}"]
+    if cfg._toml_error:
+        return [f"malformed ecc.toml: {cfg._toml_error}"]
 
     errors = []
 
-    param_errors = getattr(cfg, "_param_errors", None)
-    if param_errors:
-        for pe in param_errors:
-            errors.append(f"invalid params: {pe}")
+    for pe in cfg._pdk_config_errors:
+        errors.append(f"invalid PDK configuration: {pe}")
+
+    for pe in cfg._param_errors:
+        errors.append(f"invalid params: {pe}")
 
     if not cfg.design_name:
         errors.append("design.name is required")
@@ -147,7 +216,7 @@ def validate_project_config(cfg: ProjectConfig) -> list[str]:
         if not os.path.isdir(pdk_root):
             errors.append(f"pdk.root is not a directory: {cfg.pdk_root or '$(env)'}")
         else:
-            pdk_err = _validate_pdk_contents(cfg.pdk_name, pdk_root)
+            pdk_err = _validate_pdk_contents(cfg.pdk_name, pdk_root, resolve_pdk_overrides(cfg))
             if pdk_err:
                 errors.append(pdk_err)
     else:
@@ -158,8 +227,8 @@ def validate_project_config(cfg: ProjectConfig) -> list[str]:
     elif cfg.flow_preset not in _supported_flow_presets():
         errors.append(f"unsupported flow.preset: {cfg.flow_preset}")
 
-    if cfg.flow_run and cfg.flow_run not in SUPPORTED_FLOW_RUNS:
-        errors.append(f"unsupported flow.run: {cfg.flow_run}")
+    if cfg._flow_run_error:
+        errors.append(cfg._flow_run_error)
 
     if len(cfg.design_rtl) == 1:
         rtl_path = _resolve_path(cfg.project_dir, cfg.design_rtl[0])
@@ -235,13 +304,35 @@ def _resolve_pdk_root(cfg: ProjectConfig) -> str:
     return _resolve_path(cfg.project_dir, cfg.pdk_root)
 
 
-def _validate_pdk_contents(pdk_name: str, pdk_root: str) -> str | None:
+def resolve_pdk_overrides(cfg: ProjectConfig) -> dict[str, object]:
+    """Return pdk_overrides with path-field values resolved against the project dir.
+
+    Only fields the PDK dataclass declares as paths are rewritten; non-path
+    values such as dont_use glob patterns pass through untouched.
+    """
+    from chipcompiler.data.pdk import PATH_LIST_FIELDS, PATH_SCALAR_FIELDS
+
+    resolved = dict(cfg.pdk_overrides)
+    for key, value in resolved.items():
+        if key in PATH_SCALAR_FIELDS and isinstance(value, str):
+            resolved[key] = _resolve_path(cfg.project_dir, value)
+        elif key in PATH_LIST_FIELDS and isinstance(value, list):
+            resolved[key] = [
+                _resolve_path(cfg.project_dir, element) if isinstance(element, str) else element
+                for element in value
+            ]
+    return resolved
+
+
+def _validate_pdk_contents(
+    pdk_name: str, pdk_root: str, pdk_overrides: dict | None = None
+) -> str | None:
     if not pdk_root:
         return None
     try:
         from chipcompiler.data.pdk import get_pdk
 
-        get_pdk(pdk_name, pdk_root)
+        get_pdk(pdk_name, pdk_root, overrides=pdk_overrides)
         return None
     except ValueError as exc:
         return str(exc)

@@ -25,6 +25,9 @@ from z3 import (
 )
 
 from chipcompiler.data import (
+    EccOutput,
+    EccStep,
+    LogPaths,
     OriginDesign,
     StateEnum,
     Workspace,
@@ -318,20 +321,20 @@ def test_run_steps_stops_on_failure(tmp_path: Path, fail_index: int) -> None:
         output_dir: str = os.path.join(step_dir, "output")
         os.makedirs(output_dir, exist_ok=True)
 
-        ws_step = WorkspaceStep(
+        ws_step = EccStep(
             name=f"step_{i}",
             tool="mock",
             directory=step_dir,
-            output={
-                "verilog": os.path.join(output_dir, "design.v"),
-                "def": os.path.join(output_dir, "design.def"),
-                "gds": os.path.join(output_dir, "design.gds"),
-            },
-            log={"file": os.path.join(step_dir, "log.txt")},
+            output=EccOutput(
+                verilog=Path(output_dir) / "design.v",
+                def_=Path(output_dir) / "design.def",
+                gds=Path(output_dir) / "design.gds",
+            ),
+            log=LogPaths(file=Path(step_dir) / "log.txt"),
         )
         flow.workspace_steps.append(ws_step)
 
-    def mock_run_step(workspace_step: WorkspaceStep | str, rerun: bool = False) -> StateEnum:
+    def mock_run_step(workspace_step: WorkspaceStep | str, *, rerun: bool = False) -> StateEnum:
         if isinstance(workspace_step, str):
             resolved = flow.get_workspace_step(workspace_step)
             assert resolved is not None, f"Step '{workspace_step}' not found"

@@ -18,7 +18,10 @@ def build_project_config_items(
     if config_path is None:
         return [{"kind": "error", "status": "missing_config"}], 1
 
-    cfg = load_project_config(config_path)
+    try:
+        cfg = load_project_config(config_path)
+    except (OSError, UnicodeDecodeError):
+        return [{"kind": "error", "status": "invalid_config"}], 1
     if getattr(cfg, "_toml_error", None):
         return [{"kind": "error", "status": "invalid_config"}], 1
 
@@ -82,6 +85,20 @@ def build_project_config_items(
             "inspect_cmd": inspect,
         }
     )
+
+    # PDK overrides
+    if cfg.pdk_overrides:
+        items.append(
+            {
+                "kind": "config",
+                "scope": "project",
+                "key": "pdk.overrides",
+                "value": cfg.pdk_overrides,
+                "resolved": cfg.pdk_overrides,
+                "source": "ecc.toml",
+                "inspect_cmd": inspect,
+            }
+        )
 
     # Run directory
     try:

@@ -52,10 +52,41 @@ class WorkspaceInspectSignoffRequest:
 
 
 @dataclass(frozen=True)
+class WorkspaceExtractFoundationRequest:
+    workspace_id: str
+
+
+@dataclass(frozen=True)
 class WorkspaceInfoRequest:
     workspace_id: str
     step: str
     info_id: str
+
+
+@dataclass(frozen=True)
+class CandidateBindInputRequest:
+    workspace_id: str
+    target_step: str
+    source_step: str
+    candidate_id: str
+
+
+@dataclass(frozen=True)
+class CandidateMaterializeRequest:
+    workspace_id: str
+    target_step: str
+    candidate_id: str
+    patch: list[dict[str, Any]]
+
+
+@dataclass(frozen=True)
+class CandidateRerunRequest:
+    workspace_id: str
+    target_step: str
+    end_step: str
+    candidate_id: str
+    patch: list[dict[str, Any]]
+    execution_scope: str
 
 
 @dataclass(frozen=True)
@@ -82,6 +113,51 @@ class DbReleaseRequest:
     workspace_id: str
 
 
+@dataclass(frozen=True)
+class LayoutEditBeginRequest:
+    workspace_id: str
+    step: str
+    expected_source_fingerprint: str = ""
+
+
+@dataclass(frozen=True)
+class LayoutEditApplyRequest:
+    edit_session_id: str
+    command_id: str
+    base_revision: int
+    operation: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class LayoutEditSaveRequest:
+    edit_session_id: str
+    expected_revision: int
+
+
+@dataclass(frozen=True)
+class LayoutEditDiscardRequest:
+    edit_session_id: str
+
+
+@dataclass(frozen=True)
+class FloorplanEditInspectRequest:
+    edit_session_id: str
+
+
+@dataclass(frozen=True)
+class FloorplanEditRunAutoRequest:
+    edit_session_id: str
+    command_id: str
+    base_revision: int
+    request: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class FloorplanEditValidateRequest:
+    edit_session_id: str
+    scope: str = "all"
+
+
 class RequestValidationError(ValueError):
     def __init__(self, reason: str):
         super().__init__(reason)
@@ -97,9 +173,19 @@ FIELD_ALIASES = {
     "paramJson": "parameters",
     "rtlList": "rtl_list",
     "workspaceId": "workspace_id",
+    "targetStep": "target_step",
+    "endStep": "end_step",
+    "sourceStep": "source_step",
+    "candidateId": "candidate_id",
+    "executionScope": "execution_scope",
     "configPath": "config_path",
     "outputPath": "output_path",
     "infoId": "info_id",
+    "editSessionId": "edit_session_id",
+    "commandId": "command_id",
+    "baseRevision": "base_revision",
+    "expectedRevision": "expected_revision",
+    "expectedSourceFingerprint": "expected_source_fingerprint",
     "id": "info_id",
 }
 

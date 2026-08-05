@@ -1,17 +1,11 @@
 #!/usr/bin/env python
 import glob
 import os
+from pathlib import Path
 
-from chipcompiler.data import Checklist, CheckState, StepEnum, Workspace, WorkspaceStep
+from chipcompiler.data import Checklist, CheckState, EccStep, StepEnum, Workspace
 from chipcompiler.tools.ecc.qor_metrics import QorMetrics
 from chipcompiler.tools.ecc.signoff_checklist import refresh_step_checklist
-from chipcompiler.tools.ecc.sta_qor import (
-    read_sta_qor_summary,
-    read_sta_timing_paths,
-    sta_qor_summary_paths,
-    sta_report_artifact_paths,
-    sta_timing_paths_paths,
-)
 from chipcompiler.utility import json_read
 
 
@@ -125,7 +119,7 @@ class EccChecklist:
     }
 
     def __init__(
-        self, workspace: Workspace, workspace_step: WorkspaceStep, init_checklist: bool = True
+        self, workspace: Workspace, workspace_step: EccStep, *, init_checklist: bool = True
     ):
         self.workspace = workspace
         self.workspace_step = workspace_step
@@ -161,20 +155,20 @@ class EccChecklist:
 
     def build_checklist(self) -> list:
         refresh_step_checklist(self.workspace, self.workspace_step)
-        return self.workspace_step.checklist["checklist"]
+        return self.workspace_step.checklist.checklist
 
     def save(self) -> bool:
-        checklist = Checklist(path=self.workspace_step.checklist.get("path", ""))
+        checklist = Checklist(path=self.workspace_step.checklist.path or "")
         return checklist.save()
 
     def update_item(self, step: str, type: str, item: str, state: str | CheckState, info: str = ""):
-        checklist = Checklist(path=self.workspace_step.checklist.get("path", ""))
+        checklist = Checklist(path=self.workspace_step.checklist.path or "")
         checklist.update(step=step, type=type, item=item, state=state, info=info)
 
     def check(self) -> bool:
         return refresh_step_checklist(self.workspace, self.workspace_step)
 
-    def check_file(self, path: str, text_tokens: list | None = None) -> bool:
+    def check_file(self, path: str | Path, text_tokens: list | None = None) -> bool:
         if not path or not os.path.isfile(path) or os.path.getsize(path) <= 0:
             return False
 
@@ -196,7 +190,7 @@ class EccChecklist:
             return default
 
     def qor_metrics(self) -> QorMetrics:
-        return QorMetrics(self.workspace_step.analysis.get("metrics", ""))
+        return QorMetrics(self.workspace_step.analysis.metrics or "")
 
     def apply_checks(
         self, step: str, checks: list[tuple[str, str, bool, str]], warnings: set[str] | None = None
@@ -214,8 +208,8 @@ class EccChecklist:
                 info="" if success else info,
             )
 
-        self.workspace_step.checklist["checklist"] = Checklist(
-            path=self.workspace_step.checklist.get("path", "")
+        self.workspace_step.checklist.checklist = Checklist(
+            path=self.workspace_step.checklist.path or ""
         ).data
         return all(success or item in warnings for _, item, success, _ in checks)
 
@@ -226,12 +220,12 @@ class EccFloorplanChecklist(EccChecklist):
 
         step = StepEnum.FLOORPLAN.value
         metrics = self.qor_metrics()
-        db = json_read(self.workspace_step.feature.get("db", ""))
-        subflow = json_read(self.workspace_step.subflow.get("path", ""))
+        db = json_read(self.workspace_step.feature.db or "")
+        subflow = json_read(self.workspace_step.subflow.path or "")
 
         try:
             with open(
-                self.workspace_step.log.get("file", ""),
+                self.workspace_step.log.file or "",
                 encoding="utf-8",
                 errors="ignore",
             ) as file:
@@ -246,9 +240,9 @@ class EccFloorplanChecklist(EccChecklist):
         subflow_state = {item.get("name"): item.get("state") for item in subflow.get("steps", [])}
         output_success = all(
             [
-                self.check_file(self.workspace_step.output.get("def", "")),
-                self.check_file(self.workspace_step.output.get("verilog", "")),
-                self.check_file(self.workspace_step.output.get("gds", "")),
+                self.check_file(self.workspace_step.output.def_ or ""),
+                self.check_file(self.workspace_step.output.verilog or ""),
+                self.check_file(self.workspace_step.output.gds or ""),
             ]
         )
 
@@ -368,12 +362,12 @@ class EccNetlistOptChecklist(EccChecklist):
 
         step = StepEnum.NETLIST_OPT.value
         metrics = self.qor_metrics()
-        db = json_read(self.workspace_step.feature.get("db", ""))
+        db = json_read(self.workspace_step.feature.db or "")
         config = json_read(self.workspace.config.get(StepEnum.NETLIST_OPT.value, ""))
 
         try:
             with open(
-                self.workspace_step.output.get("verilog", ""),
+                self.workspace_step.output.verilog or "",
                 encoding="utf-8",
                 errors="ignore",
             ) as file:
@@ -394,9 +388,9 @@ class EccNetlistOptChecklist(EccChecklist):
         db_nets = self.to_float(statis.get("num_nets"), 0.0)
         output_success = all(
             [
-                self.check_file(self.workspace_step.output.get("def", "")),
-                self.check_file(self.workspace_step.output.get("verilog", "")),
-                self.check_file(self.workspace_step.output.get("gds", "")),
+                self.check_file(self.workspace_step.output.def_ or ""),
+                self.check_file(self.workspace_step.output.verilog or ""),
+                self.check_file(self.workspace_step.output.gds or ""),
             ]
         )
 
@@ -462,7 +456,7 @@ class EccCtsChecklist(EccChecklist):
 
         step = StepEnum.CTS.value
         metrics = self.qor_metrics()
-        db = json_read(self.workspace_step.feature.get("db", ""))
+        db = json_read(self.workspace_step.feature.db or "")
         config = json_read(self.workspace.config.get(StepEnum.CTS.value, ""))
 
         nets = db.get("Nets", {})
@@ -557,14 +551,12 @@ class EccTimingOptDrvChecklist(EccChecklist):
         return refresh_step_checklist(self.workspace, self.workspace_step)
 
         step = StepEnum.TIMING_OPT_DRV.value
-        db = json_read(self.workspace_step.feature.get("db", ""))
+        db = json_read(self.workspace_step.feature.db or "")
         config = json_read(self.workspace.config.get(StepEnum.TIMING_OPT_DRV.value, ""))
 
         try:
             with open(
-                self.workspace_step.log.get("file", ""),
-                encoding="utf-8",
-                errors="ignore",
+                self.workspace_step.log.file or "", encoding="utf-8", errors="ignore"
             ) as file:
                 log_text = file.read().lower()
         except OSError:
@@ -577,9 +569,9 @@ class EccTimingOptDrvChecklist(EccChecklist):
 
         output_success = all(
             [
-                self.check_file(self.workspace_step.output.get("def", "")),
-                self.check_file(self.workspace_step.output.get("verilog", "")),
-                self.check_file(self.workspace_step.output.get("gds", "")),
+                self.check_file(self.workspace_step.output.def_ or ""),
+                self.check_file(self.workspace_step.output.verilog or ""),
+                self.check_file(self.workspace_step.output.gds or ""),
             ]
         )
         log_success = not any(
@@ -617,8 +609,8 @@ class EccTimingOptDrvChecklist(EccChecklist):
                 info="" if success else f"{item} check failed",
             )
 
-        self.workspace_step.checklist["checklist"] = Checklist(
-            path=self.workspace_step.checklist.get("path", "")
+        self.workspace_step.checklist.checklist = Checklist(
+            path=self.workspace_step.checklist.path or ""
         ).data
 
         return all(success for _, _, success in checks)
@@ -629,8 +621,8 @@ class EccTimingOptHoldChecklist(EccChecklist):
         return refresh_step_checklist(self.workspace, self.workspace_step)
 
         step = StepEnum.TIMING_OPT_HOLD.value
-        metrics = json_read(self.workspace_step.analysis.get("metrics", ""))
-        db = json_read(self.workspace_step.feature.get("db", ""))
+        metrics = json_read(self.workspace_step.analysis.metrics or "")
+        db = json_read(self.workspace_step.feature.db or "")
         config = json_read(self.workspace.config.get(StepEnum.TIMING_OPT_HOLD.value, ""))
 
         buffer_cells = config.get("hold_insert_buffers", [])
@@ -639,9 +631,9 @@ class EccTimingOptHoldChecklist(EccChecklist):
 
         output_success = all(
             [
-                self.check_file(self.workspace_step.output.get("def", "")),
-                self.check_file(self.workspace_step.output.get("verilog", "")),
-                self.check_file(self.workspace_step.output.get("gds", "")),
+                self.check_file(self.workspace_step.output.def_ or ""),
+                self.check_file(self.workspace_step.output.verilog or ""),
+                self.check_file(self.workspace_step.output.gds or ""),
             ]
         )
         min_wns = self.to_float(metrics.get("min_WNS"))
@@ -675,8 +667,8 @@ class EccTimingOptHoldChecklist(EccChecklist):
                 info="" if success else f"{item} check failed",
             )
 
-        self.workspace_step.checklist["checklist"] = Checklist(
-            path=self.workspace_step.checklist.get("path", "")
+        self.workspace_step.checklist.checklist = Checklist(
+            path=self.workspace_step.checklist.path or ""
         ).data
 
         return all(success for _, _, success in checks)
@@ -687,8 +679,8 @@ class EccTimingOptSetupChecklist(EccChecklist):
         return refresh_step_checklist(self.workspace, self.workspace_step)
 
         step = StepEnum.TIMING_OPT_SETUP.value
-        metrics = json_read(self.workspace_step.analysis.get("metrics", ""))
-        db = json_read(self.workspace_step.feature.get("db", ""))
+        metrics = json_read(self.workspace_step.analysis.metrics or "")
+        db = json_read(self.workspace_step.feature.db or "")
         config = json_read(self.workspace.config.get(StepEnum.TIMING_OPT_SETUP.value, ""))
 
         buffer_cells = config.get("setup_insert_buffers", [])
@@ -697,9 +689,9 @@ class EccTimingOptSetupChecklist(EccChecklist):
 
         output_success = all(
             [
-                self.check_file(self.workspace_step.output.get("def", "")),
-                self.check_file(self.workspace_step.output.get("verilog", "")),
-                self.check_file(self.workspace_step.output.get("gds", "")),
+                self.check_file(self.workspace_step.output.def_ or ""),
+                self.check_file(self.workspace_step.output.verilog or ""),
+                self.check_file(self.workspace_step.output.gds or ""),
             ]
         )
         max_wns = self.to_float(metrics.get("max_WNS"))
@@ -733,8 +725,8 @@ class EccTimingOptSetupChecklist(EccChecklist):
                 info="" if success else f"{item} check failed",
             )
 
-        self.workspace_step.checklist["checklist"] = Checklist(
-            path=self.workspace_step.checklist.get("path", "")
+        self.workspace_step.checklist.checklist = Checklist(
+            path=self.workspace_step.checklist.path or ""
         ).data
 
         return all(success for _, _, success in checks)
@@ -746,10 +738,8 @@ class EccRoutingChecklist(EccChecklist):
 
         step = StepEnum.ROUTING.value
         metrics = self.qor_metrics()
-        db = json_read(self.workspace_step.feature.get("db", ""))
-        feature = json_read(self.workspace_step.feature.get("step", "")).get(
-            StepEnum.ROUTING.value, {}
-        )
+        db = json_read(self.workspace_step.feature.db or "")
+        feature = json_read(self.workspace_step.feature.step or "").get(StepEnum.ROUTING.value, {})
         config = json_read(self.workspace.config.get(StepEnum.ROUTING.value, ""))
 
         layers = db.get("Layers", {})
@@ -768,9 +758,9 @@ class EccRoutingChecklist(EccChecklist):
         timing_enabled = str(rt_config.get("-enable_timing", "0")) == "1"
         output_success = all(
             [
-                self.check_file(self.workspace_step.output.get("def", "")),
-                self.check_file(self.workspace_step.output.get("verilog", "")),
-                self.check_file(self.workspace_step.output.get("gds", "")),
+                self.check_file(self.workspace_step.output.def_ or ""),
+                self.check_file(self.workspace_step.output.verilog or ""),
+                self.check_file(self.workspace_step.output.gds or ""),
             ]
         )
 
@@ -826,12 +816,12 @@ class EccDrcChecklist(EccChecklist):
 
         step = StepEnum.DRC.value
         metrics = self.qor_metrics()
-        feature = json_read(self.workspace_step.feature.get("step", "")).get("drc", {})
+        feature = json_read(self.workspace_step.feature.step or "").get("drc", {})
         output_success = all(
             [
-                self.check_file(self.workspace_step.output.get("def", "")),
-                self.check_file(self.workspace_step.output.get("verilog", "")),
-                self.check_file(self.workspace_step.output.get("gds", "")),
+                self.check_file(self.workspace_step.output.def_ or ""),
+                self.check_file(self.workspace_step.output.verilog or ""),
+                self.check_file(self.workspace_step.output.gds or ""),
             ]
         )
 
@@ -953,15 +943,13 @@ class EccFillerChecklist(EccChecklist):
         return refresh_step_checklist(self.workspace, self.workspace_step)
 
         step = StepEnum.FILLER.value
-        db = json_read(self.workspace_step.feature.get("db", ""))
-        subflow = json_read(self.workspace_step.subflow.get("path", ""))
+        db = json_read(self.workspace_step.feature.db or "")
+        subflow = json_read(self.workspace_step.subflow.path or "")
         config = json_read(self.workspace.config.get(StepEnum.PLACEMENT.value, ""))
 
         try:
             with open(
-                self.workspace_step.log.get("file", ""),
-                encoding="utf-8",
-                errors="ignore",
+                self.workspace_step.log.file or "", encoding="utf-8", errors="ignore"
             ) as file:
                 log_text = file.read()
         except OSError:
@@ -974,9 +962,9 @@ class EccFillerChecklist(EccChecklist):
         pdk_fillers = getattr(self.workspace.pdk, "fillers", []) or []
         output_success = all(
             [
-                self.check_file(self.workspace_step.output.get("def", "")),
-                self.check_file(self.workspace_step.output.get("verilog", "")),
-                self.check_file(self.workspace_step.output.get("gds", "")),
+                self.check_file(self.workspace_step.output.def_ or ""),
+                self.check_file(self.workspace_step.output.verilog or ""),
+                self.check_file(self.workspace_step.output.gds or ""),
             ]
         )
         statis = db.get("Design Statis", {})
@@ -1024,8 +1012,8 @@ class EccFillerChecklist(EccChecklist):
             info="post-filler DRC is not run in current flow",
         )
 
-        self.workspace_step.checklist["checklist"] = Checklist(
-            path=self.workspace_step.checklist.get("path", "")
+        self.workspace_step.checklist.checklist = Checklist(
+            path=self.workspace_step.checklist.path or ""
         ).data
 
         return all(success for _, _, success in checks)
@@ -1054,20 +1042,20 @@ class EccHardenChecklist(EccChecklist):
                 "Output",
                 "check abstract LEF",
                 lef_metric == 1
-                and self.check_file(self.workspace_step.output.get("lef", ""), lef_tokens),
+                and self.check_file(self.workspace_step.output.lef or "", lef_tokens),
                 lef_error or "harden_lef_exists is not 1 or the LEF deliverable is missing/invalid",
             ),
             (
                 "Output",
                 "check timing model LIB",
                 lib_metric == 1
-                and self.check_file(self.workspace_step.output.get("lib", ""), lib_tokens),
+                and self.check_file(self.workspace_step.output.lib or "", lib_tokens),
                 lib_error or "harden_lib_exists is not 1 or the LIB deliverable is missing/invalid",
             ),
             (
                 "Output",
                 "check harden GDS",
-                gds_metric == 1 and self.check_file(self.workspace_step.output.get("gds", "")),
+                gds_metric == 1 and self.check_file(self.workspace_step.output.gds or ""),
                 gds_error or "harden_gds_exists is not 1 or the GDS deliverable is missing",
             ),
         ]
@@ -1088,11 +1076,14 @@ class EccHardenChecklist(EccChecklist):
 
 class EccRcxChecklist(EccChecklist):
     def collect_rcx_spef_paths(self) -> list:
-        spef_paths = self.workspace_step.output.get("spef", [])
-        if isinstance(spef_paths, str):
-            spef_paths = [spef_paths]
+        spef_value = self.workspace_step.output.spef
+        # Preserve the legacy live-list contract: for the list case, extend the
+        # step's own list in place (a later reader of step.output.spef sees the
+        # discovered output-dir SPEFs); only the legacy string case is wrapped
+        # into a fresh local list.
+        spef_paths: list = [spef_value] if isinstance(spef_value, str) else spef_value
 
-        output_dir = self.workspace_step.output.get("dir", "")
+        output_dir = self.workspace_step.output.dir or ""
         if output_dir and os.path.isdir(output_dir):
             spef_paths.extend(glob.glob(os.path.join(output_dir, "*.spef")))
 
@@ -1220,160 +1211,5 @@ class EccRcxChecklist(EccChecklist):
 
 
 class EccStaChecklist(EccChecklist):
-    def expected_sta_report_paths(self) -> list:
-        return [
-            str(path)
-            for _, path in sta_report_artifact_paths(
-                workspace=self.workspace,
-                report_root=self.workspace_step.report.get("dir", ""),
-            )
-        ]
-
-    def collect_sta_qor_paths(self) -> list:
-        return sta_qor_summary_paths(
-            workspace=self.workspace,
-            feature_root=self.workspace_step.feature.get("dir", ""),
-        )
-
-    def collect_sta_timing_paths(self) -> list:
-        return sta_timing_paths_paths(
-            workspace=self.workspace,
-            feature_root=self.workspace_step.feature.get("dir", ""),
-        )
-
-    def load_sta_qor_summaries(self, qor_paths: list) -> list:
-        return [
-            summary
-            for corner, path in qor_paths
-            if (summary := read_sta_qor_summary(corner, path)) is not None
-        ]
-
     def check(self) -> bool:
         return refresh_step_checklist(self.workspace, self.workspace_step)
-
-        step = StepEnum.STA.value
-        artifact_paths = sta_report_artifact_paths(
-            workspace=self.workspace,
-            report_root=self.workspace_step.report.get("dir", ""),
-        )
-        expected_paths = [str(path) for _, path in artifact_paths]
-        qor_paths = self.collect_sta_qor_paths()
-        timing_paths = self.collect_sta_timing_paths()
-        summaries = self.load_sta_qor_summaries(qor_paths)
-        target_frequency = self.to_float(
-            self.workspace.parameters.data.get("Frequency max [MHz]", 0),
-            0.0,
-        )
-
-        missing_artifacts = [
-            f"{corner}/{path.name}" for corner, path in artifact_paths if not self.check_file(path)
-        ]
-        signoff_success = len(expected_paths) > 0 and not missing_artifacts
-        summaries_complete = len(summaries) == len(qor_paths) and len(qor_paths) > 0
-        invalid_summaries = [
-            f"{corner}/{path.name}"
-            for corner, path in qor_paths
-            if read_sta_qor_summary(corner, path) is None
-        ]
-        valid_timing_paths = [
-            artifact
-            for corner, path in timing_paths
-            if (artifact := read_sta_timing_paths(corner, path)) is not None
-        ]
-        timing_paths_complete = (
-            len(valid_timing_paths) == len(timing_paths) and len(timing_paths) > 0
-        )
-        invalid_timing_paths = [
-            f"{corner}/{path.name}"
-            for corner, path in timing_paths
-            if read_sta_timing_paths(corner, path) is None
-        ]
-        setup_success = summaries_complete and all(
-            summary.setup_wns >= 0 and summary.setup_tns >= 0 and summary.setup_nvp == 0
-            for summary in summaries
-        )
-        hold_success = summaries_complete and all(
-            summary.hold_wns >= 0 and summary.hold_tns >= 0 and summary.hold_nvp == 0
-            for summary in summaries
-        )
-        frequency_success = target_frequency > 0 and (
-            summaries_complete
-            and all(summary.frequency_mhz >= target_frequency for summary in summaries)
-        )
-        setup_info = "" if setup_success else "STA setup QoR data is missing or has violations"
-        hold_info = "" if hold_success else "STA hold QoR data is missing or has violations"
-        frequency_warning = target_frequency <= 0
-        if frequency_warning:
-            frequency_info = "Frequency max [MHz] is not configured"
-        elif frequency_success:
-            frequency_info = ""
-        else:
-            frequency_info = "STA frequency does not meet the configured target"
-        checks = [
-            (
-                "STA",
-                "check STA signoff matrix",
-                signoff_success,
-                False,
-                "" if signoff_success else f"Missing STA artifacts: {', '.join(missing_artifacts)}",
-            ),
-            (
-                "STA",
-                "check STA QoR summary data",
-                summaries_complete,
-                False,
-                ""
-                if summaries_complete
-                else (f"Missing or invalid STA QoR summaries: {', '.join(invalid_summaries)}"),
-            ),
-            (
-                "STA",
-                "check STA timing path data",
-                timing_paths_complete,
-                False,
-                ""
-                if timing_paths_complete
-                else (f"Missing or invalid STA timing paths: {', '.join(invalid_timing_paths)}"),
-            ),
-            ("Timing", "check setup timing", setup_success, False, setup_info),
-            ("Timing", "check hold timing", hold_success, False, hold_info),
-            (
-                "Timing",
-                "check frequency requirement",
-                frequency_success,
-                frequency_warning,
-                frequency_info,
-            ),
-            (
-                "Timing",
-                "check timing exceptions",
-                False,
-                True,
-                "No structured timing-exception result is available",
-            ),
-            (
-                "DRV",
-                "check STA DRV violations",
-                False,
-                True,
-                "No reliable structured STA DRV result is available",
-            ),
-        ]
-
-        for type, item, success, warning, info in checks:
-            state = CheckState.Passed
-            if not success:
-                state = CheckState.Warning if warning else CheckState.Failed
-            self.set_item_state(
-                step=step,
-                type=type,
-                item=item,
-                state=state,
-                info=info,
-            )
-
-        self.workspace_step.checklist["checklist"] = Checklist(
-            path=self.workspace_step.checklist.get("path", "")
-        ).data
-
-        return all(success or warning for _, _, success, warning, _ in checks)

@@ -4,17 +4,26 @@ import pytest
 
 from chipcompiler.runtime.methods import runtime_method_by_name
 from chipcompiler.runtime.requests import (
+    CandidateBindInputRequest,
+    CandidateMaterializeRequest,
     DbEnsureRequest,
     DbReleaseRequest,
+    FloorplanEditInspectRequest,
+    FloorplanEditRunAutoRequest,
+    FloorplanEditValidateRequest,
     FlowRunRequest,
     FlowRunStepRequest,
+    LayoutEditApplyRequest,
+    LayoutEditBeginRequest,
+    LayoutEditDiscardRequest,
+    LayoutEditSaveRequest,
     RequestValidationError,
     WorkspaceCloseRequest,
     WorkspaceCreateRequest,
     WorkspaceExportSignoffRequest,
     WorkspaceIdRequest,
-    WorkspaceInspectSignoffRequest,
     WorkspaceInfoRequest,
+    WorkspaceInspectSignoffRequest,
     WorkspaceOpenRequest,
     WorkspaceSyncConfigRequest,
     parse_request_model,
@@ -62,6 +71,43 @@ def test_workspace_create_maps_camel_case_fields_and_preserves_pdk_json():
     assert request.rtl_list == ["a.v"]
     assert request.sdc == "/constraints/top.sdc"
     assert request.flow_config == flow_config
+
+
+@pytest.mark.parametrize(
+    ("method", "params", "request_type"),
+    [
+        (
+            "candidate.export_capabilities",
+            {"workspaceId": "ws-1"},
+            WorkspaceIdRequest,
+        ),
+        (
+            "candidate.bind_input",
+            {
+                "workspaceId": "ws-1",
+                "targetStep": "place",
+                "sourceStep": "fixFanout",
+                "candidateId": "candidate_0001",
+            },
+            CandidateBindInputRequest,
+        ),
+        (
+            "candidate.materialize",
+            {
+                "workspaceId": "ws-1",
+                "targetStep": "place",
+                "candidateId": "candidate_0001",
+                "patch": [{"knob_id": "place.target_density", "value": 0.6}],
+            },
+            CandidateMaterializeRequest,
+        ),
+    ],
+)
+def test_candidate_payloads_parse_to_typed_request_models(method, params, request_type):
+    request = _parse_runtime_request(method, params)
+
+    assert isinstance(request, request_type)
+    assert is_dataclass(request)
 
 
 @pytest.mark.parametrize(
@@ -117,6 +163,51 @@ def test_first_slice_payloads_parse_to_typed_request_models(method, params, requ
         ),
         ("db.ensure", {"workspaceId": "ws-1"}, DbEnsureRequest),
         ("db.release", {"workspaceId": "ws-1"}, DbReleaseRequest),
+        (
+            "layout.edit.begin",
+            {"workspaceId": "ws-1", "step": "Floorplan"},
+            LayoutEditBeginRequest,
+        ),
+        (
+            "layout.edit.apply",
+            {
+                "editSessionId": "layout-edit-1",
+                "commandId": "move-1",
+                "baseRevision": 0,
+                "operation": {"kind": "place_instance"},
+            },
+            LayoutEditApplyRequest,
+        ),
+        (
+            "layout.edit.save",
+            {"editSessionId": "layout-edit-1", "expectedRevision": 1},
+            LayoutEditSaveRequest,
+        ),
+        (
+            "layout.edit.discard",
+            {"editSessionId": "layout-edit-1"},
+            LayoutEditDiscardRequest,
+        ),
+        (
+            "floorplan.edit.inspect",
+            {"editSessionId": "layout-edit-1"},
+            FloorplanEditInspectRequest,
+        ),
+        (
+            "floorplan.edit.run_auto",
+            {
+                "editSessionId": "layout-edit-1",
+                "commandId": "auto-1",
+                "baseRevision": 1,
+                "request": {"mode": "macro"},
+            },
+            FloorplanEditRunAutoRequest,
+        ),
+        (
+            "floorplan.edit.validate",
+            {"editSessionId": "layout-edit-1", "scope": "pdn"},
+            FloorplanEditValidateRequest,
+        ),
     ],
 )
 def test_persistent_db_payloads_parse_to_typed_request_models(method, params, request_type):
@@ -124,7 +215,10 @@ def test_persistent_db_payloads_parse_to_typed_request_models(method, params, re
 
     assert isinstance(request, request_type)
     assert is_dataclass(request)
-    assert request.workspace_id == "ws-1"
+    if hasattr(request, "workspace_id"):
+        assert request.workspace_id == "ws-1"
+    else:
+        assert request.edit_session_id == "layout-edit-1"
 
 
 def test_db_ensure_step_is_optional():
@@ -136,6 +230,21 @@ def test_db_ensure_step_is_optional():
 
     assert isinstance(request, DbEnsureRequest)
     assert request.step == ""
+
+
+def test_layout_edit_begin_accepts_source_fingerprint_alias():
+    request = _parse_runtime_request(
+        "layout.edit.begin",
+        {
+            "workspaceId": "ws-1",
+            "step": "Floorplan",
+            "expectedSourceFingerprint": "abc123",
+        },
+        persistent_db_enabled=True,
+    )
+
+    assert isinstance(request, LayoutEditBeginRequest)
+    assert request.expected_source_fingerprint == "abc123"
 
 
 def test_missing_required_field_reports_field_name():

@@ -18,7 +18,7 @@ from chipcompiler.cli.inspection.log_view import (
 from chipcompiler.cli.rendering.pretty import BOLD, CYAN, DIM, GREEN, RED, RESET
 from chipcompiler.cli.rendering.pretty import style as _style
 from chipcompiler.data import StateEnum, log_flow
-from chipcompiler.utility.log import redirect_stdio_to_file
+from chipcompiler.utility.log import flush_cstdio, redirect_stdio_to_file
 
 
 def supports_color(stream, mode, env=None):
@@ -28,7 +28,7 @@ def supports_color(stream, mode, env=None):
 
 
 def style(text, code, enabled):
-    return _style(text, code, enabled)
+    return _style(text, code, enabled=enabled)
 
 
 def should_enable_run_progress(ctx, stderr):
@@ -72,7 +72,7 @@ def truncate_to_width(text, width):
 _KIND_LABEL_COMPACT = {k: v.upper() for k, v in _KIND_LABEL.items()}
 
 
-def format_error_context(log_path, context_lines, log_cmd, color=True):
+def format_error_context(log_path, context_lines, log_cmd, *, color=True):
     """Format a failure context block for interactive progress output.
 
     Args:
@@ -285,6 +285,9 @@ def _preserve_cli_stdio():
         for stream in (sys.stdout, sys.stderr):
             with contextlib.suppress(Exception):
                 stream.flush()
+        # Drain C/C++ buffered output while fds still point at the step log,
+        # or it leaks to the terminal on the next flush after restore.
+        flush_cstdio()
 
         try:
             os.dup2(saved_stdout_fd, 1)
@@ -297,7 +300,7 @@ def _preserve_cli_stdio():
 
 
 class RunProgressRenderer:
-    def __init__(self, stream, width_fn=None, color=False):
+    def __init__(self, stream, width_fn=None, *, color=False):
         self._stream = stream
         self._width_fn = width_fn or terminal_width
         self._color = color
@@ -377,6 +380,7 @@ def _start_log_monitor(
     renderer,
     log_path,
     step_name,
+    *,
     isolated=False,
     interval=_LOG_POLL_INTERVAL,
     stale_after=_LOG_STALE_AFTER,
@@ -418,13 +422,13 @@ def run_flow_with_progress(engine_flow, ctx, project, stderr):
         engine_flow.workspace.home.reset()
 
         run_dir = engine_flow.workspace.directory
-        run_name = os.path.basename(run_dir) or "default"
+        run_name = ctx.run_id or "default"
         renderer.start_run(run_name, run_dir)
 
         for workspace_step in engine_flow.workspace_steps:
             step_token = normalize_step_name(workspace_step.name)
             tool = workspace_step.tool
-            log_path = workspace_step.log.get("file", "")
+            log_path = workspace_step.log.file or ""
 
             engine_flow.workspace.logger.log_section(
                 f"{workspace_step.tool} - begin step - {workspace_step.name}"
@@ -487,7 +491,7 @@ def run_flow_with_progress(engine_flow, ctx, project, stderr):
                 except ValueError:
                     rel_log = log_path
 
-            inspect = disclosure_cmd(f"ecc log {step_token}", project)
+            inspect = disclosure_cmd(f"ecc log {step_token}", project, ctx.run_id)
 
             is_success = state == StateEnum.Success
             renderer.finish_step(step_token, tool, status, runtime, rel_log, inspect, is_success)

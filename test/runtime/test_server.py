@@ -4,9 +4,11 @@ import pytest
 
 from chipcompiler.runtime.methods import RUNTIME_METHODS, runtime_methods
 from chipcompiler.runtime.requests import (
+    CandidateRerunRequest,
     DbEnsureRequest,
     DbReleaseRequest,
     WorkspaceExportSignoffRequest,
+    WorkspaceExtractFoundationRequest,
     WorkspaceInspectSignoffRequest,
     WorkspaceOpenRequest,
 )
@@ -49,6 +51,21 @@ class CompleteFakeApi:
     def inspect_signoff(self, _request):
         raise AssertionError("unexpected inspect_signoff call")
 
+    def extract_foundation(self, _request):
+        raise AssertionError("unexpected extract_foundation call")
+
+    def export_candidate_capabilities(self, _request):
+        raise AssertionError("unexpected export_candidate_capabilities call")
+
+    def bind_candidate_input(self, _request):
+        raise AssertionError("unexpected bind_candidate_input call")
+
+    def materialize_candidate(self, _request):
+        raise AssertionError("unexpected materialize_candidate call")
+
+    def candidate_rerun(self, _request):
+        raise AssertionError("unexpected candidate_rerun call")
+
     def flow_run(self, _request):
         raise AssertionError("unexpected flow_run call")
 
@@ -60,6 +77,27 @@ class CompleteFakeApi:
 
     def db_release(self, _request):
         raise AssertionError("unexpected db_release call")
+
+    def layout_edit_begin(self, _request):
+        raise AssertionError("unexpected layout_edit_begin call")
+
+    def layout_edit_apply(self, _request):
+        raise AssertionError("unexpected layout_edit_apply call")
+
+    def layout_edit_save(self, _request):
+        raise AssertionError("unexpected layout_edit_save call")
+
+    def layout_edit_discard(self, _request):
+        raise AssertionError("unexpected layout_edit_discard call")
+
+    def floorplan_edit_inspect(self, _request):
+        raise AssertionError("unexpected floorplan_edit_inspect call")
+
+    def floorplan_edit_run_auto(self, _request):
+        raise AssertionError("unexpected floorplan_edit_run_auto call")
+
+    def floorplan_edit_validate(self, _request):
+        raise AssertionError("unexpected floorplan_edit_validate call")
 
 
 def test_rpc_hello_returns_version_and_capabilities():
@@ -167,6 +205,62 @@ def test_workspace_method_dispatches_typed_request_to_runtime_api():
         "jsonrpc": "2.0",
         "result": {"workspaceId": "workspace-1", "directory": "/ws"},
         "id": 4,
+    }
+
+
+def test_workspace_extract_foundation_dispatches_typed_request():
+    class FakeApi(CompleteFakeApi):
+        def extract_foundation(self, request):
+            assert isinstance(request, WorkspaceExtractFoundationRequest)
+            return {"manifestRef": "foundation_data/ecc/manifest.json"}
+
+    server = RuntimeServer(api=FakeApi())
+
+    response = _dispatch(
+        server,
+        (
+            '{"jsonrpc":"2.0","method":"workspace.extract_foundation",'
+            '"params":{"workspaceId":"workspace-1"},"id":5}'
+        ),
+    )
+
+    assert response == {
+        "jsonrpc": "2.0",
+        "result": {"manifestRef": "foundation_data/ecc/manifest.json"},
+        "id": 5,
+    }
+
+
+def test_candidate_rerun_dispatches_typed_request():
+    class FakeApi(CompleteFakeApi):
+        def candidate_rerun(self, request):
+            assert isinstance(request, CandidateRerunRequest)
+            return {
+                "end_step": request.end_step,
+                "execution_scope": request.execution_scope,
+                "target_step": request.target_step,
+            }
+
+    server = RuntimeServer(api=FakeApi())
+
+    response = _dispatch(
+        server,
+        (
+            '{"jsonrpc":"2.0","method":"candidate.rerun","params":'
+            '{"workspaceId":"workspace-1","candidateId":"gcd-rerun-place",'
+            '"targetStep":"place","patch":[{"knob_id":"place.target_density",'
+            '"value":0.55}],"executionScope":"full_flow","endStep":"CTS"},"id":5}'
+        ),
+    )
+
+    assert response == {
+        "jsonrpc": "2.0",
+        "result": {
+            "end_step": "CTS",
+            "execution_scope": "full_flow",
+            "target_step": "place",
+        },
+        "id": 5,
     }
 
 

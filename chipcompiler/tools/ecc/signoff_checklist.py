@@ -1,8 +1,8 @@
 """Current-output signoff checklist construction.
 
-QoR owns the five chip-quality gate calculations.  This module only references
-those gate results and owns the separate flow, artifact, and provenance checks
-needed to assemble a signoff package.
+QoR owns chip-quality gate calculations. This module only references those
+gate results and owns the separate flow, artifact, and provenance checks needed
+to assemble a signoff package.
 """
 
 from __future__ import annotations
@@ -11,7 +11,16 @@ import re
 from pathlib import Path
 
 from chipcompiler.data import Checklist, StateEnum, StepEnum, Workspace, WorkspaceStep
+from chipcompiler.tools.ecc.sta_qor import (
+    STA_QOR_SUMMARY_FILENAME,
+    STA_REPORT_FILENAMES,
+    STA_TIMING_PATHS_FILENAME,
+    configured_sta_artifact_directories,
+    read_sta_qor_summary,
+    read_sta_timing_paths,
+)
 from chipcompiler.utility import json_read
+from chipcompiler.utility.filelist import FILELIST_SUFFIXES, RTL_SUFFIXES
 
 _STEP_DIRECTORIES = {
     StepEnum.SYNTHESIS.value: "Synthesis_yosys",
@@ -37,6 +46,10 @@ _QUALITY_GATES_BY_STEP = {
     StepEnum.STA.value: (
         "qor.sta.setup_closed",
         "qor.sta.hold_closed",
+    ),
+    StepEnum.HARDEN.value: (
+        "qor.mpc.minimum_area",
+        "qor.mpc.maximum_area",
     ),
 }
 
@@ -74,7 +87,7 @@ def _step_directory(step: WorkspaceStep) -> Path:
     directory = getattr(step, "directory", None)
     if directory:
         return Path(directory)
-    checklist_path = step.checklist.get("path") if isinstance(step.checklist, dict) else None
+    checklist_path = step.checklist.path
     if checklist_path:
         return Path(checklist_path).parent
     return Path(".")
@@ -126,7 +139,16 @@ def _prefixed_evidence(step_directory: str, evidence: list) -> list[dict]:
             continue
         item = dict(entry)
         path = item.get("path")
-        if isinstance(path, str) and path and not path.startswith(step_directory + "/"):
+        is_workspace_step_path = isinstance(path, str) and any(
+            path == directory or path.startswith(directory + "/")
+            for directory in _STEP_DIRECTORIES.values()
+        )
+        if (
+            isinstance(path, str)
+            and path
+            and not is_workspace_step_path
+            and not path.startswith(step_directory + "/")
+        ):
             item["path"] = f"{step_directory}/{path}"
         result.append(item)
     return result
@@ -147,13 +169,24 @@ def _gate_summary(gate: dict) -> str:
     return "; ".join(facts) or "QoR gate has no current metric evidence."
 
 
+def _expected_quality_gate_ids(workspace: Workspace, step_name: str) -> tuple[str, ...]:
+    gate_ids = _QUALITY_GATES_BY_STEP.get(step_name, ())
+    if step_name != StepEnum.HARDEN.value:
+        return gate_ids
+
+    parameters = getattr(getattr(workspace, "parameters", None), "data", {})
+    mpc = parameters.get("MPC") if isinstance(parameters, dict) else None
+    core_template = mpc.get("core_template") if isinstance(mpc, dict) else None
+    return gate_ids if isinstance(core_template, dict) else ()
+
+
 def _quality_gate_items_from_summary(
     workspace: Workspace,
     step_name: str,
     step_directory: Path,
     summary_path: Path,
 ) -> list[dict]:
-    expected_gate_ids = _QUALITY_GATES_BY_STEP.get(step_name, ())
+    expected_gate_ids = _expected_quality_gate_ids(workspace, step_name)
     if not expected_gate_ids:
         return []
     step_directory_text = _path_text(workspace, step_directory)
@@ -214,7 +247,7 @@ def _quality_gate_items_from_summary(
 
 def _quality_gate_items(workspace: Workspace, step: WorkspaceStep) -> list[dict]:
     step_directory = _step_directory(step)
-    summary_path = step.analysis.get("qor_summary") if isinstance(step.analysis, dict) else None
+    summary_path = step.analysis.qor_summary
     return _quality_gate_items_from_summary(
         workspace,
         step.name,
@@ -226,15 +259,15 @@ def _quality_gate_items(workspace: Workspace, step: WorkspaceStep) -> list[dict]
 def _step_artifact_items(workspace: Workspace, step: WorkspaceStep) -> list[dict]:
     if step.name == StepEnum.HARDEN.value:
         artifacts = (
-            ("gds", "Harden GDS", step.output.get("gds")),
-            ("lef", "Harden LEF", step.output.get("lef")),
-            ("lib", "Harden LIB", step.output.get("lib")),
+            ("gds", "Harden GDS", getattr(step.output, "gds", None)),
+            ("lef", "Harden LEF", getattr(step.output, "lef", None)),
+            ("lib", "Harden LIB", getattr(step.output, "lib", None)),
         )
     elif step.name == StepEnum.RCX.value:
-        spefs = step.output.get("spef", [])
+        spefs = getattr(step.output, "spef", []) or []
         files = [Path(path) for path in spefs] if isinstance(spefs, list) else []
         if not files:
-            output_dir = step.output.get("dir")
+            output_dir = step.output.dir
             files = sorted(Path(output_dir).glob("*.spef")) if output_dir else []
         state = (
             "pass" if files and all(_file_state(path)[0] == "pass" for path in files) else "failed"
@@ -253,25 +286,57 @@ def _step_artifact_items(workspace: Workspace, step: WorkspaceStep) -> list[dict
                     if state == "pass"
                     else "Current RCX SPEF output files are missing or empty."
                 ),
-                source={"kind": "output", "path": _path_text(workspace, step.output.get("dir"))},
+                source={"kind": "output", "path": _path_text(workspace, step.output.dir)},
                 evidence=[
                     {"kind": "output", "path": _path_text(workspace, path)} for path in files
                 ],
             )
         ]
     elif step.name == StepEnum.STA.value:
-        report_dir = step.report.get("dir")
-        feature_dir = step.feature.get("dir")
-        reports = (
-            list(Path(report_dir).rglob("*.rpt"))
-            if report_dir and Path(report_dir).is_dir()
-            else []
-        )
-        summaries = (
-            list(Path(feature_dir).rglob("qor_summary.json"))
-            if feature_dir and Path(feature_dir).is_dir()
-            else []
-        )
+        report_dir = step.report.dir
+        feature_dir = step.feature.dir
+        report_corners = configured_sta_artifact_directories(workspace, report_dir)
+        feature_corners = configured_sta_artifact_directories(workspace, feature_dir)
+        reports = [
+            (corner, path / filename)
+            for corner, path in report_corners
+            for filename in STA_REPORT_FILENAMES
+        ]
+        summaries = [(corner, path / STA_QOR_SUMMARY_FILENAME) for corner, path in feature_corners]
+        timing_paths = [
+            (corner, path / STA_TIMING_PATHS_FILENAME) for corner, path in feature_corners
+        ]
+
+        def item_state(paths, validator=None):
+            if not paths:
+                return "unavailable"
+            if validator is None:
+                return (
+                    "pass" if all(_file_state(path)[0] == "pass" for _, path in paths) else "failed"
+                )
+            return (
+                "pass"
+                if all(validator(corner, path) is not None for corner, path in paths)
+                else "failed"
+            )
+
+        def missing_paths(paths, validator=None):
+            if validator is None:
+                return [
+                    f"{corner}/{path.name}"
+                    for corner, path in paths
+                    if _file_state(path)[0] != "pass"
+                ]
+            return [
+                f"{corner}/{path.name}" for corner, path in paths if validator(corner, path) is None
+            ]
+
+        report_state = item_state(reports)
+        summary_state = item_state(summaries, read_sta_qor_summary)
+        timing_paths_state = item_state(timing_paths, read_sta_timing_paths)
+        report_missing = missing_paths(reports)
+        summary_missing = missing_paths(summaries, read_sta_qor_summary)
+        timing_paths_missing = missing_paths(timing_paths, read_sta_timing_paths)
         return [
             _item(
                 item_id="report.sta.timing_reports",
@@ -279,16 +344,21 @@ def _step_artifact_items(workspace: Workspace, step: WorkspaceStep) -> list[dict
                 category="report",
                 owner="checklist",
                 policy="block",
-                state="pass" if reports else "failed",
+                state=report_state,
                 title="STA timing reports",
                 summary=(
-                    f"{len(reports)} current STA report files are present."
-                    if reports
-                    else "No STA report files are present."
+                    f"{len(reports)} required STA reports are present for "
+                    f"{len(report_corners)} configured corners."
+                    if report_state == "pass"
+                    else (
+                        "No STA signoff corners are configured in config/sta.json."
+                        if report_state == "unavailable"
+                        else f"Missing or empty STA reports: {', '.join(report_missing)}"
+                    )
                 ),
                 source={"kind": "report", "path": _path_text(workspace, report_dir)},
                 evidence=[
-                    {"kind": "report", "path": _path_text(workspace, path)} for path in reports
+                    {"kind": "report", "path": _path_text(workspace, path)} for _, path in reports
                 ],
             ),
             _item(
@@ -297,21 +367,54 @@ def _step_artifact_items(workspace: Workspace, step: WorkspaceStep) -> list[dict
                 category="artifact",
                 owner="checklist",
                 policy="block",
-                state="pass" if summaries else "failed",
+                state=summary_state,
                 title="STA structured corner summaries",
                 summary=(
-                    f"{len(summaries)} current STA corner summaries are present."
-                    if summaries
-                    else "No structured STA corner summaries are present."
+                    f"{len(summaries)} valid STA corner summaries are present."
+                    if summary_state == "pass"
+                    else (
+                        "No STA signoff corners are configured in config/sta.json."
+                        if summary_state == "unavailable"
+                        else (
+                            f"Missing or invalid STA corner summaries: {', '.join(summary_missing)}"
+                        )
+                    )
                 ),
                 source={"kind": "feature", "path": _path_text(workspace, feature_dir)},
                 evidence=[
-                    {"kind": "feature", "path": _path_text(workspace, path)} for path in summaries
+                    {"kind": "feature", "path": _path_text(workspace, path)}
+                    for _, path in summaries
+                ],
+            ),
+            _item(
+                item_id="artifact.sta.timing_paths",
+                step=step.name,
+                category="artifact",
+                owner="checklist",
+                policy="block",
+                state=timing_paths_state,
+                title="STA structured timing paths",
+                summary=(
+                    f"{len(timing_paths)} valid STA timing-path artifacts are present."
+                    if timing_paths_state == "pass"
+                    else (
+                        "No STA signoff corners are configured in config/sta.json."
+                        if timing_paths_state == "unavailable"
+                        else (
+                            "Missing or invalid STA timing paths: "
+                            f"{', '.join(timing_paths_missing)}"
+                        )
+                    )
+                ),
+                source={"kind": "feature", "path": _path_text(workspace, feature_dir)},
+                evidence=[
+                    {"kind": "feature", "path": _path_text(workspace, path)}
+                    for _, path in timing_paths
                 ],
             ),
         ]
     elif step.name == StepEnum.SYNTHESIS.value:
-        artifacts = (("netlist", "Mapped synthesis netlist", step.output.get("verilog")),)
+        artifacts = (("netlist", "Mapped synthesis netlist", step.output.verilog),)
     else:
         return []
 
@@ -337,14 +440,14 @@ def _step_artifact_items(workspace: Workspace, step: WorkspaceStep) -> list[dict
 
 def refresh_step_checklist(workspace: Workspace, step: WorkspaceStep) -> bool:
     """Replace one step checklist with its current signoff-relevant evidence."""
-    checklist_path = Path(step.checklist.get("path", _step_directory(step) / "checklist.json"))
+    checklist_path = Path(step.checklist.path or _step_directory(step) / "checklist.json")
     checklist_path.parent.mkdir(parents=True, exist_ok=True)
     checklist = Checklist(checklist_path)
     items = [*_quality_gate_items(workspace, step), *_step_artifact_items(workspace, step)]
-    step.checklist["checklist"] = checklist.replace(items)
+    step.checklist.checklist = checklist.replace(items)
     if getattr(workspace, "directory", None):
         rebuild_home_checklist(workspace)
-    return not any(item["blocked"] for item in step.checklist["checklist"])
+    return not any(item["blocked"] for item in step.checklist.checklist)
 
 
 def _flow_items(workspace: Workspace) -> list[dict]:
@@ -386,6 +489,33 @@ def _flow_items(workspace: Workspace) -> list[dict]:
     return items
 
 
+def _initial_rtl_path(design, origin_directory: Path) -> Path | None:
+    """Resolve the initial RTL input: filelist first, then a single RTL file.
+
+    Mirrors the synthesis input priority (input_filelist over origin_verilog).
+    Configured paths win when they exist; otherwise glob the origin directory
+    by suffix, since load_workspace drops these attributes for .sv and
+    filelist inputs. A configured path missing on disk is returned last so
+    the item reports it as failed.
+    """
+    configured = (
+        getattr(design, "input_filelist", None),
+        getattr(design, "origin_verilog", None),
+    )
+    for candidate in configured:
+        if candidate and Path(candidate).is_file():
+            return Path(candidate)
+    files = sorted(path for path in origin_directory.glob("*") if path.is_file())
+    for suffixes in (FILELIST_SUFFIXES, RTL_SUFFIXES):
+        match = next((path for path in files if path.suffix.lower() in suffixes), None)
+        if match:
+            return match
+    match = next((path for path in files if path.name.endswith(".v.gz")), None)
+    if match:
+        return match
+    return next((Path(candidate) for candidate in configured if candidate), None)
+
+
 def _workspace_items(workspace: Workspace) -> list[dict]:
     workspace_directory = Path(workspace.directory)
     origin_directory = workspace_directory / "origin"
@@ -393,15 +523,12 @@ def _workspace_items(workspace: Workspace) -> list[dict]:
     pdk = getattr(workspace, "pdk", None)
     config = getattr(workspace, "config", {})
     config = config if isinstance(config, dict) else {}
-    origin_verilog = getattr(design, "origin_verilog", None)
-    if not origin_verilog:
-        origin_verilog = next(iter(sorted(origin_directory.glob("*.v*"))), None)
     origin_sdc = getattr(pdk, "sdc", None)
     if not origin_sdc:
         origin_sdc = next(iter(sorted(origin_directory.glob("*.sdc"))), None)
     config_keys = ("flow", "db", StepEnum.RCX.value, StepEnum.STA.value)
     inputs = (
-        ("provenance.initial.rtl", "Initial RTL", origin_verilog),
+        ("provenance.initial.rtl", "Initial RTL", _initial_rtl_path(design, origin_directory)),
         ("provenance.initial.sdc", "Initial SDC", origin_sdc),
         *(
             (

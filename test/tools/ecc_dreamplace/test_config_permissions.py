@@ -88,7 +88,7 @@ def test_dreamplace_config_generation_writes_generated_fields_to_copied_config(
     assert data["lef_input"] == ["tech.lef", "std.lef"]
     assert data["def_input"] == "input.def"
     assert data["verilog_input"] == "input.v"
-    assert data["result_dir"] == str(step.data[step.name])
+    assert data["result_dir"] == str(step.data.workdir_for(step.name))
     assert data["base_design_name"] == "gcd"
 
 
@@ -168,9 +168,9 @@ def test_workspace_config_generation_nested_dreamplace_overrides_win_over_flat_k
     init_workspace_config(workspace)
 
     dreamplace_config = json_read(workspace.config["dreamplace"])
-    assert dreamplace_config["routability_opt_flag"] == overrides["DreamPlace"][
-        "routability_opt_flag"
-    ]
+    assert (
+        dreamplace_config["routability_opt_flag"] == overrides["DreamPlace"]["routability_opt_flag"]
+    )
 
 
 def test_dreamplace_step_config_refresh_reapplies_current_parameter_file(
@@ -220,4 +220,4 @@ def test_dreamplace_step_config_refresh_reapplies_current_parameter_file(
     assert dreamplace_config["target_density"] == updated_overrides["Target density"]
     assert dreamplace_config["def_input"] == "input.def"
     assert dreamplace_config["verilog_input"] == "input.v"
-    assert dreamplace_config["result_dir"] == str(step.data[step.name])
+    assert dreamplace_config["result_dir"] == str(step.data.workdir_for(step.name))

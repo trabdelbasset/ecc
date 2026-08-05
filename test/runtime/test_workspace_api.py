@@ -1,18 +1,24 @@
 import json
 import queue
 import threading
+from hashlib import sha256
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
 from chipcompiler.data import StateEnum
+from chipcompiler.data.workspace.layout import EccOutput
 from chipcompiler.runtime.requests import (
+    CandidateBindInputRequest,
+    CandidateMaterializeRequest,
+    CandidateRerunRequest,
     DbEnsureRequest,
     DbReleaseRequest,
     FlowRunRequest,
     FlowRunStepRequest,
     WorkspaceCreateRequest,
+    WorkspaceExtractFoundationRequest,
     WorkspaceIdRequest,
     WorkspaceInfoRequest,
     WorkspaceOpenRequest,
@@ -91,12 +97,12 @@ class DummyFlow:
     def create_step_workspaces(self):
         self.created = True
 
-    def run_steps(self, rerun=False):
+    def run_steps(self, *, rerun=False):
         self.run_steps_calls.append(rerun)
         success = True
         for workspace_step in self.workspace_steps:
             self.init_db_engine()
-            state = self.run_step(workspace_step, rerun)
+            state = self.run_step(workspace_step, rerun=rerun)
             if state != StateEnum.Success:
                 success = False
                 break
@@ -114,15 +120,11 @@ class DummyFlow:
                 break
         return self.engine_db.create_db_engine(workspace_step)
 
-    def run_step(self, workspace_step, rerun=False):
+    def run_step(self, workspace_step, *, rerun=False):
         name = workspace_step if isinstance(workspace_step, str) else workspace_step.name
         self.run_calls.append((name, rerun))
         self.call_order.append(("run_step", name, rerun))
-        state = (
-            DummyFlow.next_run_states.pop(0)
-            if DummyFlow.next_run_states
-            else StateEnum.Success
-        )
+        state = DummyFlow.next_run_states.pop(0) if DummyFlow.next_run_states else StateEnum.Success
         if state == StateEnum.Success:
             self.completed_steps.add(name)
             workspace_step_object = self.get_workspace_step(name)
@@ -137,6 +139,15 @@ class DummyFlow:
             if step.name == name:
                 return step
         return None
+
+    def get_step(self, name, tool):
+        for step in self.workspace.flow.data.get("steps", []):
+            if step.get("name") == name and step.get("tool") == tool:
+                return step
+        return None
+
+    def save(self):
+        return True
 
     def check_state(self, name, tool, state):
         return getattr(state, "value", state) == StateEnum.Success.value and name in (
@@ -177,9 +188,9 @@ def _install_runtime_mocks(monkeypatch, tmp_path, *, create_workspace_files=True
         capture["create_kwargs"] = kwargs
         input_filelist = kwargs.get("input_filelist")
         if input_filelist and Path(input_filelist).exists():
-            capture["input_filelist_lines"] = Path(input_filelist).read_text(
-                encoding="utf-8"
-            ).splitlines()
+            capture["input_filelist_lines"] = (
+                Path(input_filelist).read_text(encoding="utf-8").splitlines()
+            )
         workspace_dir = Path(kwargs["directory"])
         if workspace_dir.is_dir():
             capture["workspace_entries_when_create_called"] = sorted(
@@ -258,6 +269,56 @@ def test_create_workspace_returns_plain_runtime_result_and_session(monkeypatch, 
     assert capture["create_kwargs"]["sdc"] == "/constraints/top.sdc"
     assert DummyFlow.instances[0].created
     assert api.sessions.get_session(result["workspaceId"]).directory == ws.resolve()
+
+
+def test_candidate_runtime_methods_bind_existing_workspace_artifacts(monkeypatch, tmp_path):
+    _capture, workspace_dir = _install_runtime_mocks(monkeypatch, tmp_path)
+    api = WorkspaceRuntimeApi()
+    created = api.create_workspace(WorkspaceCreateRequest(directory=str(workspace_dir)))
+    calls = []
+
+    monkeypatch.setattr(
+        "chipcompiler.data.export_candidate_capabilities",
+        lambda workspace: calls.append(("export", workspace.directory))
+        or {"registry_sha256": "registry"},
+    )
+    monkeypatch.setattr(
+        "chipcompiler.data.bind_candidate_input",
+        lambda workspace, flow, target, source, candidate: calls.append(
+            ("bind", workspace.directory, flow, target, source, candidate)
+        )
+        or {"receipt_sha256": "input"},
+    )
+    monkeypatch.setattr(
+        "chipcompiler.data.materialize_candidate_config",
+        lambda workspace, target, patch, candidate: calls.append(
+            ("materialize", workspace.directory, target, patch, candidate)
+        )
+        or {"receipt_sha256": "materialization"},
+    )
+
+    capabilities = api.export_candidate_capabilities(WorkspaceIdRequest(created["workspaceId"]))
+    binding = api.bind_candidate_input(
+        CandidateBindInputRequest(
+            workspace_id=created["workspaceId"],
+            target_step="place",
+            source_step="fixFanout",
+            candidate_id="candidate_0001",
+        )
+    )
+    materialization = api.materialize_candidate(
+        CandidateMaterializeRequest(
+            workspace_id=created["workspaceId"],
+            target_step="place",
+            candidate_id="candidate_0001",
+            patch=[{"knob_id": "place.target_density", "value": 0.6}],
+        )
+    )
+
+    assert capabilities == {"registry_sha256": "registry"}
+    assert binding == {"receipt_sha256": "input"}
+    assert materialization == {"receipt_sha256": "materialization"}
+    assert [call[0] for call in calls] == ["export", "bind", "materialize"]
 
 
 def test_create_workspace_forwards_dynamic_flow_config(monkeypatch, tmp_path):
@@ -414,6 +475,49 @@ def test_open_workspace_reuses_existing_same_directory_session(monkeypatch, tmp_
 
     assert second["workspaceId"] == first["workspaceId"]
     assert api.sessions.get_session(second["workspaceId"]).workspace is first_session.workspace
+
+
+def test_extract_foundation_returns_manifest_receipt(monkeypatch, tmp_path):
+    _capture, ws = _install_runtime_mocks(monkeypatch, tmp_path)
+    captured = {}
+
+    class FakeExtractor:
+        def __init__(self, directory, *, profile):
+            captured["directory"] = directory
+            captured["profile"] = profile
+
+        def extract(self, **kwargs):
+            captured["kwargs"] = kwargs
+            manifest = ws / "foundation_data/ecc/manifest.json"
+            manifest.parent.mkdir(parents=True)
+            manifest.write_text(
+                '{"contract_name":"foundation_data/ecc","schema_version":"v1"}',
+                encoding="utf-8",
+            )
+
+    monkeypatch.setattr("chipcompiler.data.foundation.FoundationExtractor", FakeExtractor)
+    api = WorkspaceRuntimeApi()
+    workspace_id = api.open_workspace(WorkspaceOpenRequest(directory=str(ws)))["workspaceId"]
+
+    result = api.extract_foundation(WorkspaceExtractFoundationRequest(workspace_id=workspace_id))
+
+    assert result == {
+        "manifestRef": "foundation_data/ecc/manifest.json",
+        "manifestSha256": sha256(
+            b'{"contract_name":"foundation_data/ecc","schema_version":"v1"}'
+        ).hexdigest(),
+        "contractName": "foundation_data/ecc",
+        "schemaVersion": "v1",
+    }
+    assert captured == {
+        "directory": str(ws.resolve()),
+        "profile": "iccd_full_v1",
+        "kwargs": {
+            "include_raw_refs": False,
+            "materialize_audit_tables": True,
+            "route_detail_level": "full",
+        },
+    }
 
 
 def test_workspace_home_and_info_use_session_id(monkeypatch, tmp_path):
@@ -653,9 +757,7 @@ def test_db_ensure_initializes_requested_step_and_stores_session_db(monkeypatch,
     api = WorkspaceRuntimeApi(persistent_db_enabled=True)
     workspace_id = api.open_workspace(WorkspaceOpenRequest(directory=str(ws)))["workspaceId"]
 
-    result = api.db_ensure(
-        DbEnsureRequest(workspace_id=workspace_id, step="Floorplan")
-    )
+    result = api.db_ensure(DbEnsureRequest(workspace_id=workspace_id, step="Floorplan"))
 
     flow = DummyFlow.instances[-1]
     session = api.sessions.get_session(workspace_id)
@@ -730,9 +832,7 @@ def test_db_ensure_does_not_store_uninitialized_db(monkeypatch, tmp_path):
     api = WorkspaceRuntimeApi(persistent_db_enabled=True)
     workspace_id = api.open_workspace(WorkspaceOpenRequest(directory=str(ws)))["workspaceId"]
 
-    result = api.db_ensure(
-        DbEnsureRequest(workspace_id=workspace_id, step="Floorplan")
-    )
+    result = api.db_ensure(DbEnsureRequest(workspace_id=workspace_id, step="Floorplan"))
 
     assert result == {
         "workspaceId": workspace_id,
@@ -966,7 +1066,7 @@ def test_flow_run_sizer_boundary_exception_captures_post_sizer_db(
         {"name": "Legalization", "tool": "ecc"},
     )
 
-    def run_steps_raises_after_post_sizer_db(self, rerun=False):
+    def run_steps_raises_after_post_sizer_db(self, *, rerun=False):
         del rerun
         self.engine_db.close()
         self.engine_db = DummyEngineDB(self)
@@ -1072,7 +1172,7 @@ def test_flow_run_step_sizer_exception_clears_closed_session_db(
         {"name": "Timing optimization", "tool": "sizer"},
     )
 
-    def run_step_raises_after_sizer_boundary(self, workspace_step, rerun=False):
+    def run_step_raises_after_sizer_boundary(self, workspace_step, *, rerun=False):
         del workspace_step, rerun
         self.engine_db.close()
         self.engine_db = None
@@ -1123,6 +1223,180 @@ def test_flow_run_step_rerun_refreshes_before_db_init(monkeypatch, tmp_path):
     ]
 
 
+def test_flow_run_step_rerun_verifies_and_reapplies_candidate_input(monkeypatch, tmp_path):
+    _capture, ws = _install_runtime_mocks(monkeypatch, tmp_path)
+    candidate_calls = []
+
+    monkeypatch.setattr(
+        "chipcompiler.data.validate_candidate_step_contract",
+        lambda workspace, step: candidate_calls.append(("validate", workspace.directory, step))
+        or "gcd-rerun-place",
+    )
+    monkeypatch.setattr(
+        "chipcompiler.data.reapply_candidate_input_binding",
+        lambda workspace, flow, step: candidate_calls.append(
+            ("reapply", workspace.directory, flow, step)
+        ),
+    )
+    api = WorkspaceRuntimeApi()
+    workspace_id = api.open_workspace(WorkspaceOpenRequest(directory=str(ws)))["workspaceId"]
+
+    result = api.flow_run_step(
+        FlowRunStepRequest(workspace_id=workspace_id, step="Floorplan", rerun=True)
+    )
+
+    flow = DummyFlow.instances[-1]
+    assert result == {"step": "Floorplan", "state": "Success"}
+    assert candidate_calls == [
+        ("validate", ws.resolve(), "Floorplan"),
+        ("reapply", ws.resolve(), flow, "Floorplan"),
+    ]
+
+
+def test_flow_run_step_rejects_an_invalid_candidate_before_tool_execution(monkeypatch, tmp_path):
+    _capture, ws = _install_runtime_mocks(monkeypatch, tmp_path)
+
+    def reject_candidate(*_args):
+        raise ValueError("candidate receipt mismatch")
+
+    monkeypatch.setattr(
+        "chipcompiler.data.validate_candidate_step_contract",
+        reject_candidate,
+    )
+    api = WorkspaceRuntimeApi()
+    workspace_id = api.open_workspace(WorkspaceOpenRequest(directory=str(ws)))["workspaceId"]
+
+    with pytest.raises(RuntimeApiError, match="candidate receipt mismatch"):
+        api.flow_run_step(
+            FlowRunStepRequest(workspace_id=workspace_id, step="Floorplan", rerun=True)
+        )
+
+    assert DummyFlow.instances[-1].run_calls == []
+
+
+@pytest.mark.parametrize(
+    ("execution_scope", "end_step", "expected_run_calls", "cleared_steps"),
+    [
+        ("single_step", "place", [("place", True)], ("place",)),
+        ("full_flow", "CTS", [("place", True), ("CTS", True)], ("place", "CTS")),
+    ],
+)
+def test_candidate_rerun_rebuilds_the_requested_scope(
+    monkeypatch,
+    tmp_path,
+    execution_scope,
+    end_step,
+    expected_run_calls,
+    cleared_steps,
+):
+    _capture, ws = _install_runtime_mocks(monkeypatch, tmp_path)
+    DummyFlow.workspace_step_specs = (
+        {"name": "fixFanout", "tool": "ecc", "output": {"dir": ws / "fixFanout_ecc/output"}},
+        {
+            "name": "place",
+            "tool": "dreamplace",
+            "output": EccOutput(dir=ws / "place_dreamplace/output"),
+            "analysis": {"dir": ws / "place_dreamplace/analysis"},
+        },
+        {
+            "name": "CTS",
+            "tool": "ecc",
+            "output": {"dir": ws / "CTS_ecc/output"},
+            "analysis": {"dir": ws / "CTS_ecc/analysis"},
+        },
+        {
+            "name": "legalization",
+            "tool": "dreamplace",
+            "output": {"dir": ws / "legalization_dreamplace/output"},
+            "analysis": {"dir": ws / "legalization_dreamplace/analysis"},
+        },
+    )
+    for path in (
+        ws / "place_dreamplace/output",
+        ws / "CTS_ecc/output",
+        ws / "place_dreamplace/analysis",
+        ws / "CTS_ecc/analysis",
+        ws / "legalization_dreamplace/output",
+        ws / "legalization_dreamplace/analysis",
+    ):
+        path.mkdir(parents=True)
+        (path / "stale").write_text("stale")
+    calls = []
+    monkeypatch.setattr(
+        "chipcompiler.data.bind_candidate_input",
+        lambda workspace, flow, target, source, candidate: calls.append(
+            ("bind", target, source, candidate)
+        )
+        or {},
+    )
+    monkeypatch.setattr(
+        "chipcompiler.data.materialize_candidate_config",
+        lambda workspace, target, patch, candidate: calls.append(
+            ("materialize", target, patch, candidate)
+        )
+        or {},
+    )
+    monkeypatch.setattr(
+        "chipcompiler.data.validate_candidate_step_contract",
+        lambda _workspace, _target: "gcd-rerun-place",
+    )
+    monkeypatch.setattr(
+        "chipcompiler.data.reapply_candidate_input_binding",
+        lambda _workspace, _flow, target: calls.append(("reapply", target)) or {},
+    )
+    api = WorkspaceRuntimeApi()
+    workspace_id = api.open_workspace(WorkspaceOpenRequest(directory=str(ws)))["workspaceId"]
+    session = api.sessions.get_session(workspace_id)
+    session.workspace.flow.data = {
+        "steps": [
+            {"name": "fixFanout", "tool": "ecc", "state": "Success"},
+            {"name": "place", "tool": "dreamplace", "state": "Success"},
+            {"name": "CTS", "tool": "ecc", "state": "Success"},
+        ]
+    }
+
+    result = api.candidate_rerun(
+        CandidateRerunRequest(
+            workspace_id=workspace_id,
+            candidate_id="gcd-rerun-place",
+            target_step="place",
+            end_step=end_step,
+            patch=[{"knob_id": "place.target_density", "value": 0.55}],
+            execution_scope=execution_scope,
+        )
+    )
+
+    assert result == {
+        "end_step": end_step,
+        "execution_scope": execution_scope,
+        "target_step": "place",
+    }
+    assert calls == [
+        ("bind", "place", "fixFanout", "gcd-rerun-place"),
+        (
+            "materialize",
+            "place",
+            [{"knob_id": "place.target_density", "value": 0.55}],
+            "gcd-rerun-place",
+        ),
+        ("reapply", "place"),
+    ]
+    assert DummyFlow.instances[-1].run_calls == expected_run_calls
+    directories = {
+        "place": (ws / "place_dreamplace/output", ws / "place_dreamplace/analysis"),
+        "CTS": (ws / "CTS_ecc/output", ws / "CTS_ecc/analysis"),
+        "legalization": (
+            ws / "legalization_dreamplace/output",
+            ws / "legalization_dreamplace/analysis",
+        ),
+    }
+    for step, paths in directories.items():
+        if step in cleared_steps:
+            assert all(list(path.iterdir()) == [] for path in paths)
+        else:
+            assert all((path / "stale").is_file() for path in paths)
+
+
 def test_flow_run_step_skips_successful_step_without_db_init(monkeypatch, tmp_path):
     _capture, ws = _install_runtime_mocks(monkeypatch, tmp_path)
     DummyFlow.successful_steps = {"Synthesis"}
@@ -1151,3 +1425,51 @@ def test_flow_run_step_unknown_step_returns_runtime_error(monkeypatch, tmp_path)
 
     assert exc_info.value.code == "command_failed"
     assert "step not found" in exc_info.value.message
+
+
+@pytest.mark.parametrize(
+    "db_value",
+    [None, "", "some/db/path"],
+)
+def test_build_workspace_step_for_info_forwards_db_from_any_predecessor(tmp_path, db_value):
+    # Regression: a Yosys (synthesis) predecessor has output.db == None on the
+    # base OutputPaths contract, so reconstructing the next step must not crash.
+    from pathlib import Path
+
+    from chipcompiler.data import (
+        EccOutput,
+        EccStep,
+        OriginDesign,
+        Workspace,
+        YosysStep,
+    )
+    from chipcompiler.runtime.workspace_api import _build_workspace_step_for_info
+
+    workspace = Workspace(
+        directory=tmp_path,
+        design=OriginDesign(name="gcd", top_module="gcd"),
+    )
+
+    # Yosys predecessor: db is the base default (None) -> must reconstruct cleanly.
+    yosys_prev = YosysStep(name="Synthesis")
+    ecc_step = _build_workspace_step_for_info(
+        workspace, {"name": "Floorplan", "tool": "ecc"}, yosys_prev
+    )
+    assert isinstance(ecc_step, EccStep)
+
+    # ECC/sizer predecessor: db forwarded unchanged (None / "" / a real path).
+    ecc_prev = EccStep(
+        name="place",
+        output=EccOutput(
+            def_=tmp_path / "p.def",
+            verilog=tmp_path / "p.v",
+            db=Path(db_value) if db_value else db_value,
+        ),
+    )
+    next_step = _build_workspace_step_for_info(workspace, {"name": "CTS", "tool": "ecc"}, ecc_prev)
+    assert isinstance(next_step, EccStep)
+    # A real db path is forwarded into the next step's input.db; "" / None -> None.
+    if db_value:
+        assert next_step.input.db == Path(db_value)
+    else:
+        assert next_step.input.db is None

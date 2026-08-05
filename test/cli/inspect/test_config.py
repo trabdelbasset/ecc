@@ -555,6 +555,7 @@ class TestDirectoryOnlyStepConfig:
             "runs/default/config/rt_default_config.json",
         ]
 
+
 class TestAbsoluteRunIdConfig:
     def test_absolute_run_id_preserves_run_dir_value(
         self,
@@ -651,16 +652,25 @@ preset = "{defaults["flow_preset"]}"
 run = "{defaults["flow_run"]}"
 '''
 
-    def test_unsupported_flow_run_rejected(
-        self, tmp_path, capsys, monkeypatch, mock_pdk_validation
-    ):
+    def test_named_flow_run_accepted(self, tmp_path, capsys, monkeypatch, mock_pdk_validation):
+        mock_pdk_validation()
+        project_dir = tmp_path / "named_run"
+        project_dir.mkdir()
+        toml = self._valid_toml(tmp_path, flow_run="custom", rtl=f'["{tmp_path}/rtl/gcd.v"]')
+        (project_dir / "ecc.toml").write_text(toml)
+        rc = cli_main.run(["config", "--resolved", "--project", str(project_dir)])
+        assert rc == 0
+
+    def test_invalid_flow_run_rejected(self, tmp_path, capsys, monkeypatch, mock_pdk_validation):
         mock_pdk_validation()
         project_dir = tmp_path / "bad_run"
         project_dir.mkdir()
-        toml = self._valid_toml(tmp_path, flow_run="custom")
+        toml = self._valid_toml(tmp_path, flow_run="")
         (project_dir / "ecc.toml").write_text(toml)
         rc = cli_main.run(["config", "--resolved", "--project", str(project_dir)])
         assert rc == 1
+        out = capsys.readouterr().out
+        assert "unsupported flow.run" in out
 
     def test_empty_clock_port_rejected(self, tmp_path, capsys, monkeypatch, mock_pdk_validation):
         mock_pdk_validation()
@@ -721,3 +731,42 @@ run = "default"
         data = json.loads(capsys.readouterr().out)
         rtl_item = next(i for i in data["records"] if i["config"] == "design.rtl.0")
         assert rtl_item["resolved"] == str(rtl_dir / "gcd.v")
+
+
+def test_config_resolved_pdk_overrides_present(
+    tmp_path,
+    capsys,
+    monkeypatch,
+    create_cli_project,
+    mock_pdk_validation,
+):
+    mock_pdk_validation()
+    project_dir = create_cli_project()
+    toml_path = os.path.join(project_dir, "ecc.toml")
+    with open(toml_path, "a") as f:
+        f.write('\n[pdk.overrides]\ndont_use = ["ICG*", "DFFSRQX*"]\n')
+
+    rc = cli_main.run(["config", "--resolved", "--json", "--project", project_dir])
+    assert rc == 0
+    data = json.loads(capsys.readouterr().out)
+    keys = [item["config"] for item in data["records"]]
+    assert "pdk.overrides" in keys
+    overrides_item = next(i for i in data["records"] if i["config"] == "pdk.overrides")
+    assert overrides_item["value"] == {"dont_use": ["ICG*", "DFFSRQX*"]}
+
+
+def test_config_resolved_pdk_overrides_absent(
+    tmp_path,
+    capsys,
+    monkeypatch,
+    create_cli_project,
+    mock_pdk_validation,
+):
+    mock_pdk_validation()
+    project_dir = create_cli_project()
+
+    rc = cli_main.run(["config", "--resolved", "--json", "--project", project_dir])
+    assert rc == 0
+    data = json.loads(capsys.readouterr().out)
+    keys = [item["config"] for item in data["records"]]
+    assert "pdk.overrides" not in keys
