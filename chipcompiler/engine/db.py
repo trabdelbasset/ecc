@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from chipcompiler.data import Workspace, WorkspaceStep
+from chipcompiler.data import StepEnum, Workspace, WorkspaceStep
 
 
 class EngineDB:
