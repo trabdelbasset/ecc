@@ -4,22 +4,22 @@
         "thread_number": 16
     },
     "macro_placer": {
-        "macro_placement_halo": 3.0,
-        "macro_routing_halo": 3.0,
+        "macro_placement_halo": 40.0,
+        "macro_routing_halo": 40.0,
         "macro_location_path": "macro_locations.txt"
     },
     "die_builder": {
         "mode": "die_util",
         "site_name": "CoreSite",
         "margin": {
-            "left_micron": 4.0,
-            "right_micron": 4.0,
-            "top_micron": 4.0,
-            "bottom_micron": 4.0
+            "left_micron": 17.5,
+            "right_micron": 17.5,
+            "top_micron": 17.5,
+            "bottom_micron": 17.5
         },
         "die_util": {
             "aspect_ratio": 1.0,
-            "utilization": 0.4
+            "utilization": 0.65
         },
         "die_size": {
             "width_micron": 100.0,
@@ -81,31 +81,31 @@
         "rail": [
             {
                 "routing_layer_name": "Metal1",
-                "width_micron": 0.48
+                "width_micron": 0.44
             }
         ],
         "stripe": [
             {
-                "routing_layer_name": "Metal4",
-                "width_micron": 1.0,
-                "pitch_micron": 20.0,
-                "offset_micron": 1.0
+                "routing_layer_name": "TopMetal1",
+                "width_micron": 2.2,
+                "pitch_micron": 75.6,
+                "offset_micron": 13.6
             },
             {
-                "routing_layer_name": "Metal5",
-                "width_micron": 1.0,
-                "pitch_micron": 20.0,
-                "offset_micron": 1.0
+                "routing_layer_name": "TopMetal2",
+                "width_micron": 2.2,
+                "pitch_micron": 75.6,
+                "offset_micron": 13.6
             }
         ],
         "connect_layers": [
             {
                 "bottom_routing_layer_name": "Metal1",
-                "top_routing_layer_name": "Metal4"
+                "top_routing_layer_name": "TopMetal1"
             },
             {
-                "bottom_routing_layer_name": "Metal4",
-                "top_routing_layer_name": "Metal5"
+                "bottom_routing_layer_name": "TopMetal1",
+                "top_routing_layer_name": "TopMetal2"
             }
         ]
     }

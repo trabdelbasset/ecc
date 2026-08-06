@@ -18,7 +18,7 @@
     "setup_target_slack": 0.0,
     "hold_target_slack": 0.4,
     "max_insert_instance_percent": 0.2,
-    "max_core_utilization": 0.8,
+    "max_core_utilization": 0.65,
     "fix_fanout": false,
     "optimize_drv": false,
     "optimize_hold": false,

@@ -1,8 +1,8 @@
 {
     "RT": {
         "-temp_directory_path": "",
-        "-bottom_routing_layer": "",
-        "-top_routing_layer": "",
+        "-bottom_routing_layer": "Metal2",
+        "-top_routing_layer": "Metal5",
         "-thread_number": "50",
         "-enable_timing": "0",
         "-output_csv": "0",

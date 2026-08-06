@@ -1,4 +1,4 @@
 {
-    "thread_num": 64,
+    "thread_num": 4,
     "output": "/RCX_ecc/output"
 }

@@ -11,6 +11,6 @@
         "output_dir_path": ""
     },
     "LayerSettings": {
-        "routing_layer_1st": ""
+        "routing_layer_1st": "Metal2"
     }
 }
