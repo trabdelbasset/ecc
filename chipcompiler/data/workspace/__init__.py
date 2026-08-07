@@ -605,12 +605,40 @@ def _ensure_writable(path: str):
 def _copy_missing_files(src_dir: str, dst_dir: str):
     import os
     import shutil
+    import json
 
     os.makedirs(dst_dir, exist_ok=True)
+    try:
+        cpu_count = os.cpu_count() or 2
+    except Exception:
+        cpu_count = 2
+
     for name in os.listdir(src_dir):
         src = os.path.join(src_dir, name)
         dst = os.path.join(dst_dir, name)
         if os.path.isfile(src) and not os.path.exists(dst):
+            if src.endswith(".json"):
+                try:
+                    with open(src, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    
+                    modified = False
+                    if "ifp" in data and "thread_number" in data["ifp"]:
+                        data["ifp"]["thread_number"] = cpu_count
+                        modified = True
+                    if "num_threads" in data:
+                        data["num_threads"] = cpu_count
+                        modified = True
+                    if "-thread_number" in data:
+                        data["-thread_number"] = str(cpu_count)
+                        modified = True
+                        
+                    if modified:
+                        with open(dst, "w", encoding="utf-8") as f:
+                            json.dump(data, f, indent=4)
+                        continue
+                except Exception:
+                    pass
             shutil.copy2(src, dst)
 
 
