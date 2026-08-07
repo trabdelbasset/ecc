@@ -34,6 +34,7 @@ _GEOMETRY_SNAPSHOT_STEPS = frozenset(
         StepEnum.FILLER.value,
         StepEnum.RCX.value,
         StepEnum.STA.value,
+        StepEnum.ANTENNA.value,
     }
 )
 
@@ -745,16 +746,16 @@ def run_antenna(
     if ecc_module is not None:
         sub_flow.update_step(step_name=EccSubFlowEnum.load_data.value, state=StateEnum.Success)
 
-        ecc_module.check_antenna(
-            config=workspace.config.get(f"{StepEnum.ANTENNA.value}", ""),
-            report_dir=step.report.dir or "",
-            feature_file=step.feature.step or "",
-        )
-
         sub_flow.update_step(step_name=EccSubFlowEnum.run_antenna.value, state=StateEnum.Success)
 
         reslut = save_data(
             workspace=workspace, step=step, ecc_module=ecc_module, report_timing=False
+        )
+
+        ecc_module.check_antenna(
+            config=workspace.config.get(f"{StepEnum.ANTENNA.value}", ""),
+            report_dir=step.report.dir or "",
+            feature_file=step.feature.step or "",
         )
 
         sub_flow.update_step(step_name=EccSubFlowEnum.save_data.value, state=StateEnum.Success)
