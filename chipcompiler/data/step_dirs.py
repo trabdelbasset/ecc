@@ -27,5 +27,6 @@ STEP_DIRECTORIES = {
     StepEnum.LVS.value: "lvs_ecc",
     StepEnum.POST_ROUTE_LEC.value: "postRouteLec_yosys_lec",
     StepEnum.DRC.value: "drc_ecc",
+    StepEnum.ANTENNA.value: "antenna_ecc",
     StepEnum.HARDEN.value: "Harden_ecc",
 }

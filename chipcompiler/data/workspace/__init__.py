@@ -166,6 +166,7 @@ _WORKSPACE_CONFIG_FILENAMES: Final[dict[str, str]] = {
     StepEnum.FILLER.value: "filler_ecc.json",
     StepEnum.RCX.value: "rcx_ecc.json",
     StepEnum.STA.value: "sta_ecc.json",
+    StepEnum.ANTENNA.value: "antenna_ecc.json",
     "dreamplace": "dreamplace_ecc.json",
 }
 
@@ -178,6 +179,7 @@ _LEGACY_WORKSPACE_CONFIG_FILENAMES: Final[dict[str, str]] = {
     StepEnum.FILLER.value: "pl_default_config.json",
     StepEnum.RCX.value: "rcx.json",
     StepEnum.STA.value: "sta.json",
+    StepEnum.ANTENNA.value: "antenna_ecc.json",
     "dreamplace": "dreamplace.json",
 }
 
@@ -191,6 +193,7 @@ _STEP_CONFIG_KEYS: Final[dict[tuple[StepEnum, str], tuple[str, ...]]] = {
     (StepEnum.CTS, "ecc"): ("db", StepEnum.CTS.value),
     (StepEnum.ROUTING, "ecc"): ("db", StepEnum.ROUTING.value),
     (StepEnum.DRC, "ecc"): ("db", StepEnum.DRC.value),
+    (StepEnum.ANTENNA, "ecc"): ("db", StepEnum.ANTENNA.value),
     (StepEnum.LEGALIZATION, "ecc"): ("db",),
     (StepEnum.FILLER, "ecc"): ("db", StepEnum.FILLER.value),
     (StepEnum.RCX, "ecc"): ("db", StepEnum.RCX.value),

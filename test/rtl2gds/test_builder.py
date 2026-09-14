@@ -70,6 +70,7 @@ def test_build_rtl2gds_flow_is_the_complete_flow():
         (StepEnum.LVS, "ecc", StateEnum.Unstart),
         (StepEnum.POST_ROUTE_LEC, "yosys_lec", StateEnum.Unstart),
         (StepEnum.DRC, "ecc", StateEnum.Unstart),
+        (StepEnum.ANTENNA, "ecc", StateEnum.Unstart),
         (StepEnum.HARDEN, "ecc", StateEnum.Unstart),
     ]
 

@@ -498,6 +498,24 @@ class ECCToolsModule:
         return self.ecc.destroy_drc()
 
     ########################################################################
+    # Antenna api
+    ########################################################################
+    def check_antenna(
+        self,
+        config: str = "",
+        report_dir: PathArg = "",
+        feature_file: PathArg = "",
+    ) -> bool:
+        """
+        run antenna check
+        """
+        return self.ecc.check_antenna(
+            config=path_text(config),
+            report_dir=path_text(report_dir),
+            feature_file=path_text(feature_file),
+        )
+
+    ########################################################################
     # LVS api
     ########################################################################
     def init_lvs(self, output_dir: PathArg, thread_number: int = 128):

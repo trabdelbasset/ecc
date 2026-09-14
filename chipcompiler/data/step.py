@@ -29,6 +29,7 @@ class StepEnum(Enum):
     DRC = "drc"
     LVS = "lvs"
     RCX = "RCX"
+    ANTENNA = "antenna"
     ABSTRACT_LEF = "Abstract lef"
     HARDEN = "Harden"
 

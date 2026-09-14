@@ -302,6 +302,20 @@ QOR_METRIC_MAP = {
         "dimension": "clock_robustness_dfm",
         "polarity": "lower_is_better",
     },
+    "antenna_num": {
+        "name": "antenna_count",
+        "display_name": "Antenna Violation Count",
+        "unit": "count",
+        "dimension": "clock_robustness_dfm",
+        "polarity": "lower_is_better",
+    },
+    "antenna_count": {
+        "name": "antenna_count",
+        "display_name": "Antenna Violation Count",
+        "unit": "count",
+        "dimension": "clock_robustness_dfm",
+        "polarity": "lower_is_better",
+    },
     "lvs_count": {
         "name": "lvs_count",
         "display_name": "LVS Violation Count",
@@ -603,6 +617,9 @@ QOR_EXPECTED_METRICS_BY_STEP = {
     ],
     StepEnum.DRC.value: [
         "drc_count",
+    ],
+    StepEnum.ANTENNA.value: [
+        "antenna_count",
     ],
     StepEnum.LVS.value: [
         "lvs_count",
@@ -1733,6 +1750,10 @@ def _metric_scope_and_roles(step: WorkspaceStep, metric_id: str) -> tuple[str, s
         scope = "final_drc"
         project_role = "gate" if metric_id == "drc_count" else "final"
         step_role = "primary"
+    elif step.name == StepEnum.ANTENNA.value:
+        scope = "antenna"
+        project_role = "gate" if metric_id == "antenna_count" else "final"
+        step_role = "primary"
     elif step.name == StepEnum.LVS.value:
         scope = "final_lvs"
         project_role = "gate" if metric_id == "lvs_count" else "final"
@@ -2041,10 +2062,11 @@ def _metric_feature_source(
             "route_wirelength": "/Nets/wire_len",
             "route_via_count": "/Nets/num_via",
         }.get(metric_id, "")
-    elif metric_id.startswith("route_") or metric_id == "drc_count":
+    elif metric_id.startswith("route_") or metric_id in ("drc_count", "antenna_count"):
         feature_path = getattr(step.feature, "step", None)
         selector = {
             "drc_count": "/drc/number",
+            "antenna_count": "/antenna/number",
             "route_dr_total_violation_count": "/route/DR",
             "route_dr_total_patch_count": "/route/DR",
             "route_dr_total_wirelength": "/route/DR",
@@ -2275,6 +2297,7 @@ def _is_blocking_qor_record(record: dict) -> bool:
 
     if metric_name in {
         "drc_count",
+        "antenna_count",
         "lvs_count",
         "route_dr_total_violation_count",
         "route_la_total_overflow",
@@ -2985,6 +3008,18 @@ def _quality_gates(
             )
         ]
 
+    if step.name == StepEnum.ANTENNA.value:
+        count, source = metric("antenna_count")
+        return [
+            _quality_gate(
+                "qor.antenna.clean",
+                "Antenna check clean",
+                _gate_state(available=count is not None, passed=count == 0),
+                [_quality_gate_metric("antenna_count", count, "==", 0, source)],
+                _quality_gate_evidence(source),
+            )
+        ]
+
     if step.name == StepEnum.LVS.value:
         count, source = metric("lvs_count")
         return [
@@ -3411,6 +3446,8 @@ def build_step_metrics(
             metrics = build_metrics_routing(workspace, step)
         case StepEnum.DRC.value:
             metrics = build_metrics_drc(workspace, step)
+        case StepEnum.ANTENNA.value:
+            metrics = build_metrics_antenna(workspace, step)
         case StepEnum.LVS.value:
             metrics = build_metrics_lvs(workspace, step)
         case StepEnum.FILLER.value:
@@ -3595,6 +3632,40 @@ def build_metrics_drc(workspace: Workspace, step: EccStep) -> StepMetrics:
         drc = data.get("drc", {})
         if isinstance(drc, dict):
             _add_number_metric(metrics, "drc_num", drc.get("number"))
+
+    step_metrics.data = metrics
+
+    # generate report image and dscription
+    image_path = str(json_path).replace(".json", ".png")
+    report = f"{step.name} step metrics:\n"
+
+    step_metrics.report.append((image_path, report))
+
+    if save_step_metrics(workspace, step, step_metrics):
+        return step_metrics
+    else:
+        return None
+
+
+def build_metrics_antenna(workspace: Workspace, step: EccStep) -> StepMetrics:
+    """
+    Build and return Antenna metrics dictionary.
+    """
+    step_metrics = StepMetrics()
+    step_metrics.path = step.analysis.metrics or ""
+
+    metrics = {}
+
+    # db summary matrics
+    metrics.update(build_metrics_db(workspace, step))
+
+    # step matrics
+    json_path = getattr(step.feature, "step", "") or ""
+    data = json_read(json_path)
+    if isinstance(data, dict):
+        antenna = data.get("antenna", {})
+        if isinstance(antenna, dict):
+            _add_number_metric(metrics, "antenna_num", antenna.get("number"))
 
     step_metrics.data = metrics
 

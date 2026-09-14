@@ -24,6 +24,7 @@ def build_rtl2gds_flow() -> list:
     steps.append((StepEnum.LVS, "ecc", StateEnum.Unstart))
     steps.append((StepEnum.POST_ROUTE_LEC, "yosys_lec", StateEnum.Unstart))
     steps.append((StepEnum.DRC, "ecc", StateEnum.Unstart))
+    steps.append((StepEnum.ANTENNA, "ecc", StateEnum.Unstart))
     steps.append((StepEnum.HARDEN, "ecc", StateEnum.Unstart))
 
     return steps
@@ -54,6 +55,7 @@ def normalize_flow_step(value: str | StepEnum) -> str:
         "route": StepEnum.ROUTING.value,
         "routing": StepEnum.ROUTING.value,
         "drc": StepEnum.DRC.value,
+        "antenna": StepEnum.ANTENNA.value,
         "lvs": StepEnum.LVS.value,
         "filler": StepEnum.FILLER.value,
         "lec": StepEnum.LEC.value,

@@ -173,6 +173,17 @@ _LEGACY_PARAM_REGISTRY: tuple[ParamSchema, ...] = (
         description="Run per-step analysis (metrics, plots, checklist) after each step",
         example="false",
     ),
+    ParamSchema(
+        param="flow.run_antenna",
+        group="flow",
+        name="run_antenna",
+        type="bool",
+        default=False,
+        applies="all",
+        maps_to="run_antenna",
+        description="Run antenna rule checker during signoff (off by default)",
+        example="true",
+    ),
 )
 
 PARAM_REGISTRY = _LEGACY_PARAM_REGISTRY + CONFIG_PARAM_SCHEMAS

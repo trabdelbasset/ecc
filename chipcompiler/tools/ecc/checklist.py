@@ -47,6 +47,11 @@ class EccChecklist:
             ("DRC", "check DRC waiver list"),
             ("Signoff", "check final DRC requirement"),
         ],
+        StepEnum.ANTENNA: [
+            ("Antenna", "check antenna violation count"),
+            ("Antenna", "check antenna ratio distribution"),
+            ("Signoff", "check antenna signoff requirement"),
+        ],
         StepEnum.FILLER: [
             ("Filler", "check filler cell list"),
             ("Filler", "check filler coverage"),

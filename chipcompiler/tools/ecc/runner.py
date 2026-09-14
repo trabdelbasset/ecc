@@ -44,6 +44,7 @@ _GEOMETRY_SNAPSHOT_STEPS = frozenset(
         StepEnum.LEGALIZATION.value,
         StepEnum.ROUTING.value,
         StepEnum.DRC.value,
+        StepEnum.ANTENNA.value,
         StepEnum.LVS.value,
         StepEnum.FILLER.value,
         StepEnum.RCX.value,
@@ -488,6 +489,8 @@ def run_step(workspace: Workspace, step: EccStep, ecc_module: ECCToolsModule | N
             state = run_routing(workspace=workspace, step=step, ecc_module=ecc_module)
         case StepEnum.DRC.value:
             state = run_drc(workspace=workspace, step=step, ecc_module=ecc_module)
+        case StepEnum.ANTENNA.value:
+            state = run_antenna(workspace=workspace, step=step, ecc_module=ecc_module)
         case StepEnum.LVS.value:
             state = run_lvs(workspace=workspace, step=step, ecc_module=ecc_module)
         case StepEnum.FILLER.value:
@@ -630,6 +633,48 @@ def run_drc(workspace: Workspace, step: EccStep, ecc_module: ECCToolsModule | No
         if not save_drc_feature(step):
             workspace.logger.error("Failed to save DRC feature: %s", step.feature.step)
             return False
+
+        sub_flow.update_step(step_name=EccSubFlowEnum.save_data.value, state=StateEnum.Success)
+
+        run_analysis(workspace=workspace, step=step, subflow=sub_flow)
+
+    return reslut
+
+
+def run_antenna(
+    workspace: Workspace, step: EccStep, ecc_module: ECCToolsModule | None = None
+) -> bool:
+    """
+    run antenna check
+    """
+    sub_flow = EccSubFlow(workspace=workspace, workspace_step=step)
+
+    # Check if antenna check is enabled (off by default)
+    if not workspace.parameters.data.get("run_antenna", False):
+        workspace.logger.info("Antenna check skipped: run_antenna is False (disabled by default)")
+        sub_flow.update_step(step_name=EccSubFlowEnum.load_data.value, state=StateEnum.Success)
+        sub_flow.update_step(step_name=EccSubFlowEnum.run_antenna.value, state=StateEnum.Success)
+        sub_flow.update_step(step_name=EccSubFlowEnum.save_data.value, state=StateEnum.Success)
+        sub_flow.update_step(step_name=EccSubFlowEnum.analysis.value, state=StateEnum.Success)
+        return True
+
+    reslut = False
+    ecc_module = get_eda_instance(workspace=workspace, step=step, ecc_module=ecc_module)
+
+    if ecc_module is not None:
+        sub_flow.update_step(step_name=EccSubFlowEnum.load_data.value, state=StateEnum.Success)
+
+        ecc_module.check_antenna(
+            config=workspace.config.get(f"{StepEnum.ANTENNA.value}", ""),
+            report_dir=step.report.dir or "",
+            feature_file=step.feature.step or "",
+        )
+
+        sub_flow.update_step(step_name=EccSubFlowEnum.run_antenna.value, state=StateEnum.Success)
+
+        reslut = save_data(
+            workspace=workspace, step=step, ecc_module=ecc_module, report_timing=False
+        )
 
         sub_flow.update_step(step_name=EccSubFlowEnum.save_data.value, state=StateEnum.Success)
 
