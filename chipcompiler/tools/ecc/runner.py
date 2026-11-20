@@ -21,6 +21,7 @@ from chipcompiler.tools.ecc.clock_tree import (
     clock_tree_stage_for_step,
 )
 from chipcompiler.tools.ecc.drc_artifacts import save_drc_feature
+from chipcompiler.tools.ecc.gds_merge import merge_pdk_cell_layouts
 from chipcompiler.tools.ecc.harden import export_harden_views
 from chipcompiler.tools.ecc.lvs_artifacts import (
     copy_lvs_outputs as copy_lvs_outputs,
@@ -809,6 +810,8 @@ def run_filler(
             output_path=step.output.gds or "",
             layer_map_path=workspace.pdk.mapping_file or "",
         )
+        if not merge_pdk_cell_layouts(workspace, step):
+            return False
         reslut = save_data(
             workspace=workspace,
             step=step,
@@ -1144,6 +1147,8 @@ def run_harden(
         workspace.logger.error("Harden STA configuration is not configured")
         return False
     export_harden_views(workspace, step, ecc_module, items, sta_config)
+    if not merge_pdk_cell_layouts(workspace, step):
+        return False
     sub_flow.update_step(EccSubFlowEnum.run_harden.value, StateEnum.Success)
     run_analysis(workspace=workspace, step=step, subflow=sub_flow)
     return True
