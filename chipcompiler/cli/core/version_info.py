@@ -26,6 +26,32 @@ def build_identity() -> tuple[str | None, str | None]:
     return build_info.BUILD_COMMIT, build_info.BUILD_DATE
 
 
+def build_channel() -> str | None:
+    """Return the channel CI stamped into the bundle ("nightly", "dev", "stable"), if any."""
+    try:
+        build_info = import_module("chipcompiler._build_info")
+    except ImportError:
+        return None
+    return getattr(build_info, "BUILD_CHANNEL", None) or None
+
+
+def display_version() -> str:
+    """Human-readable version that tells nightly/dev bundles apart from stable ones.
+
+    The package version is identical for every build of a release, so non-stable
+    stamped bundles append their channel, build date and short commit, e.g.
+    ``0.1.0a12 (nightly 20261107 0da4cdb)``. ``ecc_version()`` stays the bare
+    package version because update checks compare it against published releases.
+    """
+    version = ecc_version()
+    channel = build_channel()
+    if not channel or channel == "stable":
+        return version
+    commit, date = build_identity()
+    details = " ".join(part for part in (channel, date, commit[:7] if commit else None) if part)
+    return f"{version} ({details})"
+
+
 def ecc_version() -> str:
     try:
         from chipcompiler import __version__
@@ -47,18 +73,20 @@ def version_payload() -> dict[str, int | str | None]:
         "cli_contract": CLI_CONTRACT,
         "build_commit": build_commit,
         "build_date": build_date,
+        "build_channel": build_channel(),
+        "display_version": display_version(),
     }
 
 
 def root_version_line() -> str:
-    return f"ecc {ecc_version()}"
+    return f"ecc {display_version()}"
 
 
 def version_text(payload: dict[str, int | str | None], tools: dict[str, str]) -> str:
     tool_lines = tuple(f"{name} {version}" for name, version in tools.items())
     return "\n".join(
         (
-            f"ecc {payload['ecc']}",
+            f"ecc {payload.get('display_version') or payload['ecc']}",
             f"dreamplace {payload['dreamplace']}",
             f"ecc_tools {payload['ecc_tools']}",
             f"runtime {payload['runtime']}",

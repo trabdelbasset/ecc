@@ -3,11 +3,13 @@ import importlib
 import json
 import os
 import shutil
+import warnings
 from pathlib import Path
 from typing import Any
 
 from chipcompiler.tools.ecc.sta_artifacts import discard_sta_run_outputs, publish_sta_artifacts
 from chipcompiler.utility.path import PathArg, path_list, path_text
+from chipcompiler.utility.threads import thread_budget
 
 # ecc-tools loggers terminate the host process on error by default; embedded in
 # Python they must raise instead so failures surface as Python exceptions.
@@ -690,11 +692,30 @@ class ECCToolsModule:
     ########################################################################
     # DRC api
     ########################################################################
-    def init_drc(self, output_dir: PathArg, therad_number: int = 128):
+    def init_drc(
+        self,
+        output_dir: PathArg,
+        thread_number: int | None = None,
+        *,
+        therad_number: int | None = None,
+    ):
         """
         init drc config
+
+        ``therad_number`` is the misspelled keyword of earlier releases; it is
+        still accepted but emits a DeprecationWarning.
         """
-        self.ecc.init_drc(temp_directory_path=output_dir, thread_number=therad_number)
+        if therad_number is not None:
+            warnings.warn(
+                "init_drc(therad_number=...) is deprecated; use thread_number",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            thread_number = therad_number
+        self.ecc.init_drc(
+            temp_directory_path=output_dir,
+            thread_number=thread_number or thread_budget(),
+        )
 
     def run_drc(self) -> bool:
         """
@@ -711,10 +732,10 @@ class ECCToolsModule:
     ########################################################################
     # LVS api
     ########################################################################
-    def init_lvs(self, output_dir: PathArg, thread_number: int = 128):
+    def init_lvs(self, output_dir: PathArg, thread_number: int | None = None):
         return self.ecc.init_lvs(
             temp_directory_path=output_dir,
-            thread_number=thread_number,
+            thread_number=thread_number or thread_budget(),
         )
 
     def run_lvs(self):
@@ -761,6 +782,30 @@ class ECCToolsModule:
         if step_json:
             config_dict["-step_json"] = path_text(step_json)
         return self.ecc.check_antenna(config_dict=config_dict)
+
+    def repair_antenna(
+        self,
+        diode: str | None = None,
+        max_iter: int | None = None,
+        search_radius_um: float | None = None,
+        report_dir: PathArg | None = None,
+        report_path: PathArg | None = None,
+        step_json: PathArg | None = None,
+    ) -> bool:
+        config_dict: dict[str, str] = {}
+        if diode:
+            config_dict["-diode"] = str(diode)
+        if max_iter is not None:
+            config_dict["-max_iter"] = str(max_iter)
+        if search_radius_um is not None:
+            config_dict["-search_radius_um"] = str(search_radius_um)
+        if report_dir:
+            config_dict["-report_dir"] = path_text(report_dir)
+        if report_path:
+            config_dict["-report_path"] = path_text(report_path)
+        if step_json:
+            config_dict["-step_json"] = path_text(step_json)
+        return self.ecc.repair_antenna(config_dict=config_dict)
 
     def destroy_mj(self) -> bool:
         return self.ecc.destroy_mj()

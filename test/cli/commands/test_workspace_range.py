@@ -106,3 +106,20 @@ def test_flow_range_rejects_overwrite(tmp_path, capsys, create_cli_project, plai
     assert plain_records(capsys.readouterr().out) == [
         {"kind": "error", "error": "selector_conflict"}
     ]
+
+
+def test_unknown_from_step_is_reported_as_unknown_step(
+    tmp_path, capsys, create_cli_project, plain_records
+):
+    project_dir = create_cli_project()
+
+    rc = cli_main.run(
+        ["run", "--project", project_dir, "--workspace", "cts-only", "--from", "bogus", "--plain"]
+    )
+
+    assert rc == 1
+    [record] = plain_records(capsys.readouterr().out)
+    assert record["error"] == "unknown_step"
+    assert "bogus" in record["reason"]
+    assert "cts" in record["reason"]
+    assert not (Path(project_dir) / "project.json").exists()

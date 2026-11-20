@@ -104,6 +104,8 @@ def test_version_command_returns_json_payload(monkeypatch, capsys):
         "cli_contract",
         "build_commit",
         "build_date",
+        "build_channel",
+        "display_version",
         "tools",
     }
     assert data["schema_version"] == 2
@@ -134,6 +136,34 @@ def test_version_payload_reports_stamped_build_identity(monkeypatch, capsys):
     assert data["build_date"] == "20261012"
 
 
+def test_nightly_stamp_is_visible_in_version_output(monkeypatch, capsys):
+    import types
+
+    monkeypatch.setattr(
+        "chipcompiler.cli.app.tool_versions",
+        lambda: {"yosys": "0.68", "sizer": "unknown", "klayout": "not installed"},
+    )
+    monkeypatch.setattr("chipcompiler.cli.core.version_info.ecc_version", lambda: "0.1.0a12")
+    stamp = types.ModuleType("chipcompiler._build_info")
+    stamp.__dict__.update(
+        BUILD_COMMIT="0da4cdb1234567890", BUILD_DATE="20261107", BUILD_CHANNEL="nightly"
+    )
+    monkeypatch.setitem(sys.modules, "chipcompiler._build_info", stamp)
+
+    assert cli_main.run(["version", "--json"]) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data["ecc"] == "0.1.0a12"
+    assert data["build_channel"] == "nightly"
+    assert data["display_version"] == "0.1.0a12 (nightly 20261107 0da4cdb)"
+
+    assert cli_main.run(["version"]) == 0
+    assert capsys.readouterr().out.splitlines()[0] == "ecc 0.1.0a12 (nightly 20261107 0da4cdb)"
+
+    stamp.BUILD_CHANNEL = "stable"
+    assert cli_main.run(["version"]) == 0
+    assert capsys.readouterr().out.splitlines()[0] == "ecc 0.1.0a12"
+
+
 def test_version_metadata_missing_uses_unknown(monkeypatch, capsys):
     def missing_version(distribution):
         raise metadata.PackageNotFoundError(distribution)
@@ -162,6 +192,8 @@ def test_version_metadata_missing_uses_unknown(monkeypatch, capsys):
         "cli_contract": 1,
         "build_commit": None,
         "build_date": None,
+        "build_channel": None,
+        "display_version": "source-fallback",
         "tools": {"yosys": "0.68", "sizer": "unknown", "klayout": "not installed"},
     }
 
@@ -484,3 +516,35 @@ def test_flow_validate_returns_validation_records(capsys):
     assert data[0]["status"] == "valid"
     assert data[0]["flow_id"] == "rtl2gds"
     assert data[0]["step_count"] > 0
+
+
+@pytest.mark.parametrize("command", [["check"], ["process", "inspect"]])
+def test_check_and_process_inspect_accept_json(command, capsys, tmp_path, monkeypatch):
+    """Both commands accept --json consistently with sibling commands."""
+    monkeypatch.chdir(tmp_path)
+
+    rc = cli_main.run([*command, "--json"])
+
+    captured = capsys.readouterr()
+    assert rc != 2, captured.err
+    assert "No such option" not in captured.err
+    assert json.loads(captured.out)  # records, even for an error, are valid JSON
+
+
+@pytest.mark.parametrize("command", [["check"], ["process", "inspect"]])
+def test_check_and_process_inspect_reject_plain_with_json(command, capsys):
+    rc = cli_main.run([*command, "--plain", "--json"])
+
+    assert rc != 0
+    assert "cannot be used together" in capsys.readouterr().err
+
+
+def test_signoff_check_help_documents_exit_codes():
+    from typer.testing import CliRunner
+
+    from chipcompiler.cli.app import app
+
+    result = CliRunner().invoke(app, ["signoff", "check", "--help"], terminal_width=200)
+
+    assert "6 = a required gate failed" in " ".join(result.output.split())
+    assert "7 = a required gate is unknown" in " ".join(result.output.split())

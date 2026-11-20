@@ -2602,3 +2602,83 @@ def test_timing_model_infers_the_design_from_the_harden_output_name(tmp_path):
     module.write_timing_model(timing_output, output_dir=timing_work_dir)
 
     assert timing_output.read_text(encoding="utf-8") == module.ecc.generated_timing_lib_contents
+
+
+class TestInitDrcThreadNumber:
+    def _module_with_recorder(self):
+        module = ECCToolsModule()
+        calls = []
+        module.ecc = SimpleNamespace(init_drc=lambda **kwargs: calls.append(kwargs))
+        return module, calls
+
+    def test_thread_number_keyword_is_forwarded(self):
+        module, calls = self._module_with_recorder()
+        module.init_drc(Path("/ws/data/drc"), thread_number=7)
+        assert calls == [{"temp_directory_path": Path("/ws/data/drc"), "thread_number": 7}]
+
+    def test_default_thread_number_follows_thread_budget(self, monkeypatch):
+        monkeypatch.setenv("ECC_THREADS", "6")
+        module, calls = self._module_with_recorder()
+        module.init_drc(Path("/ws/data/drc"))
+        assert calls[0]["thread_number"] == 6
+
+    def test_legacy_therad_number_keyword_still_works_with_warning(self):
+        module, calls = self._module_with_recorder()
+        with pytest.warns(DeprecationWarning, match="thread_number"):
+            module.init_drc(Path("/ws/data/drc"), therad_number=9)
+        assert calls[0]["thread_number"] == 9
+
+
+class _ThreadEcc:
+    def __init__(self):
+        self.calls = []
+
+    def init_drc(self, **kwargs):
+        self.calls.append(("drc", kwargs))
+
+    def init_lvs(self, **kwargs):
+        self.calls.append(("lvs", kwargs))
+
+
+def test_drc_lvs_threads_follow_the_budget_and_explicit_values_win(monkeypatch):
+    monkeypatch.setenv("ECC_THREADS", "6")
+    module = ECCToolsModule.__new__(ECCToolsModule)
+    module.ecc = _ThreadEcc()
+
+    module.init_drc("/tmp/drc")
+    module.init_lvs("/tmp/lvs")
+    module.init_drc("/tmp/drc", thread_number=2)
+    module.init_lvs("/tmp/lvs", thread_number=3)
+
+    assert [call[1]["thread_number"] for call in module.ecc.calls] == [6, 6, 2, 3]
+
+
+def test_repair_antenna_forwards_config_dict(tmp_path):
+    calls = []
+    module = ECCToolsModule.__new__(ECCToolsModule)
+    module.ecc = SimpleNamespace(
+        repair_antenna=lambda **kwargs: calls.append(kwargs) or True
+    )
+
+    ok = module.repair_antenna(
+        diode="ANTENNAX1_9TSVT",
+        max_iter=3,
+        search_radius_um=25.0,
+        report_dir=tmp_path / "rpt",
+        report_path=tmp_path / "antenna_repair.rpt",
+        step_json=tmp_path / "antenna_repair.step.json",
+    )
+
+    assert ok is True
+    assert calls == [
+        {
+            "config_dict": {
+                "-diode": "ANTENNAX1_9TSVT",
+                "-max_iter": "3",
+                "-search_radius_um": "25.0",
+                "-report_dir": str(tmp_path / "rpt"),
+                "-report_path": str(tmp_path / "antenna_repair.rpt"),
+                "-step_json": str(tmp_path / "antenna_repair.step.json"),
+            }
+        }
+    ]

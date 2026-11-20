@@ -1712,3 +1712,48 @@ def test_create_workspace_pdk_overrides_typo_propagates(
             pdk_root=str(pdk_root),
             pdk_overrides={"dontuse": ["ICG*"]},
         )
+
+
+def test_dreamplace_num_threads_defaults_to_the_thread_budget(
+    tmp_path, minimal_ics55_pdk_factory, default_ics55_parameters
+):
+    from chipcompiler.utility.threads import thread_budget
+
+    pdk_root = minimal_ics55_pdk_factory(tmp_path / "ics55")
+    rtl_path = tmp_path / "gcd.v"
+    rtl_path.write_text("module gcd(input clk, output y); assign y = clk; endmodule\n")
+    parameters = {k: v for k, v in default_ics55_parameters.items() if k != "num_threads"}
+    workspace = create_workspace(
+        directory=str(tmp_path / "workspace"),
+        origin_def="",
+        origin_verilog=str(rtl_path),
+        pdk="ics55",
+        parameters=parameters,
+        pdk_root=str(pdk_root),
+    )
+    assert workspace is not None
+    assert json_read(workspace.config["dreamplace"])["num_threads"] == thread_budget()
+
+
+def test_explicit_dreamplace_num_threads_beats_the_thread_budget(
+    tmp_path, monkeypatch, minimal_ics55_pdk_factory, default_ics55_parameters
+):
+    monkeypatch.setenv("ECC_THREADS", "7")
+    pdk_root = minimal_ics55_pdk_factory(tmp_path / "ics55")
+    rtl_path = tmp_path / "gcd.v"
+    rtl_path.write_text("module gcd(input clk, output y); assign y = clk; endmodule\n")
+
+    def make(name, extra):
+        workspace = create_workspace(
+            directory=str(tmp_path / name),
+            origin_def="",
+            origin_verilog=str(rtl_path),
+            pdk="ics55",
+            parameters={**default_ics55_parameters, **extra},
+            pdk_root=str(pdk_root),
+        )
+        assert workspace is not None
+        return json_read(workspace.config["dreamplace"])["num_threads"]
+
+    assert make("budget", {}) == 7
+    assert make("explicit", {"dreamplace": {"num_threads": 3}}) == 3

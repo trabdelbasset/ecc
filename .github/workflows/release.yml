@@ -50,6 +50,7 @@ jobs:
         with:
           artifact-path: dist/release/ecc-cli-linux-x86_64.tar.gz
           artifact-format: tar.gz
+          channel: stable
 
       - name: Upload CLI artifact
         uses: actions/upload-artifact@v4

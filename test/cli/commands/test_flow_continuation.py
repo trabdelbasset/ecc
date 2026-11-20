@@ -652,3 +652,46 @@ class TestWorkspaceRunLock:
         thread.join()
         assert rc == 0
         assert released.is_set()
+
+
+def _bounded_workspace(tmp_path):
+    run_dir = str(tmp_path / "ws")
+    _write_existing_workspace(run_dir, RTL2GDS_NAMES[:2], preset="rtl2gds")
+    from chipcompiler.data.workspace.config import save_workspace_config
+
+    assert save_workspace_config(
+        run_dir,
+        {"pdk": "ics55", "design": "gcd", "top_module": "gcd", "clock": "clk"},
+        {"start": RTL2GDS_NAMES[0], "end": RTL2GDS_NAMES[1]},
+    )
+    return run_dir
+
+
+def test_later_to_extends_a_bounded_workspace_flow(tmp_path):
+    """A bounded run's end is not permanent: a later --to extends the persisted suffix."""
+    from types import SimpleNamespace
+
+    from chipcompiler.cli.project.run_workspace import _extension_target
+    from chipcompiler.engine.reconcile import reconcile_workspace_locked
+
+    run_dir = _bounded_workspace(tmp_path)
+    later = RTL2GDS_NAMES[3]
+
+    def request(**kwargs):
+        return SimpleNamespace(to_step=kwargs.get("to"), only=kwargs.get("only"))
+
+    assert _extension_target(run_dir, request()) is None
+    assert _extension_target(run_dir, request(to=RTL2GDS_NAMES[1])) is None
+    assert _extension_target(run_dir, request(to=later, only="x")) is None
+    assert _extension_target(run_dir, request(to="nope")) is None
+
+    target = _extension_target(run_dir, request(to=later.upper()))
+    assert target is not None and target["end"] == later
+
+    result = reconcile_workspace_locked(run_dir, target)
+
+    assert result.outcome == "extended"
+    assert result.appended == tuple(RTL2GDS_NAMES[2:4])
+    flow = json.loads((Path(run_dir) / "home" / "flow.json").read_text())
+    assert [s["name"] for s in flow["steps"]] == RTL2GDS_NAMES[:4]
+    assert [s["state"] for s in flow["steps"]][:2] == ["Success", "Success"]

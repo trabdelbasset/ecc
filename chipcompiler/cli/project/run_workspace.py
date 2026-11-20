@@ -60,6 +60,36 @@ def execute_workspace_run(
         )
 
 
+def _extension_target(workspace_path: str, command_input) -> dict | None:
+    """Target section that extends a bounded workspace up to a later ``--to``.
+
+    A bounded run (``--from a --to b``) persists ``[flow] start/end``. A later
+    ``--to`` beyond that end is a request to extend the flow, so the ledger gets
+    the missing suffix instead of the run failing on an unknown step. ``None``
+    when ``--to`` is absent, inside the persisted range, or the flow is a preset.
+    """
+    if command_input.to_step is None or command_input.only is not None:
+        return None
+    from chipcompiler.data.workspace.config import (
+        WorkspaceConfigError,
+        WorkspaceFlowTargetError,
+        load_workspace_config,
+    )
+    from chipcompiler.rtl2gds.builder import rtl2gds_step_names
+
+    try:
+        flow = load_workspace_config(workspace_path)["_flow"]
+        chain = rtl2gds_step_names()
+    except (FileNotFoundError, OSError, WorkspaceConfigError, WorkspaceFlowTargetError):
+        return None
+    if "start" not in flow or "end" not in flow or flow["end"] not in chain:
+        return None
+    wanted = {name.casefold(): name for name in chain}.get(str(command_input.to_step).casefold())
+    if wanted is None or chain.index(wanted) <= chain.index(flow["end"]):
+        return None
+    return {**flow, "end": wanted}
+
+
 def _execute_workspace_run(
     command_input,
     workspace_path: str,
@@ -166,7 +196,9 @@ def _execute_workspace_run(
 
         # Extend/resume against the workspace's own persisted flow target
         # before building the engine flow, so appended steps are visible.
-        reconcile_result = reconcile_workspace_locked(workspace_path)
+        reconcile_result = reconcile_workspace_locked(
+            workspace_path, _extension_target(workspace_path, command_input)
+        )
         if not reconcile_result.ok:
             return mismatch_error(reconcile_result.error or "")
         if (

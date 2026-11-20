@@ -91,7 +91,7 @@ run_one() {
   local archive="$dst/signoff.tar.gz"
 
   if CHIPCOMPILER_ICS55_PDK_ROOT="$PDK_ROOT" PYTHONUNBUFFERED=1 \
-    "$ECC" run --project "$dst" --workspace default --plain 2>&1 | tee "$log"; then
+    "$ECC" run --project "$dst" --workspace default --plain >"$log" 2>&1; then
     if "$ECC" signoff export --project "$dst" --workspace default \
       --output "$archive" --plain >>"$log" 2>&1 && [[ -s "$archive" ]]; then
       echo "PASS $name"

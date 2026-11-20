@@ -6,6 +6,7 @@ from typing import Any, Final
 
 from chipcompiler.utility import Logger, create_logger, dict_to_str
 from chipcompiler.utility.path import path_is_within, path_text
+from chipcompiler.utility.threads import thread_budget
 
 from ..flow.build import (
     _canonical_rtl2gds_flow_entries as _canonical_rtl2gds_flow_entries,
@@ -514,6 +515,8 @@ def refresh_workspace_config(workspace: Workspace) -> None:
         str(path) for path in [workspace.pdk.tech, *workspace.pdk.lefs] if path
     ]
     dreamplace["base_design_name"] = workspace.design.name
+    # The template's thread count follows the shared budget; explicit overrides still win.
+    dreamplace["num_threads"] = thread_budget()
     dreamplace = apply_parameter_overrides(dreamplace, workspace.parameters.data)
     json_write(workspace.config["dreamplace"], dreamplace)
 

@@ -188,6 +188,15 @@ def validate_runtime_entry(value: Any) -> dict[str, Any]:
     return value
 
 
+def _is_dead_local_entry(value: Any) -> bool:
+    """True when ``value`` is a valid entry of a run on this host that is gone."""
+    try:
+        entry = validate_runtime_entry(value)
+    except RuntimeProcessError:
+        return False
+    return entry["host_id"] == host_id() and not identity_is_live(entry)
+
+
 def register_runtime_process(
     project_dir: str | Path, workspace_id: str, entry: dict[str, Any], *, blocking: bool = True
 ) -> None:
@@ -214,13 +223,21 @@ def register_runtime_process(
                 and existing == entry
             ):
                 return
-            raise RuntimeProcessError(
-                "workspace_running", "Workspace already has a runtime process"
-            )
+            if not _is_dead_local_entry(existing):
+                raise RuntimeProcessError(
+                    "workspace_running",
+                    "Workspace already has a live runtime process; if it is not "
+                    f"running, clear it with: ecc process reconcile --workspace {workspace_id}",
+                )
 
         def mutate(document: dict) -> None:
             current = document.setdefault("runtime_processes", {})
-            if not isinstance(current, dict) or workspace_id in current:
+            if not isinstance(current, dict):
+                raise RuntimeProcessError(
+                    "workspace_running", "Workspace already has a runtime process"
+                )
+            # A dead local entry is replaced; a live one never is.
+            if workspace_id in current and not _is_dead_local_entry(current[workspace_id]):
                 raise RuntimeProcessError(
                     "workspace_running", "Workspace already has a runtime process"
                 )

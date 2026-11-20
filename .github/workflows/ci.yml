@@ -288,6 +288,7 @@ jobs:
         with:
           artifact-path: dist/ecc.tar
           artifact-format: tar
+          channel: ${{ github.event_name == 'schedule' && 'nightly' || 'dev' }}
 
       - name: Upload PyInstaller artifact
         if: always()

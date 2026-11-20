@@ -750,6 +750,15 @@ def reset_workspace_flow(command_input, ctx: CommandContext) -> CommandResult:
     )
 
 
+def _unknown_flow_step(name: str) -> bool:
+    """True when ``name`` is not a step of the canonical rtl2gds chain."""
+    from chipcompiler.rtl2gds.builder import rtl2gds_step_names
+
+    chain = rtl2gds_step_names()
+    folded = {step.casefold() for step in chain}
+    return name.strip().casefold() not in folded
+
+
 def _run_project(
     command_input: RunInput, ctx: CommandContext, *, execute_flow: bool
 ) -> CommandResult:
@@ -766,6 +775,20 @@ def _run_project(
     range_requested = command_input.from_step is not None or command_input.to_step is not None
     if command_input.to_step is not None and command_input.from_step is None:
         return error("flow_range_requires_pair")
+    if (
+        command_input.from_step is not None
+        and command_input.to_step is None
+        and _unknown_flow_step(command_input.from_step)
+    ):
+        # A bad step name is reported as such, not as a missing --to.
+        from chipcompiler.rtl2gds.builder import rtl2gds_step_names
+
+        available = ", ".join(rtl2gds_step_names())
+        return error(
+            "unknown_step",
+            step=command_input.from_step,
+            reason=f"unknown step '{command_input.from_step}'; available steps: {available}",
+        )
     if (
         range_requested
         and command_input.from_step is not None
@@ -1046,6 +1069,20 @@ def _run_project(
             or command_input.only is not None
         )
     ):
+        if cli_overrides:
+            return CommandResult.err(
+                [
+                    error_record(
+                        "set_requires_fresh_run",
+                        workspace_id=run_name,
+                        workspace=run_dir,
+                        reason=(
+                            "--set applies only to fresh workspaces; use --overwrite "
+                            "or a new --workspace"
+                        ),
+                    )
+                ]
+            )
         return _run_workspace(command_input, ctx)
 
     return run_dispatch.dispatch_project_run(

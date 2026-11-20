@@ -14,6 +14,10 @@ inputs:
     description: Directory used to extract and smoke test the artifact.
     required: false
     default: dist/pyinstaller-smoke
+  channel:
+    description: Build channel stamped into `ecc version` (for example nightly, dev or stable).
+    required: false
+    default: ""
 
 runs:
   using: composite
@@ -44,12 +48,14 @@ runs:
 
     - name: Stamp build identity
       shell: bash
+      env:
+        BUILD_CHANNEL: ${{ inputs.channel }}
       run: |
         # Stamp the checked-out revision, not the event SHA: tag-checkout
         # workflows (release.yml) dispatch from a branch ref while building a
         # different commit.
-        printf 'BUILD_COMMIT = "%s"\nBUILD_DATE = "%s"\n' \
-          "$(git rev-parse HEAD)" "$(date -u +%Y%m%d)" > chipcompiler/_build_info.py
+        printf 'BUILD_COMMIT = "%s"\nBUILD_DATE = "%s"\nBUILD_CHANNEL = "%s"\n' \
+          "$(git rev-parse HEAD)" "$(date -u +%Y%m%d)" "$BUILD_CHANNEL" > chipcompiler/_build_info.py
 
     - name: Build PyInstaller bundle
       shell: bash

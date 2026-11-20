@@ -10,6 +10,7 @@ from typing import Any, Final
 from chipcompiler.data import StepEnum
 from chipcompiler.data.flow.options import clock_tree_requested
 from chipcompiler.data.step import StepDirectories
+from chipcompiler.utility.threads import thread_budget
 
 # Steps whose clock network ecc-tools can capture into the geometry snapshot.
 CLOCK_TREE_STEPS: Final = frozenset(
@@ -122,8 +123,9 @@ def _prepare_rcx_config(clock_tree_dir: Path) -> tuple[Path, Path]:
     shutil.rmtree(rcx_dir, ignore_errors=True)
     rcx_dir.mkdir(parents=True, exist_ok=True)
     config_path = clock_tree_dir / "rcx_config.json"
+    payload = {"thread_num": thread_budget(), "output": str(rcx_dir.resolve())}
     config_path.write_text(
-        json.dumps({"thread_num": 64, "output": str(rcx_dir.resolve())}, indent=2) + "\n",
+        json.dumps(payload, indent=2) + "\n",
         encoding="utf-8",
     )
     return config_path, rcx_dir
@@ -168,7 +170,7 @@ def _run_ista_clock_graph(
         "-output_timing_reports": "0",
         "-output_timing_features": "0",
         "-timing_corner": FILLER_LIBERTY_CORNER,
-        "-thread_number": "64",
+        "-thread_number": str(thread_budget()),
     }
     if ecc.init_sta(config=str(sta_config), config_dict=config_dict) is not True:
         raise ClockTreeCaptureError("filler clock-tree STA initialization failed")
