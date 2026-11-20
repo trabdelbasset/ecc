@@ -35,6 +35,12 @@ class StaQorSummary:
     hold_wns: float | None
     hold_tns: float | None
     hold_nvp: int | None
+    # Design-rule violation counts (max_transition / max_capacitance /
+    # max_fanout) from ``design_statistics``; None when the corner does not
+    # report them, which must never be read as "no violations".
+    max_transition_violations: int | None = None
+    max_capacitance_violations: int | None = None
+    max_fanout_violations: int | None = None
 
 
 @dataclass(frozen=True)
@@ -69,6 +75,9 @@ def _safe_dir_name(name: str) -> str:
         character if character.isalnum() or character in ("-", "_", ".") else "_"
         for character in name.strip()
     )
+    if value and set(value) == {"."}:
+        # "." and ".." would resolve to the artifact root or its parent.
+        value = value.replace(".", "_")
     return value or "unknown"
 
 
@@ -159,9 +168,14 @@ def _finite_number(value) -> float | None:
 
 
 def _nonnegative_int(value) -> int | None:
-    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
         return None
-    return value
+    # JSON writers may emit counts as 3.0; only integral values are counts.
+    if isinstance(value, float) and not (isfinite(value) and value.is_integer()):
+        return None
+    if value < 0:
+        return None
+    return int(value)
 
 
 def read_sta_qor_summary(
@@ -189,6 +203,9 @@ def read_sta_qor_summary(
     hold_wns = _finite_number(hold.get("wns")) if isinstance(hold, dict) else None
     hold_tns = _finite_number(hold.get("tns")) if isinstance(hold, dict) else None
     hold_nvp = _nonnegative_int(hold.get("nvp")) if isinstance(hold, dict) else None
+    design_statistics = data.get("design_statistics")
+    if not isinstance(design_statistics, dict):
+        design_statistics = {}
     if (
         setup_wns is None
         or setup_tns is None
@@ -208,6 +225,9 @@ def read_sta_qor_summary(
         hold_wns=hold_wns,
         hold_tns=hold_tns,
         hold_nvp=hold_nvp,
+        max_transition_violations=_nonnegative_int(design_statistics.get("tran")),
+        max_capacitance_violations=_nonnegative_int(design_statistics.get("cap")),
+        max_fanout_violations=_nonnegative_int(design_statistics.get("fanout")),
     )
 
 

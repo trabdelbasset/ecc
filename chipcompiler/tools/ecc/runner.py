@@ -93,24 +93,36 @@ def _workspace_sta_config_path(workspace: Workspace) -> str | None:
     return os.fspath(config_path) if config_path is not None else None
 
 
-def copy_lvs_outputs(workspace: Workspace, step: EccStep):
+def copy_lvs_outputs(workspace: Workspace, step: EccStep) -> bool:
+    """Publish the LVS report and feature JSON; True when the feature JSON is fresh.
+
+    Stale copies from an earlier run are removed first, so a missing native
+    report can never leave an old result in place.
+    """
+    targets = (Path(step.report.step or ""), Path(step.feature.step or ""))
+    for target in targets:
+        if target.is_file():
+            target.unlink()
+
     output_dir_text = os.fspath((step.data.steps or {}).get(StepEnum.LVS.value, ""))
     if not output_dir_text:
-        return
+        return False
 
     reporter_dir = Path(output_dir_text) / "lvs_reporter"
     if not reporter_dir.is_dir():
-        return
+        return False
 
-    for source_path, target_path in (
-        (reporter_dir / "ilvs.rpt", Path(step.report.step or "")),
-        (reporter_dir / "ilvs.json", Path(step.feature.step or "")),
+    copied_feature = False
+    for source_path, target_path in zip(
+        (reporter_dir / "ilvs.rpt", reporter_dir / "ilvs.json"), targets, strict=True
     ):
         if not source_path.is_file():
             continue
         target_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source_path, target_path)
+        copied_feature = copied_feature or target_path == targets[1]
         workspace.logger.info("Copied LVS %s to %s", source_path, target_path)
+    return copied_feature
 
 
 def has_parasitics(workspace: Workspace, step: EccStep) -> bool:
@@ -772,7 +784,9 @@ def run_lvs(workspace: Workspace, step: EccStep, ecc_module: ECCToolsModule | No
         if not reslut:
             return False
 
-        copy_lvs_outputs(workspace=workspace, step=step)
+        if not copy_lvs_outputs(workspace=workspace, step=step):
+            workspace.logger.error("LVS produced no report (ilvs.json): %s", step.feature.step)
+            return False
 
         sub_flow.update_step(step_name=EccSubFlowEnum.save_data.value, state=StateEnum.Success)
 

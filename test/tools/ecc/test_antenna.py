@@ -66,6 +66,30 @@ def test_antenna_dispatch_publishes_report_and_continues_with_violations(antenna
     ]
 
 
+def test_antenna_run_warns_when_nothing_was_analysed(antenna_case, monkeypatch):
+    workspace, step, module, _native_report, _save_data = antenna_case
+    original = module.check_antenna.side_effect
+
+    def vacuous(*, step_json):
+        original(step_json=step_json)
+        step_json.write_text(
+            '{"antenna_check": {"signal_net_count": 0, "pins_with_gate_area": 0,'
+            ' "violation_count": 0}}\n',
+            encoding="utf-8",
+        )
+        return True
+
+    module.check_antenna.side_effect = vacuous
+    warnings = []
+    monkeypatch.setattr(
+        workspace.logger, "warning", lambda msg, *args: warnings.append(msg % args if args else msg)
+    )
+
+    assert runner.run_step(workspace, step, module) is True
+
+    assert any("not verified" in w for w in warnings)
+
+
 @pytest.mark.parametrize("failed_method", ["init_mj", "check_antenna", "destroy_mj"])
 def test_antenna_native_failure_releases_resources_without_saving(antenna_case, failed_method):
     workspace, step, module, _native_report, save_data = antenna_case

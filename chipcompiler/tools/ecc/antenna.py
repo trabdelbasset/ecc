@@ -3,6 +3,7 @@
 import shutil
 
 from chipcompiler.data import EccStep, StateEnum, StepEnum, Workspace
+from chipcompiler.tools.ecc.antenna_coverage import antenna_coverage, read_antenna_check
 from chipcompiler.tools.ecc.module import ECCToolsModule
 from chipcompiler.tools.ecc.subflow import EccSubFlow, EccSubFlowEnum
 
@@ -55,6 +56,11 @@ def run_antenna_check(
         shutil.copy2(native_report, report_path)
         # Success means execution/reporting completed, not zero violations
         # or complete antenna-rule coverage in the technology/cell LEFs.
+        # Coverage is judged by the signoff checklist (quality.antenna.coverage);
+        # say so here too so a vacuous run is not mistaken for a clean one.
+        verified, message = antenna_coverage(read_antenna_check(step_json_path))
+        if not verified:
+            workspace.logger.warning("%s", message)
         completed = True
     finally:
         sub_flow.update_step(

@@ -20,9 +20,22 @@ def test_workspace_gate_order_is_the_feasibility_evaluation_order():
     assert [gate.id for gate in WORKSPACE_GATES] == [
         "GATE_DRC",
         "GATE_LVS",
+        "GATE_ANTENNA",
         "GATE_SETUP_SLACK",
         "GATE_HOLD_SLACK",
         "GATE_SETUP_NVP",
         "GATE_HOLD_NVP",
+        "GATE_MAX_TRANSITION",
+        "GATE_MAX_CAPACITANCE",
+        "GATE_MAX_FANOUT",
         "GATE_HARDEN_ARTIFACTS",
     ]
+
+
+def test_drv_step_gate_maps_to_the_three_drv_workspace_gates():
+    assert "qor.sta.drv_clean" in QOR_STEP_GATE_IDS["sta"]
+    assert WORKSPACE_GATE_ALIASES["qor.sta.drv_clean"] == (
+        "GATE_MAX_TRANSITION",
+        "GATE_MAX_CAPACITANCE",
+        "GATE_MAX_FANOUT",
+    )

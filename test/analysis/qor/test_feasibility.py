@@ -1,4 +1,7 @@
+import pytest
+
 from chipcompiler.analysis.qor.feasibility import evaluate_feasibility
+from chipcompiler.analysis.qor.loader import CornerSlack
 from test.analysis.qor.helpers import gcd_metrics, make_inputs
 
 ALL_SUCCESS = {
@@ -80,3 +83,108 @@ class TestFeasibilityReduction:
         states = dict(ALL_SUCCESS)
         states["sta"] = "Ongoing"
         assert _status(make_inputs(gcd_metrics(), states)) == "NOT_VERIFIED"
+
+
+@pytest.mark.parametrize(
+    ("metric_id", "gate_id"),
+    [
+        ("sta_max_transition_violation_count", "GATE_MAX_TRANSITION"),
+        ("sta_max_capacitance_violation_count", "GATE_MAX_CAPACITANCE"),
+        ("sta_max_fanout_violation_count", "GATE_MAX_FANOUT"),
+    ],
+)
+class TestDrvGates:
+    def test_violations_fail_the_gate(self, metric_id, gate_id):
+        metrics = gcd_metrics()
+        metrics[metric_id].value = 3
+        feasibility = evaluate_feasibility(make_inputs(metrics, ALL_SUCCESS))
+        assert feasibility.status == "PHYSICAL_FAIL"
+        assert [gate.id for gate in feasibility.gates if gate.state == "failed"] == [gate_id]
+
+    def test_missing_evidence_is_unknown_never_pass(self, metric_id, gate_id):
+        metrics = gcd_metrics()
+        del metrics[metric_id]
+        feasibility = evaluate_feasibility(make_inputs(metrics, ALL_SUCCESS))
+        assert feasibility.status == "UNKNOWN"
+        gate = next(gate for gate in feasibility.gates if gate.id == gate_id)
+        assert gate.state == "unavailable"
+        assert gate.availability == "corrupt"
+
+    def test_unfinished_sta_is_not_verified(self, metric_id, gate_id):
+        states = dict(ALL_SUCCESS)
+        states["sta"] = "Unstart"
+        gate = next(
+            gate
+            for gate in evaluate_feasibility(make_inputs(gcd_metrics(), states)).gates
+            if gate.id == gate_id
+        )
+        assert gate.availability == "not_verified"
+
+
+def _gate(inputs, gate_id):
+    return next(gate for gate in evaluate_feasibility(inputs).gates if gate.id == gate_id)
+
+
+def _corners(**overrides):
+    base = {"setup_ws": 16.622, "hold_ws": 0.1, "setup_nvp": 0, "hold_nvp": 0}
+    return [
+        CornerSlack("MAX/Cworst", **{**base, **overrides}),
+        CornerSlack("MIN/Cbest", **{**base, "setup_ws": 18.98}),
+    ]
+
+
+class TestPerCornerGates:
+    def test_consistent_corners_pass_with_unchanged_slack_view(self):
+        inputs = make_inputs(gcd_metrics(), ALL_SUCCESS, corners=_corners())
+        feasibility = evaluate_feasibility(inputs)
+        assert feasibility.status == "PASS"
+        setup = next(g for g in feasibility.gates if g.id == "GATE_SETUP_SLACK")
+        assert setup.timing_slack.ws_ns == 16.622
+
+    def test_failing_corner_fails_even_if_aggregate_passes(self):
+        inputs = make_inputs(
+            gcd_metrics(), ALL_SUCCESS, corners=_corners(setup_ws=-0.5, setup_nvp=3)
+        )
+        feasibility = evaluate_feasibility(inputs)
+        assert feasibility.status == "PHYSICAL_FAIL"
+        setup = next(g for g in feasibility.gates if g.id == "GATE_SETUP_SLACK")
+        assert setup.state == "failed"
+        assert setup.timing_slack.ws_ns == -0.5
+
+    def test_failing_hold_corner_fails_even_if_aggregate_passes(self):
+        inputs = make_inputs(gcd_metrics(), ALL_SUCCESS, corners=_corners(hold_ws=-0.02))
+        assert _gate(inputs, "GATE_HOLD_SLACK").state == "failed"
+
+    def test_missing_corner_is_unknown_with_reason(self):
+        inputs = make_inputs(gcd_metrics(), ALL_SUCCESS, corners=_corners()[:1])
+        gate = _gate(inputs, "GATE_SETUP_SLACK")
+        assert (gate.state, gate.availability) == ("unavailable", "corrupt")
+        assert "1 of 2 expected corners" in gate.reason
+        assert _status(inputs) == "UNKNOWN"
+
+    def test_missing_corner_does_not_hide_a_failing_corner(self):
+        inputs = make_inputs(gcd_metrics(), ALL_SUCCESS, corners=_corners(setup_ws=-0.5)[:1])
+        assert _status(inputs) == "PHYSICAL_FAIL"
+
+    def test_aggregate_disagreement_is_unknown(self):
+        metrics = gcd_metrics()
+        metrics["sta_setup_wns"].value = 20.0  # worst corner says 16.622
+        inputs = make_inputs(metrics, ALL_SUCCESS, corners=_corners())
+        gate = _gate(inputs, "GATE_SETUP_SLACK")
+        assert gate.availability == "corrupt"
+        assert "disagrees" in gate.reason
+
+    def test_rounding_tolerance_is_accepted(self):
+        metrics = gcd_metrics()
+        metrics["sta_setup_wns"].value = 16.6225
+        inputs = make_inputs(metrics, ALL_SUCCESS, corners=_corners())
+        assert _status(inputs) == "PASS"
+
+    def test_violation_count_disagreement_is_unknown(self):
+        inputs = make_inputs(gcd_metrics(), ALL_SUCCESS, corners=_corners(setup_nvp=2))
+        gate = _gate(inputs, "GATE_SETUP_SLACK")
+        assert gate.availability == "corrupt"
+        assert "sta_setup_violation_count" in gate.reason
+
+    def test_no_corner_data_falls_back_to_aggregate(self):
+        assert _status(make_inputs(gcd_metrics(), ALL_SUCCESS, corners=[])) == "PASS"

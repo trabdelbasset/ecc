@@ -58,6 +58,7 @@ SCHEMA = {
         },
         "scalar_summary": {
             "required": ["score", "status", "profile", "weights"],
+            "optional": ["coverage", "band_provisional"],
             "status_enum": SCALAR_STATUSES,
         },
     },
@@ -120,6 +121,10 @@ def validate_report(report: dict) -> list:
                 require(
                     gate.get("availability") is None or isinstance(gate.get("availability"), str),
                     "gate.availability invalid",
+                )
+                require(
+                    gate.get("reason") is None or isinstance(gate.get("reason"), str),
+                    "gate.reason invalid",
                 )
                 timing = gate.get("timing_slack")
                 if timing is not None:
@@ -205,6 +210,17 @@ def validate_report(report: dict) -> list:
                         "feature.input_source_artifacts invalid",
                     )
 
+    supplementary = report.get("supplementary_features", [])
+    require(isinstance(supplementary, list), "supplementary_features must be a list")
+    for feature in supplementary if isinstance(supplementary, list) else []:
+        valid = isinstance(feature, dict) and isinstance(feature.get("feature_id"), str)
+        require(valid, "supplementary feature requires a feature_id")
+        if valid:
+            require(
+                finite_number(feature.get("value"), nullable=True),
+                "supplementary feature.value invalid",
+            )
+
     power = report["power"]
     require(isinstance(power, dict), "power must be an object")
     if isinstance(power, dict):
@@ -238,6 +254,17 @@ def validate_report(report: dict) -> list:
         require(
             isinstance(summary.get("weights"), dict), "scalar_summary.weights must be an object"
         )
+        # Optional (added without a schema bump): older reports omit them.
+        if "coverage" in summary:
+            require(
+                finite_number(summary["coverage"], low=0, high=1, nullable=True),
+                "scalar_summary.coverage out of range",
+            )
+        if "band_provisional" in summary:
+            require(
+                isinstance(summary["band_provisional"], bool),
+                "scalar_summary.band_provisional must be a boolean",
+            )
 
     diagnoses = report["diagnoses"]
     require(isinstance(diagnoses, list), "diagnoses must be a list")

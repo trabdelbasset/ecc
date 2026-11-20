@@ -34,6 +34,9 @@ class FeatureBundle:
     pvt_setup_disp: float | None = None
     pvt_hold_disp: float | None = None
     compatibility: "Compatibility | None" = None
+    # Published-only observability features; kept separate from ``features`` so no
+    # dimension, evidence, or diagnosis consumer reads them.
+    supplementary: dict = dataclasses.field(default_factory=dict)
 
     def records(self) -> list:
         return list(self.features.values())
@@ -168,7 +171,7 @@ def compute_features(inputs) -> FeatureBundle:
     b_max = inputs.value("clock_path_max_buffer")
     b_min = inputs.value("clock_path_min_buffer")
     imbalance = None
-    if b_max is not None and b_max >= 1 and b_min is not None:
+    if b_max is not None and b_max >= 1 and b_min is not None and b_min <= b_max:
         imbalance = (b_max - b_min) / b_max
     _record(
         f,
@@ -316,6 +319,7 @@ def compute_features(inputs) -> FeatureBundle:
 
     return FeatureBundle(
         features=f,
+        supplementary=_supplementary_features(inputs),
         i_place=i_place,
         i_route=i_route,
         i_total=i_total,
@@ -325,6 +329,93 @@ def compute_features(inputs) -> FeatureBundle:
         pvt_hold_disp=pvt_hold,
         compatibility=compatibility,
     )
+
+
+def _supplementary_features(inputs) -> dict:
+    """Features published in the report for observability without changing scores or gates."""
+    out: dict = {}
+
+    def add(feature_id, value, state, interpretation, artifacts=None, metric_ids=None):
+        entry = feature_registry.SUPPLEMENTARY_FEATURE_REGISTRY[feature_id]
+        ids = list(metric_ids or entry["input_metric_ids"])
+        out[feature_id] = feature_registry.make_record(
+            feature_id,
+            value,
+            state,
+            _artifacts(inputs, ids) if artifacts is None else artifacts,
+            interpretation=interpretation,
+            input_metric_ids=ids,
+        )
+
+    total, overflowed = inputs.egr_gcell_count, inputs.egr_overflowed_gcell_count
+    fraction = _ratio(overflowed, total)
+    artifacts = []
+    if fraction is not None and inputs.egr_grid_source_path:
+        artifacts = [
+            SourceArtifact(
+                metric="place_congestion_egr_overflow_total",
+                path=inputs.egr_grid_source_path,
+                selector="/grid[overflow>0]/count/grid/count",
+            )
+        ]
+    add(
+        "F_PL_EGR_OVERFLOW_GCELL_FRAC",
+        fraction,
+        "PASS" if fraction is not None else "UNKNOWN",
+        "Share of global-route GCells with overflow; size-normalized congestion indicator.",
+        artifacts=artifacts,
+    )
+
+    def slack_feature(feature_id, value, state, interpretation):
+        add(feature_id, value, state if value is not None else "UNKNOWN", interpretation)
+
+    tclk = inputs.tclk_ns
+    setup_tns = inputs.value("sta_setup_tns")
+    hold_tns = inputs.value("sta_hold_tns")
+
+    def clean_state(value):
+        return "PASS" if value is not None and value >= 0 else "FAIL"
+
+    slack_feature(
+        "F_STA_SETUP_TNS",
+        setup_tns,
+        clean_state(setup_tns),
+        "Signed setup total negative slack (ns).",
+    )
+    slack_feature(
+        "F_STA_HOLD_TNS",
+        hold_tns,
+        clean_state(hold_tns),
+        "Signed hold total negative slack (ns).",
+    )
+    tns_norm = setup_tns / tclk if setup_tns is not None and tclk and tclk > 0 else None
+    slack_feature(
+        "F_STA_SETUP_TNS_NORM",
+        tns_norm,
+        clean_state(tns_norm),
+        "Setup TNS in clock periods; comparable across designs and clock targets.",
+    )
+    for feature_id, metric_id, label in (
+        ("F_STA_SETUP_FEP", "sta_setup_violation_count", "setup"),
+        ("F_STA_HOLD_FEP", "sta_hold_violation_count", "hold"),
+    ):
+        count = inputs.value(metric_id)
+        slack_feature(
+            feature_id,
+            count,
+            "PASS" if count == 0 else "FAIL",
+            f"Failing {label} endpoint count; the endpoint population is not "
+            "emitted, so no fraction is derived.",
+        )
+    hold_ws = inputs.value("sta_hold_wns")
+    hold_headroom = _ratio(hold_ws, tclk) if tclk and hold_ws is not None else None
+    slack_feature(
+        "F_STA_HOLD_HEADROOM",
+        hold_headroom,
+        "PASS" if hold_headroom is not None and hold_headroom >= 0 else "FAIL",
+        "Signed worst hold slack in clock periods.",
+    )
+    return out
 
 
 def _headroom_state(ws, tclk):

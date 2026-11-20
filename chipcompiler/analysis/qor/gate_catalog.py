@@ -8,6 +8,7 @@ from chipcompiler.data import StepEnum
 QOR_STEP_GATE_IDS = {
     StepEnum.DRC.value: ("qor.drc.clean",),
     StepEnum.LVS.value: ("qor.lvs.clean",),
+    StepEnum.ANTENNA_CHECK.value: ("qor.antenna.clean",),
     StepEnum.RCX.value: (
         "qor.rcx.corner_coverage",
         "qor.rcx.spef_parse_health",
@@ -15,6 +16,7 @@ QOR_STEP_GATE_IDS = {
     StepEnum.STA.value: (
         "qor.sta.setup_closed",
         "qor.sta.hold_closed",
+        "qor.sta.drv_clean",
     ),
     StepEnum.HARDEN.value: (
         "qor.mpc.minimum_area",
@@ -34,6 +36,10 @@ class WorkspaceGateSpec:
     qor_gate_ids: tuple[str, ...] = ()
     tns_metric: str | None = None
     nvp_metric: str | None = None
+    # Metric that must be > 0 for the count to mean anything (vacuous-check guard).
+    coverage_metric: str | None = None
+    # Evaluated only when the flow contains this step (older flows lack it).
+    only_if_in_flow: bool = False
 
 
 # Workspace feasibility may split an aggregate step gate into scoring aspects.
@@ -52,6 +58,15 @@ WORKSPACE_GATES = (
         "lvs",
         "lvs_count",
         ("qor.lvs.clean",),
+    ),
+    WorkspaceGateSpec(
+        "GATE_ANTENNA",
+        "ANTENNA",
+        StepEnum.ANTENNA_CHECK.value,
+        "antenna_violation_count",
+        ("qor.antenna.clean",),
+        coverage_metric="antenna_signal_net_count",
+        only_if_in_flow=True,
     ),
     WorkspaceGateSpec(
         "GATE_SETUP_SLACK",
@@ -86,6 +101,27 @@ WORKSPACE_GATES = (
         ("qor.sta.hold_closed",),
     ),
     WorkspaceGateSpec(
+        "GATE_MAX_TRANSITION",
+        "STA",
+        "sta",
+        "sta_max_transition_violation_count",
+        ("qor.sta.drv_clean",),
+    ),
+    WorkspaceGateSpec(
+        "GATE_MAX_CAPACITANCE",
+        "STA",
+        "sta",
+        "sta_max_capacitance_violation_count",
+        ("qor.sta.drv_clean",),
+    ),
+    WorkspaceGateSpec(
+        "GATE_MAX_FANOUT",
+        "STA",
+        "sta",
+        "sta_max_fanout_violation_count",
+        ("qor.sta.drv_clean",),
+    ),
+    WorkspaceGateSpec(
         "GATE_HARDEN_ARTIFACTS",
         "HARDEN",
         "harden",
@@ -101,3 +137,13 @@ WORKSPACE_GATE_ALIASES = {
     gate_id: tuple(spec.id for spec in WORKSPACE_GATES if gate_id in spec.qor_gate_ids)
     for gate_id in _QOR_GATE_IDS
 }
+
+
+def gate_metric_ids() -> frozenset[str]:
+    """Metric ids that feed a workspace gate (value, TNS and violation count)."""
+    return frozenset(
+        metric_id
+        for spec in WORKSPACE_GATES
+        for metric_id in (spec.metric_id, spec.tns_metric, spec.nvp_metric)
+        if metric_id
+    )

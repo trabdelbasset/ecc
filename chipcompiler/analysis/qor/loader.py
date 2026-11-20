@@ -7,11 +7,13 @@ disk, and stale suffixes must not report obsolete metrics as current.
 """
 
 import dataclasses
+from csv import reader as csv_reader
 from math import isfinite
 from pathlib import Path
 from typing import cast
 
-from chipcompiler.analysis.qor.metric_registry import SCORED_STEP_VALUES
+from chipcompiler.analysis.qor.gate_catalog import gate_metric_ids
+from chipcompiler.analysis.qor.metric_registry import SCORED_STEP_VALUES, metric_range_violation
 from chipcompiler.data import StateEnum, StepEnum
 from chipcompiler.data.flow.document import FlowStepEntry
 from chipcompiler.data.step import StepDirectories
@@ -73,6 +75,11 @@ class QorInputs:
     profile: str = "balanced"
     power_budget_uw: float | None = None
     config_warnings: list = dataclasses.field(default_factory=list)
+    # Global-route union overflow grid read from the placement EGR map CSV:
+    # total GCell count, GCells with positive overflow, and the CSV path.
+    egr_gcell_count: int | None = None
+    egr_overflowed_gcell_count: int | None = None
+    egr_grid_source_path: str | None = None
 
     def value(self, metric_id):
         record = self.metrics.get(metric_id)
@@ -135,9 +142,57 @@ def _payload_metrics(payload: dict) -> list:
     return [raw for raw in payload["metrics"] if isinstance(raw, dict)]
 
 
-def _select_metrics(step_payloads: list) -> dict:
-    """Project-level selection: final > gate > trend, later step wins."""
+# Evidence may be written a moment after the cached metrics; allow clock/fs granularity.
+_EVIDENCE_MTIME_TOLERANCE_S = 2.0
+
+
+def _evidence_problem(step_dir: Path, cache: Path, raw: dict) -> str | None:
+    """Why a gate metric's evidence artifact cannot back the cached value, or None.
+
+    The artifact is the metric's own ``source.path`` (relative to the step
+    directory). It must still exist and must not be newer than the cache.
+    """
+    source = raw.get("source")
+    rel = source.get("path") if isinstance(source, dict) else None
+    if not isinstance(rel, str) or not rel:
+        return "no evidence path recorded"
+    artifact = step_dir / rel
+    try:
+        artifact_mtime = artifact.stat().st_mtime
+        cache_mtime = cache.stat().st_mtime
+    except OSError:
+        return f"evidence artifact missing: {artifact}"
+    if artifact_mtime > cache_mtime + _EVIDENCE_MTIME_TOLERANCE_S:
+        return f"evidence artifact newer than cached metrics (stale cache): {artifact}"
+    return None
+
+
+def _drop_unverified_gate_metrics(
+    step_dir: Path, cache: Path, records: list, warnings: list
+) -> list:
+    """Remove gate metrics whose evidence is gone or changed; their gates become UNKNOWN."""
+    gate_ids = gate_metric_ids()
+    kept = []
+    for raw in records:
+        problem = _evidence_problem(step_dir, cache, raw) if raw.get("id") in gate_ids else None
+        if problem is None:
+            kept.append(raw)
+        else:
+            warnings.append(f"{raw['id']}: {problem}; gate is UNKNOWN")
+    return kept
+
+
+def _select_metrics(step_payloads: list, warnings: list | None = None) -> dict:
+    """Project-level selection: final > gate > trend, later step wins.
+
+    Records outside the registry's physical range are dropped (the metric
+    becomes UNKNOWN downstream) and reported through ``warnings``.
+    Two records with the same id, role and step are duplicates. Identical
+    duplicates are harmless; conflicting ones leave the metric unknown instead of
+    letting the first record win, matching ``QorMetrics`` in the step runners.
+    """
     selected: dict = {}
+    conflicted: dict = {}
     for index, (step_value, records) in enumerate(step_payloads):
         for raw in records:
             metric_id = raw.get("id")
@@ -149,6 +204,15 @@ def _select_metrics(step_payloads: list) -> dict:
                 or not isinstance(value, (int, float))
                 or not isfinite(value)
             ):
+                continue
+            violation = metric_range_violation(metric_id, float(value))
+            if violation is not None:
+                message = (
+                    f"{metric_id}={value!r} is out of range ({violation}); "
+                    "metric treated as UNKNOWN"
+                )
+                if warnings is not None and message not in warnings:
+                    warnings.append(message)
                 continue
             role = raw.get("project_role")
             if role not in _ROLE_PRIORITY or role == "none":
@@ -174,6 +238,16 @@ def _select_metrics(step_payloads: list) -> dict:
             current = selected.get(metric_id)
             if current is None or rank < current[0]:
                 selected[metric_id] = (rank, record)
+                conflicted.pop(metric_id, None)
+            elif rank == current[0] and record.value != current[1].value:
+                conflicted.setdefault(metric_id, (step_value, current[1].value, record.value))
+    for metric_id, (step_value, first, other) in conflicted.items():
+        del selected[metric_id]
+        if warnings is not None:
+            warnings.append(
+                f"duplicate conflicting records for {metric_id} in {step_value} "
+                f"({first} vs {other}); metric treated as UNKNOWN"
+            )
     return {metric_id: rank_record[1] for metric_id, rank_record in selected.items()}
 
 
@@ -247,6 +321,49 @@ def _power_summary(workspace, directories: StepDirectories, flow_states: dict):
     return None, None, None, None
 
 
+def _egr_overflow_grid(directories: StepDirectories, flow_states: dict):
+    """Read (total GCells, overflowed GCells, path) from the placement EGR map.
+
+    ``placement.map.json`` (or legacy ``place.map.json``) records the union
+    overflow CSV, one cell per GCell, so the grid size and overflowed-GCell
+    fraction are derivable from it. Returns ``(None, None, None)`` when absent
+    or invalid.
+    """
+    empty = (None, None, None)
+    if flow_states.get(StepEnum.PLACEMENT.value) != StateEnum.Success.value:
+        return empty
+    feature_dir = directories.path(StepEnum.PLACEMENT.value) / "feature"
+    map_data = json_read(feature_dir / "placement.map.json")
+    if not map_data:
+        map_data = json_read(feature_dir / "place.map.json")
+    recorded = (
+        JsonObject(map_data).get_obj("Congestion").get_obj("map").get_obj("egr").get_str("union")
+    )
+    if not recorded:
+        return empty
+    # Prefer the copy beside the map file: recorded paths may be absolute and
+    # stop resolving once a workspace is moved.
+    candidates = [feature_dir / "egr_congestion_map" / Path(recorded).name, Path(recorded)]
+    path = next((candidate for candidate in candidates if candidate.is_file()), None)
+    if path is None:
+        return empty
+    total = overflowed = 0
+    try:
+        with path.open(newline="", encoding="utf-8") as file:
+            for row in csv_reader(file):
+                for cell in row:
+                    value = float(cell)
+                    if not isfinite(value) or value < 0:
+                        return empty
+                    total += 1
+                    overflowed += value > 0
+    except (OSError, UnicodeDecodeError, ValueError):
+        return empty
+    if total == 0:
+        return empty
+    return total, overflowed, str(path)
+
+
 def _resolve_parameters(parameters: dict, warnings: list) -> tuple:
     """Resolve (tclk_ns, profile, power_budget_uw) from flat parameters."""
     tclk_ns = None
@@ -267,7 +384,12 @@ def _resolve_parameters(parameters: dict, warnings: list) -> tuple:
     budget = parameters.get("qor_power_budget_w")
     power_budget_uw = None
     if budget is not None:
-        if isinstance(budget, (int, float)) and not isinstance(budget, bool) and budget > 0:
+        if (
+            isinstance(budget, (int, float))
+            and not isinstance(budget, bool)
+            and isfinite(budget)
+            and budget > 0
+        ):
             power_budget_uw = float(budget) * 1e6
         else:
             warnings.append("qor_power_budget_w must be a positive number; power quality UNKNOWN")
@@ -297,11 +419,14 @@ def load_workspace_qor_inputs(workspace) -> QorInputs:
     for step_value in SCORED_STEP_VALUES:
         if flow_states.get(step_value) != StateEnum.Success.value:
             continue
-        payload = json_read(directories.path(step_value) / "analysis" / "qor_metrics.json")
+        step_dir = directories.path(step_value)
+        cache = step_dir / "analysis" / "qor_metrics.json"
+        payload = json_read(cache)
         records = _payload_metrics(payload)
         if payload is None or not records:
             parse_failures += 1
             continue
+        records = _drop_unverified_gate_metrics(step_dir, cache, records, warnings)
         analyzed_steps.append(step_value)
         integrity = payload.get("integrity")
         if isinstance(integrity, dict):
@@ -309,7 +434,7 @@ def load_workspace_qor_inputs(workspace) -> QorInputs:
             invalid_selector_count += len(integrity.get("invalid_detail_ids") or [])
         step_payloads.append((step_value, records))
 
-    metrics = _select_metrics(step_payloads)
+    metrics = _select_metrics(step_payloads, warnings)
 
     def _metric_value(metric_id: str) -> float | None:
         record = metrics.get(metric_id)
@@ -319,6 +444,7 @@ def load_workspace_qor_inputs(workspace) -> QorInputs:
         workspace, directories, flow_states
     )
     corners, sta_setup_only = _corner_slack(workspace, directories, flow_states)
+    egr_gcells, egr_overflowed, egr_source = _egr_overflow_grid(directories, flow_states)
 
     return QorInputs(
         design=design,
@@ -341,4 +467,7 @@ def load_workspace_qor_inputs(workspace) -> QorInputs:
         profile=profile,
         power_budget_uw=power_budget_uw,
         config_warnings=warnings,
+        egr_gcell_count=egr_gcells,
+        egr_overflowed_gcell_count=egr_overflowed,
+        egr_grid_source_path=egr_source,
     )

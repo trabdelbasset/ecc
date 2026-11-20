@@ -47,9 +47,9 @@ ecc report qor -o /tmp/qor.txt        # 自定义输出路径
   ECC QoR ANALYSIS REPORT - Design: gcd
   Workspace: ~/ecc-demo/gcd/ws_0001
 ==============================================================================
-  FEASIBILITY STATUS : PASS [All 7 Physical Signoff Gates Clean]
+  FEASIBILITY STATUS : PASS [All 10 Physical Signoff Gates Clean]
   EVIDENCE STATE     : HIGH [Integrity: 100.0%, Coverage: 100.0%, Consistency: 100.0%]
-  QoR COMPOSITE      : 99.0 / 100 (Status: GREEN, Profile: balanced)
+  QoR COMPOSITE      : 99.0 / 100 (Status: GREEN (provisional), Profile: balanced, Coverage: 85.0%)
 ------------------------------------------------------------------------------
   [PHYSICAL QoR RECORD BREAKDOWN]
     Timing Quality (Q_T)      : 100.0 / 100 [OPPORTUNITY] (WS: +16.622ns, WNS: 0ns)
@@ -259,6 +259,9 @@ Q_summary = 0.0                          若 Feasibility = PHYSICAL_FAIL（否�
 | GATE_HOLD_SLACK | STA | `sta_hold_wns`（WS） | ≥ 0.0 ns |
 | GATE_SETUP_NVP | STA | `sta_setup_violation_count` | == 0 |
 | GATE_HOLD_NVP | STA | `sta_hold_violation_count` | == 0 |
+| GATE_MAX_TRANSITION | STA | `sta_max_transition_violation_count` | == 0 |
+| GATE_MAX_CAPACITANCE | STA | `sta_max_capacitance_violation_count` | == 0 |
+| GATE_MAX_FANOUT | STA | `sta_max_fanout_violation_count` | == 0 |
 | GATE_HARDEN_ARTIFACTS | Harden | `harden_artifact_missing_count` | == 0（GDS/LEF/LIB 齐全） |
 
 要点：
@@ -357,7 +360,7 @@ qor_power_budget_w = 0.5
 CTS：`cts_buffer_count`、`cts_inverter_count`、`clock_path_max_buffer/min_buffer`、`clock_wirelength`；
 布线：`route_wirelength`、`route_via_count`；
 RCX：`rcx_spef_file_count`、`rcx_expected/missing_corner_count`、`rcx_spef_parse_failure_count`、`rcx_worst_total/coupling_capacitance_ff`；
-STA：`sta_setup/hold_wns`（有符号 WS）、`sta_setup/hold_tns`、`sta_setup/hold_violation_count`、`sta_frequency_mhz`、`sta_corner_count`、`sta_expected/missing_corner_count`、`sta_worst_setup_corner`；
+STA：`sta_setup/hold_wns`（有符号 WS）、`sta_setup/hold_tns`、`sta_setup/hold_violation_count`、`sta_max_transition/max_capacitance/max_fanout_violation_count`、`sta_frequency_mhz`、`sta_corner_count`、`sta_expected/missing_corner_count`、`sta_worst_setup_corner`；
 功耗分析：`power_analysis_internal_uw`、`power_analysis_switching_uw`、`power_analysis_dynamic_uw`、`power_analysis_leakage_uw`（旧 workspace 的 `synthesis_power_*` 产物仍可兼容读取）；
 签核：`drc_count`、`lvs_count`、`harden_artifact_missing_count`。
 
