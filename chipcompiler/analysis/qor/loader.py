@@ -200,11 +200,11 @@ def _select_metrics(step_payloads: list, warnings: list | None = None) -> dict:
     that metric unknown unless a later step supplies a higher-ranked record,
     matching ``QorMetrics`` in the step runners.
     """
-    selected: dict = {}
+    selected: dict[str, tuple[tuple[int, int], MetricRecord | None]] = {}
     conflicted: dict = {}
     for index, (step_value, records) in enumerate(step_payloads):
         step_conflicts = index_metric_records(records).conflicts
-        step_candidates: dict[str, tuple[tuple[int, int], MetricRecord]] = {}
+        step_candidates: dict[str, tuple[tuple[int, int], MetricRecord | None]] = {}
         for raw in records:
             metric_id = raw.get("id")
             num = finite_number(raw.get("value"))
@@ -219,32 +219,35 @@ def _select_metrics(step_payloads: list, warnings: list | None = None) -> dict:
                 )
                 if warnings is not None and message not in warnings:
                     warnings.append(message)
-                continue
             role = raw.get("project_role")
-            if role not in _ROLE_PRIORITY or role == "none":
+            if not isinstance(role, str) or role not in _ROLE_PRIORITY or role == "none":
                 continue
-            fields = JsonObject(raw)
-            ep = finite_number(raw.get("endpoint_population"))
-            record = MetricRecord(
-                metric_id=metric_id,
-                value=value,
-                unit=fields.get_str("unit"),
-                step=step_value,
-                project_role=role,
-                corner=fields.get_str("corner", None),
-                source=dict(fields.get_obj("source")),
-                scope=fields.get_str("scope", None),
-                endpoint_population=float(ep) if ep is not None else None,
-            )
+            candidate: MetricRecord | None
+            if violation is not None:
+                candidate = None
+            else:
+                fields = JsonObject(raw)
+                ep = finite_number(raw.get("endpoint_population"))
+                candidate = MetricRecord(
+                    metric_id=metric_id,
+                    value=value,
+                    unit=fields.get_str("unit"),
+                    step=step_value,
+                    project_role=role,
+                    corner=fields.get_str("corner", None),
+                    source=dict(fields.get_obj("source")),
+                    scope=fields.get_str("scope", None),
+                    endpoint_population=float(ep) if ep is not None else None,
+                )
             rank = (_ROLE_PRIORITY[role], -index)
             best = step_candidates.get(metric_id)
-            if best is None or rank < best[0]:
-                step_candidates[metric_id] = (rank, record)
+            if best is None or rank < best[0] or (rank == best[0] and candidate is None):
+                step_candidates[metric_id] = (rank, candidate)
 
-        for metric_id, (rank, record) in step_candidates.items():
+        for metric_id, (rank, candidate) in step_candidates.items():
             current = selected.get(metric_id)
             if current is None or rank < current[0]:
-                selected[metric_id] = (rank, record)
+                selected[metric_id] = (rank, candidate)
                 if metric_id in step_conflicts:
                     conflicted[metric_id] = (step_value, *step_conflicts[metric_id])
                 else:
@@ -256,7 +259,11 @@ def _select_metrics(step_payloads: list, warnings: list | None = None) -> dict:
                 f"duplicate conflicting records for {metric_id} in {step_value} "
                 f"({first} vs {other}); metric treated as UNKNOWN"
             )
-    return {metric_id: rank_record[1] for metric_id, rank_record in selected.items()}
+    return {
+        metric_id: rank_record[1]
+        for metric_id, rank_record in selected.items()
+        if rank_record[1] is not None
+    }
 
 
 def _corner_slack(
