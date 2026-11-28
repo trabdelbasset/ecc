@@ -1,8 +1,13 @@
 #!/usr/bin/env python
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
+
+MIN_YOSYS_VERSION: tuple[int, ...] = (0, 67)
+MIN_YOSYS_VERSION_STR = "0.67"
+_YOSYS_VERSION_RE = re.compile(r"^(?:Yosys\s+)?(\d+(?:\.\d+)+)(?:\+\d+)?(?=$|\s)")
 
 
 def _sanitize_loader_env(env: dict[str, str]) -> dict[str, str]:
@@ -149,6 +154,83 @@ def check_slang_support(
     log_file.write(error_msg + "\n")
     print(error_msg)
     return False
+
+
+def extract_yosys_version_token(output: str) -> str:
+    """Extract the version token from ``yosys -V`` output."""
+    stripped = output.strip()
+    if not stripped:
+        return ""
+    parts = stripped.split()
+    if parts[0] == "Yosys" and len(parts) > 1:
+        return parts[1]
+    return stripped
+
+
+def parse_yosys_version(output: str) -> tuple[int, ...] | None:
+    """Parse major/minor version components from ``yosys -V`` or its version token."""
+    match = _YOSYS_VERSION_RE.search(output.strip())
+    if match is None:
+        return None
+    return tuple(int(part) for part in match.group(1).split("."))
+
+
+def get_yosys_version_string(
+    yosys_cmd: list[str], yosys_env: dict[str, str], timeout: int = 5
+) -> str | None:
+    """Query ``yosys -V`` and return the extracted version token, or None on failure."""
+    try:
+        result = subprocess.run(
+            yosys_cmd + ["-V"],
+            env=yosys_env,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            timeout=timeout,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if result.returncode != 0:
+        return None
+    output = result.stdout.decode("utf-8", errors="replace").strip()
+    if not output:
+        return None
+    return extract_yosys_version_token(output)
+
+
+def check_yosys_version(
+    yosys_cmd: list[str],
+    yosys_env: dict[str, str],
+    *,
+    min_version: tuple[int, ...] = MIN_YOSYS_VERSION,
+    timeout: int = 5,
+) -> tuple[bool, str | None, str]:
+    """Verify Yosys meets ``min_version``; return ``(ok, version_str, error_message)``."""
+    min_label = ".".join(str(part) for part in min_version)
+    version_str = get_yosys_version_string(yosys_cmd, yosys_env, timeout=timeout)
+    if version_str is None:
+        return (
+            False,
+            None,
+            f"Could not determine Yosys version from '{' '.join(yosys_cmd)} -V'. "
+            f"ECC requires Yosys >= {min_label} (OSS CAD Suite).",
+        )
+    parsed = parse_yosys_version(version_str)
+    if parsed is None:
+        return (
+            False,
+            version_str,
+            f"Unrecognized Yosys version {version_str!r}. "
+            f"ECC requires Yosys >= {min_label} (OSS CAD Suite).",
+        )
+    if parsed < min_version:
+        return (
+            False,
+            version_str,
+            f"Yosys {version_str} is older than required >= {min_label}. "
+            f"Install OSS CAD Suite / Yosys >= {min_label} (or set CHIPCOMPILER_OSS_CAD_DIR).",
+        )
+    return True, version_str, ""
 
 
 def is_eda_exist() -> bool:

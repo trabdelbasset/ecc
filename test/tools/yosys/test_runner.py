@@ -78,6 +78,7 @@ def test_run_step_uses_local_env_and_runs_synthesis(tmp_path, monkeypatch):
     monkeypatch.setattr(runner, "YosysChecklist", FakeChecklist)
     monkeypatch.setattr(runner, "build_step_metrics", lambda workspace, step: None)
     monkeypatch.setattr(runner, "get_yosys_runtime", lambda: (["yosys"], runtime_env))
+    monkeypatch.setattr(runner, "check_yosys_version", lambda *_a, **_k: (True, "0.70+16", ""))
     monkeypatch.setattr(runner, "check_slang_support", fake_check_slang_support)
     monkeypatch.setattr(runner.subprocess, "run", fake_run)
     sta_calls = []
@@ -130,6 +131,7 @@ def test_run_step_keeps_synthesis_success_when_sta_report_fails(tmp_path, monkey
     monkeypatch.setattr(runner, "YosysChecklist", FakeChecklist)
     monkeypatch.setattr(runner, "build_step_metrics", lambda workspace, step: None)
     monkeypatch.setattr(runner, "get_yosys_runtime", lambda: (["yosys"], {"PATH": "/tmp"}))
+    monkeypatch.setattr(runner, "check_yosys_version", lambda *_a, **_k: (True, "0.70+16", ""))
     monkeypatch.setattr(runner, "check_slang_support", lambda *args, **kwargs: True)
     monkeypatch.setattr(runner.subprocess, "run", fake_run)
     monkeypatch.setattr(runner, "_run_ecc_synthesis_sta", lambda **kwargs: False)
@@ -162,6 +164,7 @@ def test_run_step_marks_invalid_when_slang_check_fails(tmp_path, monkeypatch):
     monkeypatch.setattr(runner, "YosysSubFlow", FakeSubFlow)
     monkeypatch.setattr(runner, "build_step_metrics", lambda workspace, step: None)
     monkeypatch.setattr(runner, "get_yosys_runtime", lambda: (["yosys"], {"PATH": "/tmp"}))
+    monkeypatch.setattr(runner, "check_yosys_version", lambda *_a, **_k: (True, "0.70+16", ""))
     monkeypatch.setattr(runner, "check_slang_support", fake_check_slang_support)
     monkeypatch.setattr(runner.subprocess, "run", fake_run)
 
@@ -204,6 +207,7 @@ def test_run_step_skips_slang_check_for_native_verilog(tmp_path, monkeypatch):
     monkeypatch.setattr(runner, "YosysChecklist", FakeChecklist)
     monkeypatch.setattr(runner, "build_step_metrics", lambda workspace, step: None)
     monkeypatch.setattr(runner, "get_yosys_runtime", lambda: (["yosys"], {"PATH": "/tmp"}))
+    monkeypatch.setattr(runner, "check_yosys_version", lambda *_a, **_k: (True, "0.70+16", ""))
     monkeypatch.setattr(runner, "check_slang_support", fail_slang_check)
     monkeypatch.setattr(runner, "_run_ecc_synthesis_sta", lambda **kwargs: True)
     monkeypatch.setattr(runner.subprocess, "run", fake_run)
@@ -270,3 +274,33 @@ def test_run_step_records_missing_step_directory_as_incomplete(tmp_path, monkeyp
 
     assert runner.run_step(workspace=workspace, step=step) is False
     assert updates[-1] == ("run yosys", StateEnum.Imcomplete)
+
+
+def test_run_step_marks_invalid_when_yosys_version_check_fails(tmp_path, monkeypatch):
+    workspace, step, _, _, log_file = _build_workspace_and_step(tmp_path)
+    updates = []
+
+    class FakeSubFlow:
+        def __init__(self, workspace, workspace_step):
+            pass
+
+        def update_step(self, step_name, state, runtime="", memory=0, info=None):
+            updates.append((step_name, state))
+
+    def fail_run(*args, **kwargs):
+        raise AssertionError("Synthesis must not run when Yosys version is unsupported")
+
+    monkeypatch.setattr(runner, "YosysSubFlow", FakeSubFlow)
+    monkeypatch.setattr(runner, "get_yosys_runtime", lambda: (["yosys"], {"PATH": "/tmp"}))
+    monkeypatch.setattr(
+        runner,
+        "check_yosys_version",
+        lambda *args, **kwargs: (False, "0.66+1", "Yosys 0.66+1 is older than required >= 0.67."),
+    )
+    monkeypatch.setattr(runner.subprocess, "run", fail_run)
+
+    result = runner.run_step(workspace=workspace, step=step)
+
+    assert result is False
+    assert ("run yosys", StateEnum.Invalid) in updates
+    assert "older than required >= 0.67" in log_file.read_text()

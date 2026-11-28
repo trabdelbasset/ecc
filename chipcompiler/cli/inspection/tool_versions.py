@@ -39,7 +39,11 @@ def _query(
 
 
 def yosys_version() -> str:
-    from chipcompiler.tools.yosys.utility import get_yosys_command, get_yosys_runtime
+    from chipcompiler.tools.yosys.utility import (
+        extract_yosys_version_token,
+        get_yosys_command,
+        get_yosys_runtime,
+    )
 
     if not get_yosys_command():
         return NOT_INSTALLED
@@ -47,11 +51,7 @@ def yosys_version() -> str:
     output = _query(yosys_cmd + ["-V"], yosys_env)
     if not output:
         return UNKNOWN
-    # "Yosys 0.68+132 (git sha1 ...)" -> "0.68+132"
-    parts = output.split()
-    if parts[0] == "Yosys" and len(parts) > 1:
-        return parts[1]
-    return output
+    return extract_yosys_version_token(output) or UNKNOWN
 
 
 def sizer_version() -> str:

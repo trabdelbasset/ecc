@@ -72,17 +72,29 @@ def _installed_at_for_module(module_name: str) -> str:
 
 
 def probe_yosys() -> ProbeResult:
-    from chipcompiler.tools.yosys.utility import get_yosys_command, get_yosys_not_found_error
+    from chipcompiler.tools.yosys.utility import (
+        check_yosys_version,
+        get_yosys_command,
+        get_yosys_not_found_error,
+        get_yosys_runtime,
+    )
 
     command = get_yosys_command()
-    if command:
-        return ProbeResult(
-            "yosys",
-            PASS,
-            detail=" ".join(command),
-            installed_at=_installed_at_for_command(command),
-        )
-    return ProbeResult("yosys", FAIL, remediation=get_yosys_not_found_error())
+    if not command:
+        return ProbeResult("yosys", FAIL, remediation=get_yosys_not_found_error())
+    yosys_cmd, yosys_env = get_yosys_runtime()
+    version_ok, version_str, version_error = check_yosys_version(yosys_cmd, yosys_env)
+    detail = f"{' '.join(command)} ({version_str})" if version_str else " ".join(command)
+    installed_at = _installed_at_for_command(command)
+    if version_ok:
+        return ProbeResult("yosys", PASS, detail=detail, installed_at=installed_at)
+    return ProbeResult(
+        "yosys",
+        FAIL,
+        detail=detail,
+        remediation=version_error,
+        installed_at=installed_at,
+    )
 
 
 def probe_yosys_slang() -> ProbeResult:

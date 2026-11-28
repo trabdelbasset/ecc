@@ -143,3 +143,62 @@ def test_check_slang_support_writes_error_on_failure(tmp_path, monkeypatch):
 
     assert ok is False
     assert "slang frontend check failed" in log_path.read_text()
+
+
+def test_extract_and_parse_yosys_version():
+    assert utility.extract_yosys_version_token("Yosys 0.70+16 (git sha1 3bb533450)") == "0.70+16"
+    assert utility.extract_yosys_version_token("0.68+132") == "0.68+132"
+    assert utility.parse_yosys_version("Yosys 0.70+16 (git sha1 3bb533450)") == (0, 70)
+    assert utility.parse_yosys_version("0.67") == (0, 67)
+    assert utility.parse_yosys_version("0.66+99") == (0, 66)
+    assert utility.parse_yosys_version("Yosys unknown-dev") is None
+    assert utility.parse_yosys_version("unrecognized") is None
+
+
+def test_check_yosys_version_accepts_min_and_newer(monkeypatch):
+    for banner, expected_ver in (
+        ("Yosys 0.67 (git sha1 abcdef)", "0.67"),
+        ("Yosys 0.70+16 (git sha1 3bb533450, Release)", "0.70+16"),
+    ):
+        monkeypatch.setattr(
+            utility.subprocess,
+            "run",
+            lambda *_a, _b=banner, **_k: SimpleNamespace(returncode=0, stdout=_b.encode()),
+        )
+        ok, version_str, err = utility.check_yosys_version(["yosys"], {})
+        assert ok is True
+        assert version_str == expected_ver
+        assert err == ""
+
+
+def test_check_yosys_version_rejects_old_failed_or_unparseable(monkeypatch):
+    monkeypatch.setattr(
+        utility.subprocess,
+        "run",
+        lambda *_a, **_k: SimpleNamespace(returncode=0, stdout=b"Yosys 0.66+99 (git sha1 old)"),
+    )
+    ok, version_str, err = utility.check_yosys_version(["yosys"], {})
+    assert ok is False
+    assert version_str == "0.66+99"
+    assert "0.66+99" in err
+    assert ">= 0.67" in err
+
+    monkeypatch.setattr(
+        utility.subprocess,
+        "run",
+        lambda *_a, **_k: SimpleNamespace(returncode=1, stdout=b""),
+    )
+    ok, version_str, err = utility.check_yosys_version(["yosys"], {})
+    assert ok is False
+    assert version_str is None
+    assert "Could not determine Yosys version" in err
+
+    monkeypatch.setattr(
+        utility.subprocess,
+        "run",
+        lambda *_a, **_k: SimpleNamespace(returncode=0, stdout=b"Yosys dev-custom"),
+    )
+    ok, version_str, err = utility.check_yosys_version(["yosys"], {})
+    assert ok is False
+    assert version_str == "dev-custom"
+    assert "Unrecognized Yosys version" in err

@@ -80,10 +80,65 @@ class TestDoctorCommand:
             "chipcompiler.tools.yosys.utility.get_yosys_command",
             lambda: [str(binary)],
         )
+        monkeypatch.setattr(
+            "chipcompiler.tools.yosys.utility.get_yosys_runtime",
+            lambda: ([str(binary)], {}),
+        )
+        monkeypatch.setattr(
+            "chipcompiler.tools.yosys.utility.check_yosys_version",
+            lambda *_a, **_k: (True, "0.70+16", ""),
+        )
 
         result = env_probe.probe_yosys()
 
         assert result.status == PASS
+        assert "0.70+16" in result.detail
+        assert result.installed_at == env_probe.installed_at_for_path(binary)
+
+    def test_yosys_probe_fails_when_yosys_version_too_old(self, tmp_path, monkeypatch):
+        binary = tmp_path / "yosys"
+        binary.write_text("#!/bin/sh\n", encoding="utf-8")
+        monkeypatch.setattr(
+            "chipcompiler.tools.yosys.utility.get_yosys_command",
+            lambda: [str(binary)],
+        )
+        monkeypatch.setattr(
+            "chipcompiler.tools.yosys.utility.get_yosys_runtime",
+            lambda: ([str(binary)], {}),
+        )
+        monkeypatch.setattr(
+            "chipcompiler.tools.yosys.utility.check_yosys_version",
+            lambda *_a, **_k: (False, "0.66+1", "Yosys 0.66+1 is older than required >= 0.67."),
+        )
+
+        result = env_probe.probe_yosys()
+
+        assert result.status == FAIL
+        assert "0.66+1" in result.detail
+        assert ">= 0.67" in result.remediation
+        assert result.installed_at == env_probe.installed_at_for_path(binary)
+
+    def test_yosys_probe_fails_when_version_unreadable(self, tmp_path, monkeypatch):
+        binary = tmp_path / "yosys"
+        binary.write_text("#!/bin/sh\n", encoding="utf-8")
+        monkeypatch.setattr(
+            "chipcompiler.tools.yosys.utility.get_yosys_command",
+            lambda: [str(binary)],
+        )
+        monkeypatch.setattr(
+            "chipcompiler.tools.yosys.utility.get_yosys_runtime",
+            lambda: ([str(binary)], {}),
+        )
+        monkeypatch.setattr(
+            "chipcompiler.tools.yosys.utility.check_yosys_version",
+            lambda *_a, **_k: (False, None, "Could not determine Yosys version"),
+        )
+
+        result = env_probe.probe_yosys()
+
+        assert result.status == FAIL
+        assert result.detail == str(binary)
+        assert "Could not determine Yosys version" in result.remediation
         assert result.installed_at == env_probe.installed_at_for_path(binary)
 
     def test_doctor_required_failure_exits_nonzero(
