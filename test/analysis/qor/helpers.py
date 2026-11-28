@@ -1,10 +1,42 @@
 """Shared fixtures for the QoR engine tests."""
 
+import json
 import os
+from types import SimpleNamespace
 
 from chipcompiler.analysis.qor.loader import CornerSlack, MetricRecord, QorInputs
+from test.flow_fixture import step_fields
 
 SUCCESS = "Success"
+
+STEP_TOOLS = {"synthesis": "yosys", "placement": "dreamplace"}
+
+STEP_DIRECTORIES = {
+    "synthesis": "synthesis_yosys",
+    "post_floorplan": "post_floorplan_ecc",
+    "placement": "placement_dreamplace",
+    "cts": "cts_ecc",
+    "routing": "routing_ecc",
+    "drc": "drc_ecc",
+    "lvs": "lvs_ecc",
+    "rcx": "rcx_ecc",
+    "sta": "sta_ecc",
+    "power_analysis": "power_analysis_ecc",
+    "harden": "harden_ecc",
+}
+
+FULL_FLOW = {
+    "synthesis": SUCCESS,
+    "post_floorplan": SUCCESS,
+    "placement": SUCCESS,
+    "cts": SUCCESS,
+    "routing": SUCCESS,
+    "drc": SUCCESS,
+    "lvs": SUCCESS,
+    "rcx": SUCCESS,
+    "sta": SUCCESS,
+    "harden": SUCCESS,
+}
 
 
 def touch_qor_evidence(path, payload):
@@ -123,3 +155,85 @@ def gcd_corners():
         CornerSlack(corner="MAX_125", setup_ws=16.622, hold_ws=0.100, setup_nvp=0, hold_nvp=0),
         CornerSlack(corner="MAX_M40", setup_ws=18.980, hold_ws=0.274, setup_nvp=0, hold_nvp=0),
     ]
+
+
+def write_json(path, payload):
+    if str(path).endswith("qor_metrics.json"):
+        touch_qor_evidence(path, payload)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
+        json.dump(payload, f)
+
+
+def loader_metric(metric_id, value, project_role="final", **overrides):
+    record = {
+        "id": metric_id,
+        "display_name": metric_id,
+        "value": value,
+        "unit": "",
+        "category": "timing",
+        "direction": "lower_is_better",
+        "scope": "project",
+        "corner": None,
+        "project_role": project_role,
+        "step_role": "primary",
+        "rating": {"gate": False, "score": True, "trend": True},
+        "source": {"kind": "analysis", "path": "feature/x.json"},
+    }
+    record.update(overrides)
+    return record
+
+
+def loader_payload(metrics, details=None):
+    payload = {
+        "schema_version": 3,
+        "kind": "qor_metrics",
+        "integrity": {"status": "pass", "invalid_metric_source_ids": [], "invalid_detail_ids": []},
+        "metrics": metrics,
+    }
+    if details is not None:
+        payload["details"] = details
+    return payload
+
+
+def write_step_payload(root, directory, metrics, details=None):
+    write_json(
+        os.path.join(root, directory, "analysis", "qor_metrics.json"),
+        loader_payload(metrics, details=details),
+    )
+
+
+def make_loader_workspace(tmp_path, steps):
+    root = str(tmp_path / "ws")
+    write_json(
+        os.path.join(root, "home", "flow.json"),
+        {
+            "schema_version": 3,
+            "steps": [
+                {
+                    "name": name,
+                    "tool": STEP_TOOLS.get(name, "ecc"),
+                    "state": state,
+                    **step_fields(name, STEP_TOOLS.get(name, "ecc")),
+                }
+                for name, state in steps.items()
+            ],
+        },
+    )
+    from chipcompiler.data.workspace.config import save_workspace_config
+
+    assert save_workspace_config(root, {"design": "gcd", "frequency_max": 50.0})
+    # Every successful step emits a minimal valid payload unless a test
+    # overwrites it; the loader treats a missing payload as a parse failure.
+    for step_value, state in steps.items():
+        if state == SUCCESS:
+            write_step_payload(
+                root, STEP_DIRECTORIES[step_value], [loader_metric("probe_metric", 1.0)]
+            )
+
+    class _Flow:
+        data = {}
+
+    return SimpleNamespace(
+        directory=root, name="gcd", design=SimpleNamespace(name="gcd"), flow=_Flow()
+    )
